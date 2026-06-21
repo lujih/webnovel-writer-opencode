@@ -3,12 +3,12 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "使用 /webnovel-review 审查第4章（agents/evals/files/test-project/正文/第0004章-迦南学院的考验.md）。项目在 agents/evals/files/test-project/。",
+      "prompt": "使用 /webnovel-review 审查第4章（evals/files/test-project/正文/第0004章-迦南学院的考验.md）。项目在 evals/files/test-project/。",
       "expected_output": "生成审查报告，包含 AI 味问题和时间线问题，并将审查指标写入 index.db",
       "files": [
-        "agents/evals/files/test-project/正文/第0004章-迦南学院的考验.md",
-        "agents/evals/files/test-project/.webnovel/state.json",
-        "agents/evals/files/test-project/.webnovel/summaries/ch0003.md"
+        "evals/files/test-project/正文/第0004章-迦南学院的考验.md",
+        "evals/files/test-project/.webnovel/state.json",
+        "evals/files/test-project/.webnovel/summaries/ch0003.md"
       ],
       "expectations": [
         "审查报告被生成",
