@@ -1,37 +1,27 @@
 {
-  "version": "v2.9.1-20260622.0310",
-  "tag": "v2.9.1",
-  "updated": "2026-06-22T03:10:39Z",
+  "version": "v2.9.2-20260622.0323",
+  "tag": "v2.9.2",
+  "updated": "2026-06-22T03:23:10Z",
   "changelog": [
     {
-      "hash": "b1ca86d",
-      "type": "refactor",
-      "message": "refactor: \u5220\u9664 Python \u5b89\u88c5\u811a\u672c"
+      "hash": "dc72122",
+      "type": "fix",
+      "message": "fix: \u6838\u5fc3\u811a\u672c\u7d2f\u79ef\u4fee\u590d"
     },
     {
-      "hash": "267a366",
+      "hash": "07a4ef0",
+      "type": "ci",
+      "message": "ci: npm \u81ea\u52a8\u6253\u5305\u53d1\u5e03 \u2014 \u53cc workflow \u8bbe\u8ba1"
+    },
+    {
+      "hash": "78e90d0",
       "type": "docs",
-      "message": "docs: \u6587\u6863\u66f4\u65b0\u4e3a npx \u5b89\u88c5\u65b9\u5f0f"
+      "message": "docs: \u6e05\u7406 README \u4e2d\u5df2\u5220\u9664\u7684 install.py \u548c installer/ \u5f15\u7528"
     },
     {
-      "hash": "55ba910",
-      "type": "docs",
-      "message": "docs: \u79fb\u9664 Python \u5b89\u88c5\u65b9\u5f0f\uff0cnpx \u4e3a\u552f\u4e00\u5b89\u88c5\u5165\u53e3"
-    },
-    {
-      "hash": "e50b870",
+      "hash": "270c8f4",
       "type": "chore",
-      "message": "chore: \u6392\u9664 npm pack \u4ea7\u7269\u548c\u6d4f\u89c8\u5668\u4e34\u65f6\u6587\u4ef6"
-    },
-    {
-      "hash": "da45d50",
-      "type": "feat",
-      "message": "feat: npx \u4e00\u952e\u5b89\u88c5\u5668 + README \u66f4\u65b0"
-    },
-    {
-      "hash": "ad08be2",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260621.1436 [skip ci]"
+      "message": "chore: update manifest to v2.9.1-20260622.0310 [skip ci]"
     }
   ],
   "files": {
@@ -84,8 +74,8 @@
       "size": 3972
     },
     ".opencode/scripts/init_project.py": {
-      "sha256": "2cf3c0476df0c56252c214c60d8d5c95bc3d3178db819a17d610aa6f18394e6a",
-      "size": 32738
+      "sha256": "188da218eda424e09182204c38ff6419136f5709bb650f4ccd3fff6df58f7a63",
+      "size": 32965
     },
     ".opencode/scripts/requirements.txt": {
       "sha256": "6063cc8e2a44ebef9fbdec6c6cfaa4c1c4ac5c8890e54f5c23e2f6b885e77957",
@@ -152,8 +142,8 @@
       "size": 2838
     },
     ".opencode/scripts/archive_manager.py": {
-      "sha256": "9ad7482da1bdcad8060627abb1d472ea94fab75f0d59d853454c03e410588787",
-      "size": 23045
+      "sha256": "f52c227b8253e8c89e4323a28075cffa12916425ffc2d6816d9d6df609771ba1",
+      "size": 23403
     },
     ".opencode/scripts/status_reporter.py": {
       "sha256": "5b9328b68dd544eb943acf7c489c9af6f15dc3917e7a3d6a042fa0dd52b981eb",
@@ -220,8 +210,8 @@
       "size": 22025
     },
     ".opencode/scripts/data_modules/migrate_state_to_sqlite.py": {
-      "sha256": "4411243b3087307c80dde453ee8a753bd4d3a050fcfe6b4552d5217a96ecab85",
-      "size": 12702
+      "sha256": "beea548d5fada84522e156465438372f5a4d3e353db44563fe63fea92c929a6f",
+      "size": 12920
     },
     ".opencode/scripts/data_modules/state_validator.py": {
       "sha256": "d35642f8bfa93afe6b31d660857117f3dc11bad5458ce0f2879d3f698517a7ba",
@@ -284,8 +274,8 @@
       "size": 2278
     },
     ".opencode/scripts/data_modules/state_manager.py": {
-      "sha256": "2ec5d170b0000deb01935fe8920a9909e50d44ccfc96a9d1147eb88c936dbe9d",
-      "size": 63550
+      "sha256": "d391cba3a70c666b78d6ca1448db961e4227f3584acfee15dd856ff29f9cb046",
+      "size": 63816
     },
     ".opencode/scripts/data_modules/state_projection_renderer.py": {
       "sha256": "3f09a9195909fb1298d28386bf7230f5a114d20b6b8b3b3628923b729e00ac51",
