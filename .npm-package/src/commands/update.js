@@ -9,7 +9,7 @@ import { get as httpsGet } from 'node:https';
 import { get as httpGet } from 'node:http';
 import { spawn } from 'node:child_process';
 
-import { step, stepOk, info, createSpinner, confirm, success } from '../core/ui.js';
+import { step, stepOk, info, warn, createSpinner, confirm, success } from '../core/ui.js';
 import { extractTarGz } from '../core/extract.js';
 import { detectPython } from '../core/python.js';
 
@@ -32,8 +32,22 @@ const GITHUB_TARBALL = `https://github.com/${REPO}/archive/refs/heads/${BRANCH}.
 const MIRRORS = ['https://ghproxy.com/', 'https://mirror.ghproxy.com/'];
 const PREFIX = `${REPO.split('/')[1]}-${BRANCH}/.opencode`;
 
+// 可信域名白名单
+const TRUSTED_HOSTS = [
+  'github.com', 'objects.githubusercontent.com', 'codeload.github.com',
+  'ghproxy.com', 'mirror.ghproxy.com',
+];
+
+function isTrustedHost(url) {
+  try {
+    const host = new URL(url).hostname;
+    return TRUSTED_HOSTS.some(h => host === h || host.endsWith('.' + h));
+  } catch { return false; }
+}
+
 async function downloadFile(url, destPath, redirectCount = 0) {
-  if (redirectCount > 10) throw new Error('重定向次数过多');
+  if (redirectCount > 5) throw new Error('重定向次数过多');
+  if (!isTrustedHost(url)) throw new Error(`不受信任的下载地址: ${new URL(url).hostname}`);
   mkdirSync(dirname(destPath), { recursive: true });
 
   return new Promise((resolve, reject) => {
@@ -69,6 +83,18 @@ async function downloadWithFallback(urls, destPath) {
 async function installPythonDeps(cwd) {
   const reqFile = join(cwd, '.opencode', 'scripts', 'requirements.txt');
   if (!existsSync(reqFile)) return 'skipped';
+
+  // 验证 requirements.txt 来自可信源（仅允许 GitHub + 白名单镜像）
+  try {
+    const content = readFileSync(reqFile, 'utf-8');
+    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
+    // 每行必须是合法的 pip requirement 格式（package==version 或 package>=version）
+    const valid = lines.every(l => /^[a-zA-Z0-9._-]+([><=!~]+[a-zA-Z0-9._*-]+)?(\s*;\s*[a-zA-Z_]+.*)?$/.test(l.trim().split(';')[0].trim().split(/[><=!~]+/)[0]));
+    if (!valid || lines.length === 0) {
+      warn('依赖文件格式异常，跳过 pip 安装以确保安全');
+      return 'skipped';
+    }
+  } catch { return 'skipped'; }
 
   const python = await detectPython();
   if (!python) { info('未检测到 Python，跳过依赖更新'); return 'skipped'; }

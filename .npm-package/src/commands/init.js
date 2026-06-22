@@ -29,6 +29,17 @@ const REPO = 'lujih/webnovel-writer-opencode';
 const BRANCH = 'master';
 const GITHUB_TARBALL = `https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz`;
 const MIRRORS = ['https://ghproxy.com/', 'https://mirror.ghproxy.com/'];
+const TRUSTED_HOSTS = [
+  'github.com', 'objects.githubusercontent.com', 'codeload.github.com',
+  'ghproxy.com', 'mirror.ghproxy.com',
+];
+
+function isTrustedHost(url) {
+  try {
+    const host = new URL(url).hostname;
+    return TRUSTED_HOSTS.some(h => host === h || host.endsWith('.' + h));
+  } catch { return false; }
+}
 const PREFIX = `${REPO.split('/')[1]}-${BRANCH}/.opencode`;
 
 // ── 步骤 0: Node 版本检查 ────────────────────────────────
@@ -65,7 +76,8 @@ async function showWelcome(cwd) {
 // ── 步骤 2: 下载 ─────────────────────────────────────────
 
 async function downloadFile(url, destPath, redirectCount = 0) {
-  if (redirectCount > 10) throw new Error('重定向次数过多');
+  if (redirectCount > 5) throw new Error('重定向次数过多');
+  if (!isTrustedHost(url)) throw new Error(`不受信任的下载地址: ${new URL(url).hostname}`);
 
   mkdirSync(dirname(destPath), { recursive: true });
 
@@ -183,6 +195,13 @@ async function installPythonDeps(cwd, options) {
 
   const reqFile = join(cwd, '.opencode', 'scripts', 'requirements.txt');
   if (!existsSync(reqFile)) { warn('requirements.txt 不存在'); return 'skipped'; }
+
+  try {
+    const content = readFileSync(reqFile, 'utf-8');
+    const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
+    const valid = lines.every(l => /^[a-zA-Z0-9._-]+/.test(l.trim().split(/[><=!~]+/)[0]));
+    if (!valid || lines.length === 0) { warn('依赖文件格式异常，跳过 pip 安装'); return 'skipped'; }
+  } catch { return 'skipped'; }
 
   const doit = await confirm('安装 Python 依赖？', true);
   if (!doit) { info(`手动运行: ${python} -m pip install -r .opencode/scripts/requirements.txt`); return 'skipped'; }
