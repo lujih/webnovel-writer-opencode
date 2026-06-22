@@ -1,6 +1,6 @@
 {
   "name": "@cszx/webnovel-writer-opencode",
-  "version": "1.2.1",
+  "version": "2.9.2",
   "description": "Webnovel Writer OpenCode Edition — 网文 AI 写作工具链安装器 (lujih 分支)",
   "bin": {
     "webnovel-writer-opencode": "bin/webnovel-writer.js"
