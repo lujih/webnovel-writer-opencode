@@ -1,5 +1,11 @@
 /**
  * update 命令 — 更新 .opencode/ 到最新版本
+ *
+ * 安全模型:
+ * 1. 主路径使用 npm 内置离线包 (npm registry 已校验完整性)
+ * 2. 网络回退仅连可信域名白名单，重定向上限 5 次
+ * 3. requirements.txt 提取后校验格式再执行 pip
+ * 4. tar 解压含路径穿越防护 (extract.js)
  */
 
 import { existsSync, unlinkSync, createWriteStream, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
@@ -94,14 +100,17 @@ async function installPythonDeps(cwd) {
   const reqFile = join(cwd, '.opencode', 'scripts', 'requirements.txt');
   if (!existsSync(reqFile)) return 'skipped';
 
-  // 验证 requirements.txt 来自可信源（仅允许 GitHub + 白名单镜像）
+  // 验证 requirements.txt 内容安全
   try {
     const content = readFileSync(reqFile, 'utf-8');
     const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
-    // 每行必须是合法的 pip requirement 格式（package==version 或 package>=version）
-    const valid = lines.every(l => /^[a-zA-Z0-9._-]+([><=!~]+[a-zA-Z0-9._*-]+)?(\s*;\s*[a-zA-Z_]+.*)?$/.test(l.trim().split(';')[0].trim().split(/[><=!~]+/)[0]));
+    // 禁止 pip 选项行（-i, --index-url, --extra-index-url 等）
+    const hasOptions = lines.some(l => /^\s*-/.test(l.trim()));
+    if (hasOptions) { warn('依赖文件含 pip 选项，为安全跳过安装'); return 'skipped'; }
+    // 每行必须是 package==version 格式
+    const valid = lines.every(l => /^[a-zA-Z0-9._-]+[><=!~]+\S+/.test(l.trim()));
     if (!valid || lines.length === 0) {
-      warn('依赖文件格式异常，跳过 pip 安装以确保安全');
+      warn('依赖文件格式异常，跳过 pip 安装');
       return 'skipped';
     }
   } catch { return 'skipped'; }

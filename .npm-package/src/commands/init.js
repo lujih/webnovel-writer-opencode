@@ -209,7 +209,9 @@ async function installPythonDeps(cwd, options) {
   try {
     const content = readFileSync(reqFile, 'utf-8');
     const lines = content.split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
-    const valid = lines.every(l => /^[a-zA-Z0-9._-]+/.test(l.trim().split(/[><=!~]+/)[0]));
+    const hasOptions = lines.some(l => /^\s*-/.test(l.trim()));
+    if (hasOptions) { warn('依赖文件含 pip 选项，为安全跳过安装'); return 'skipped'; }
+    const valid = lines.every(l => /^[a-zA-Z0-9._-]+[><=!~]+\S+/.test(l.trim()));
     if (!valid || lines.length === 0) { warn('依赖文件格式异常，跳过 pip 安装'); return 'skipped'; }
   } catch { return 'skipped'; }
 
