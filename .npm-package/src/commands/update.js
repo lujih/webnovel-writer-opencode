@@ -8,7 +8,7 @@
  * 4. tar 解压含路径穿越防护 (extract.js)
  */
 
-import { existsSync, unlinkSync, createWriteStream, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
+import { existsSync, unlinkSync, createWriteStream, mkdirSync, readFileSync, writeFileSync, statSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { get as httpsGet } from 'node:https';
@@ -140,8 +140,11 @@ export async function update(options = {}) {
   }
 
   try {
-    const doit = await confirm('将下载最新版本覆盖现有 .opencode/，继续？', true);
+    const doit = await confirm('将更新 .opencode/（会先清除旧文件），继续？', true);
     if (!doit) { info('已取消'); return; }
+
+    // 清除旧文件，避免残留
+    rmSync(dest, { recursive: true, force: true });
 
     // 优先用 npx 已下载的内置离线包
     const offline = join(__pkgRoot, 'offline', 'opencode-bundle.tar.gz');

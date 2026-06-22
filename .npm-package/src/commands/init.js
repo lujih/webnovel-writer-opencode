@@ -4,7 +4,7 @@
  * npx @cszx/webnovel-writer-opencode init [--offline] [--mirror URL] [--no-pip] [--quiet]
  */
 
-import { existsSync, mkdirSync, unlinkSync, createWriteStream, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, unlinkSync, createWriteStream, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { get as httpsGet } from 'node:https';
@@ -138,6 +138,7 @@ async function deployOpencode(cwd, options) {
   if (existsSync(dest)) {
     const overwrite = await confirm('.opencode/ 已存在，是否覆盖？', false);
     if (!overwrite) { info('保留现有 .opencode/'); return 'skipped'; }
+    rmSync(dest, { recursive: true, force: true });
   }
 
   // 1) 离线包（tar 内已含 .opencode/ 目录，解压到 cwd 即得 cwd/.opencode/）
