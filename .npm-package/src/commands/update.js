@@ -150,7 +150,7 @@ export async function update(options = {}) {
       const s = createSpinner('解压中');
       s.start();
       try {
-        const count = await extractTarGz(offline, dest);
+        const count = await extractTarGz(offline, cwd);  // tar 内已含 .opencode/
         s.stop(`已更新 ${count} 个文件`);
         stepOk(1, 2, `已更新（离线包，${count} 个文件）`);
       } catch (e) {
