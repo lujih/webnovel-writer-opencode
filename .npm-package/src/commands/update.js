@@ -125,7 +125,9 @@ export async function update(options = {}) {
     if (!doit) { info('已取消'); return; }
 
     step(1, 3, '下载最新版本');
-    const urls = [GITHUB_TARBALL];
+    const urls = options.mirror
+      ? [`${options.mirror}${GITHUB_TARBALL}`]
+      : [GITHUB_TARBALL];
     for (const m of MIRRORS) urls.push(`${m}${GITHUB_TARBALL}`);
 
     const tmp = join(cwd, '_opencode_update.tar.gz');
@@ -133,7 +135,11 @@ export async function update(options = {}) {
     s.start();
     if (!(await downloadWithFallback(urls, tmp))) {
       s.fail('下载失败');
-      process.stderr.write('请检查网络连接，或稍后重试。\n');
+      process.stderr.write('\n');
+      process.stderr.write('  所有下载地址均不可用。\n');
+      process.stderr.write('  请检查网络连接，或使用镜像：\n');
+      process.stderr.write('    npx @cszx/webnovel-writer-opencode update --mirror https://ghproxy.com/\n');
+      process.stderr.write('  离线环境请重新运行 init 使用内置离线包安装。\n');
       process.exit(1);
     }
     s.stop('下载完成');

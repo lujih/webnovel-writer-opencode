@@ -93,7 +93,10 @@ async function main() {
       break;
     }
     case 'update': {
-      await update({ quiet: args.includes('-q') || args.includes('--quiet') });
+      const uOpts = { quiet: args.includes('-q') || args.includes('--quiet') };
+      const mIdx = args.indexOf('--mirror');
+      if (mIdx !== -1 && args[mIdx + 1]) uOpts.mirror = args[mIdx + 1].replace(/\/?$/, '/');
+      await update(uOpts);
       break;
     }
     case 'uninstall': {
