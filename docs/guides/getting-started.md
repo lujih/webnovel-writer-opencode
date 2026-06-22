@@ -2,12 +2,12 @@
 
 本教程带你从零开始，完成一篇网文的初始化、规划、写作、审查、导出全流程。每一步都有可直接复制的命令和详细说明。
 
-**预计总耗时**：首次安装 5-15 分钟（取决于网络和可选模块）。
+**预计总耗时**：首次安装 2 分钟。
 
 ### 完整体验路线图
 
 ```text
-1. 装 Python/Git  →  2. 下载 install.py  →  3. 选功能模块  →  4. 配 API Key
+1. npx init  →  2. 配 API Key  →  3. /webnovel-init
          ↓
 5. /webnovel-init  →  6. /webnovel-plan  →  7. /webnovel-write
          ↓
@@ -45,9 +45,11 @@ OpenCode 是一个 AI 编程助手，类似 Cursor 或 GitHub Copilot，但更�
 
 | 软件 | 最低版本 | 检查方法 |
 |------|---------|---------|
+| Node.js | 22+ | 终端输入 `node --version` |
 | Python | 3.10+ | 终端输入 `python --version` |
-| Git | 任意版本 | 终端输入 `git --version` |
 | OpenCode | 最新版 | 确认能启动 OpenCode |
+
+> 安装器会自动检测 Node.js 和 Python，缺失时给出安装指引。Git 由安装器自动配置。
 
 ### 1.3 安装 Python
 
@@ -85,191 +87,52 @@ brew install git
 
 ## 2. 安装
 
-### 2.1 创建工作区
+### 2.1 创建工作目录
 
-工作区是一个文件夹，用来存放插件和你的多本书项目。建议单独建一个：
+打开 OpenCode，创建一个工作目录（所有书项目将存在这里）：
 
-**Windows**（PowerShell）：
-```powershell
-mkdir D:\novels
-cd D:\novels
+```
+File → Open Folder → 新建文件夹 → 命名（如 D:\novels 或 ~/novels）
 ```
 
-**Mac / Linux**：
-```bash
-mkdir ~/novels
-cd ~/novels
-```
+### 2.2 一键安装
 
-> 💡 **概念说明**：这个目录叫"工作区"，里面会有 `.opencode/`（插件代码）和各个书项目的子文件夹（如 `凡人资本论/`）。
-
-### 2.2 下载安装脚本
-
-**Windows**（PowerShell）：
-
-```powershell
-Invoke-WebRequest -Uri "https://raw.githubusercontent.com/lujih/webnovel-writer-opencode/master/install.py" -OutFile "install.py"
-```
-
-如果下载失败（常见于国内网络），尝试镜像：
-
-```powershell
-Invoke-WebRequest -Uri "https://mirror.ghproxy.com/https://raw.githubusercontent.com/lujih/webnovel-writer-opencode/master/install.py" -OutFile "install.py"
-```
-
-**Mac / Linux**：
+在 OpenCode 的终端中运行：
 
 ```bash
-curl -O https://raw.githubusercontent.com/lujih/webnovel-writer-opencode/master/install.py
+npx @cszx/webnovel-writer-opencode init
 ```
 
-如果下载失败，尝试镜像：
-
-```bash
-curl -O https://mirror.ghproxy.com/https://raw.githubusercontent.com/lujih/webnovel-writer-opencode/master/install.py
-```
-
-### 2.3 运行安装
-
-```bash
-python install.py
-```
-
-> 💡 **Linux 用户**：如果提示 `python: command not found`，试试 `python3 install.py`。
-
-你会看到一个青色边框的菜单：
+内置离线包（约 2 MB），几秒内完成。安装器自动检测 Python 并安装依赖。
 
 ```text
-┌──────────────────────────────────────────────────────┐
-│  Webnovel Writer for OpenCode — 安装管理              │
-├──────────────────────────────────────────────────────┤
-│ ● 未安装                                             │
-├──────────────────────────────────────────────────────┤
-│ 请选择操作:                                          │
-│                                                      │
-│  [1] 安装 / 更新      下载最新版本                    │
-│  [2] 增量更新          仅变更文件 (快)                │
-│  [3] 清洁安装          擦除后全新安装                 │
-│  [5] 卸载              移除 .opencode/                │
-│  [6] 完全卸载          移除 .opencode/ + .venv/       │
-│  [0] 退出                                           │
-└──────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ Webnovel Writer OpenCode Edition — 安装          │
+├──────────────────────────────────────────────────────────┤
+│ 目录：D:\novels                                          │
+│                                                          │
+│ 将在此目录部署 .opencode/ 写作工具链                     │
+│ 按 Enter 继续，输入 q 退出                               │
+└──────────────────────────────────────────────────────────┘
 
-  输入数字选择 (默认=1):
+  [1/2] 部署 .opencode/ 写作工具链
+  ✓ 已解压 499 个文件
+  ✓ [1/2] 已部署（离线包）
+
+  [2/2] 安装 Python 依赖
+  ✓ Python 依赖安装完成
+  ✓ [2/2] Python 依赖安装完成
 ```
 
-**第一次安装直接回车（选 1）**。
+### 2.3 配置 API Key
 
-### 2.4 选择功能模块
-
-安装前会让你选择需要的功能：
-
-```text
-┌──────────────────────────────────────────────────────┐
-│  功能模块选择                                         │
-├──────────────────────────────────────────────────────┤
-│ ● 核心依赖 (必装): aiohttp + filelock + pydantic      │
-├──────────────────────────────────────────────────────┤
-│  可选模块:                                            │
-│                                                      │
-│  [1] [Y] Dashboard — Web 管理面板  fastapi/uvicorn (~15MB) │
-│  [2] [Y] 导出 — MD/TXT/EPUB/HTML/DOCX/PDF  (~8MB)   │
-│  [3] [N] 发布 — 小说平台自动发布  playwright (~150MB) │
-│  [4] [N] 开发工具 — 测试套件  pytest (~10MB)          │
-│                                                      │
-│  [A] 全选    [N] 仅核心    [0] 确认                   │
-└──────────────────────────────────────────────────────┘
-
-  输入数字切换开关，0 确认:
-```
-
-- **新手建议**：直接按 `0` 确认默认选择（核心 + 面板 + 导出）
-- 网络慢的话选 `N` 仅核心（最小安装 ~5MB）
-- 选了"发布"模块会下载 Chromium 浏览器（~150MB），请耐心等待
-
-### 2.5 等待安装完成
-
-安装过程中你会看到：
-```text
-══════════════════════════════════════════════════════
-  Webnovel Writer — 安装
-══════════════════════════════════════════════════════
-
-  [1/3] 下载最新版本...
-  ──────────────────────────────────────────────────
-  ▸ 尝试下载: master.zip
-  下载中 [██████████████████████████████] 100%  2.3/2.3 MB
-
-  [2/3] 解压文件...
-  ──────────────────────────────────────────────────
-  ✓ 解压中...
-
-  [3/3] 安装依赖...
-  ──────────────────────────────────────────────────
-  ▸ 安装依赖: .opencode/scripts/requirements.txt
-  ✓ 安装依赖: .opencode/dashboard/requirements.txt
-
-┌──────────────────────────────────────────────────────┐
-│  安装完成！                                          │
-│                                                      │
-│  Webnovel Writer 已就绪。                            │
-│                                                      │
-│  下一步:                                             │
-│  1. python .opencode/scripts/webnovel.py init        │
-│  2. 编辑 .env 添加 API Key                           │
-│  3. python install.py --with dashboard               │
-└──────────────────────────────────────────────────────┘
-```
-
-看到 `安装完成！` 和操作指引就成功了。
-
-### 2.6 配置 API Key
-
-安装脚本在工作区目录（如 `D:\novels`）生成了一个 `.env.example` 文件。需要把它复制为 `.env` 并填入你的 API Key：
-
-**Windows**（PowerShell）：
-```powershell
-copy .env.example .env
-notepad .env
-```
-
-**Mac / Linux**：
-```bash
-cp .env.example .env
-nano .env
-```
-
-在打开的 `.env` 文件中，填入你的 Embedding API Key（必填）：
+安装后即可开始写作。如需 Embedding/Rerank 功能，复制 `.env.example` 为 `.env` 并填入 API Key：
 
 ```
 EMBED_API_KEY=你的API_Key填在这里
 ```
 
-> 💡 **去哪获取 API Key？** 如果你用的是硅基流动（SiliconFlow），去 https://siliconflow.cn 注册后在后台获取。如果你用 ModelScope，去 https://modelscope.cn 获取。Rerank 的 Key 可选，不填也能用。
-
-### 2.7 确认安装成功
-
-在终端（或 OpenCode 中）运行预检命令：
-
-**Windows**（PowerShell）：
-```powershell
-python .opencode\scripts\webnovel.py preflight
-```
-
-**Mac / Linux**：
-```bash
-python .opencode/scripts/webnovel.py preflight
-```
-
-显示 `preflight: OK` 即安装成功。
-
-### 2.8 在 OpenCode 中打开工作区
-
-启动 OpenCode，用 `File → Open Folder` 打开你的工作区目录（`D:\novels` 或 `~/novels`）。
-
-之后所有的 `/webnovel-xxx` 命令都在 OpenCode 的对话框中输入。
-
----
+> 💡 去[硅基流动](https://siliconflow.cn)或[ModelScope](https://modelscope.cn)注册获取 Key。Rerank Key 可选。
 
 ## 3. 初始化你的第一本书
 
@@ -325,7 +188,6 @@ AI 会分 7 步和你交互。以下是每一步会问什么，以及你需要�
 ```text
 工作区/                             ← D:\novels 或 ~/novels
 ├── .opencode/                     ← 插件代码
-├── install.py
 ├── .env
 └── 凡人资本论/                     ← 你的书项目！
     ├── .webnovel/
@@ -525,7 +387,7 @@ AI 会分 7 步和你交互。以下是每一步会问什么，以及你需要�
 2. 运行：
 
 ```bash
-python install.py
+npx @cszx/webnovel-writer-opencode init
 ```
 
 3. 选择 `[1] 安装 / 更新`
@@ -533,7 +395,7 @@ python install.py
 或者一句命令搞定：
 
 ```bash
-python install.py --update
+npx @cszx/webnovel-writer-opencode update
 ```
 
 ---
@@ -625,7 +487,7 @@ OpenCode 是一个 AI 编程助手软件。把它想象成一个"超级对话框
 
 ### Q: 安装时卡住不动怎么办？
 
-**现象**：运行 `python install.py` 后，在 "安装依赖" 步骤长时间没有反应。
+**现象**：运行 `npx @cszx/webnovel-writer-opencode init` 后，在 "安装依赖" 步骤长时间没有反应。
 
 **原因**：pip 在下载大文件（特别是 Chromium ~150MB），国内网络访问 pypi.org 可能很慢。
 
@@ -636,9 +498,8 @@ OpenCode 是一个 AI 编程助手软件。把它想象成一个"超级对话框
 
 ### Q: 提示 "无法连接到 GitHub"
 
-**解决**：在 `python install.py` 后面加镜像参数：
-```
-python install.py --mirror https://mirror.ghproxy.com/
+**解决**：（国内网络）使用镜像重试：
+npx @cszx/webnovel-writer-opencode init
 ```
 
 ### Q: 写作时上下文丢失（写着写着就忘了前面的设定）
@@ -682,7 +543,7 @@ python .opencode/scripts/webnovel.py init ./书名 "书名" "题材" --protagoni
 
 ### Q: 工作区目录 和 书项目目录 有什么区别？
 
-- **工作区目录**（如 `D:\novels`）：包含 `.opencode/`（插件代码）和 `install.py`，是你安装插件的地方
+- **工作区目录**（如 `D:\novels`）：包含 `.opencode/`（插件代码）是你安装插件的地方
 - **书项目目录**（如 `D:\novels\凡人资本论\`）：包含 `.webnovel/`、`设定集/`、`正文/`等，是你写书的地方
 
 写作时 OpenCode 需要在**书项目目录**下（不是工作区目录）。
@@ -690,14 +551,14 @@ python .opencode/scripts/webnovel.py init ./书名 "书名" "题材" --protagoni
 ### Q: 如何完全卸载？
 
 ```
-python install.py --uninstall --full --yes
+npx @cszx/webnovel-writer-opencode uninstall
 ```
 
 这会删除 `.opencode/`、`.venv/` 和所有依赖。你的书项目文件不会受影响（在独立目录下）。
 
 ### Q: 我安装时选了"仅核心"，现在想用导出/发布/Dashboard 怎么办？
 
-重新运行 `python install.py`，选择 `[1] 安装 / 更新`，在功能选择界面按对应的数字键开关需要的模块，然后 `0` 确认。已安装的模块不会重复下载，只装新增的。
+运行 `npx @cszx/webnovel-writer-opencode update` 更新到最新版。
 
 ### Q: 写好的章节在哪里？怎么阅读？
 
