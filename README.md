@@ -126,7 +126,6 @@ Donald Knuth 在《计算机程序设计艺术》中写道："程序是为人类
 
 ```
 webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
-├── install.py                    # 一键安装引导脚本
 ├── manifest.json                 # 文件清单（SHA256，增量更新用）
 ├── .env                          # API 配置（不提交）
 ├── README.md                     # 项目技术概览
@@ -146,7 +145,6 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   │   ├── server.py             # 服务器配置
 │   │   └── frontend/             # React 19 前端（ECharts）
 │   │
-│   ├── installer/                # 安装器（纯 stdlib）
 │   ├── genres/                   # 38+ 题材模板
 │   ├── references/               # 结构化知识库
 │   │   ├── csv/                  # 9 张知识表 + BM25 检索
