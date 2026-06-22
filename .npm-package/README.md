@@ -30,3 +30,4 @@ npx @cszx/webnovel-writer-opencode init
 ## 下一步
 
 安装完成后，编辑 `.env` 文件配置 API Key，然后在工作目录打开 AI 工具（Claude Code / Codex）开始写作。
+
