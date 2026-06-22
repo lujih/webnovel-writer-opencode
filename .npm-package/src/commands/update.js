@@ -149,14 +149,22 @@ export async function update(options = {}) {
     const es = createSpinner('解压中');
     es.start();
     try {
+      // 验证下载完整性
+      const { statSync } = await import('node:fs');
+      const fileSize = statSync(tmp).size;
+      if (fileSize < 1024) throw new Error('下载文件不完整（文件过小）');
+
       const count = await extractTarGz(tmp, dest, PREFIX);
+      if (count === 0) throw new Error('压缩包为空或格式异常');
       es.stop(`已更新 ${count} 个文件`);
       stepOk(2, 3, `已更新 ${count} 个文件`);
       try { unlinkSync(tmp); } catch {}
     } catch (e) {
-      es.fail(`解压失败: ${e.message}`);
+      es.fail('解压失败');
       try { unlinkSync(tmp); } catch {}
-      process.stderr.write('更新失败，请尝试重新运行 init。\n');
+      process.stderr.write(`\n  解压失败: ${e.message}\n`);
+      process.stderr.write('  可能是下载不完整。离线环境请使用 init 安装：\n');
+      process.stderr.write('    npx @cszx/webnovel-writer-opencode init\n');
       process.exit(1);
     }
 
