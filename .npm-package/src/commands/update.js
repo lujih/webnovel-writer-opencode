@@ -134,51 +134,65 @@ export async function update(options = {}) {
     const doit = await confirm('将下载最新版本覆盖现有 .opencode/，继续？', true);
     if (!doit) { info('已取消'); return; }
 
-    step(1, 3, '下载最新版本');
-    const urls = options.mirror
-      ? [`${options.mirror}${GITHUB_TARBALL}`]
-      : [GITHUB_TARBALL];
-    for (const m of MIRRORS) urls.push(`${m}${GITHUB_TARBALL}`);
+    // 优先用 npx 已下载的内置离线包
+    const offline = join(__pkgRoot, 'offline', 'opencode-bundle.tar.gz');
+    if (existsSync(offline)) {
+      step(1, 2, '从内置离线包更新');
+      const s = createSpinner('解压中');
+      s.start();
+      try {
+        const count = await extractTarGz(offline, dest);
+        s.stop(`已更新 ${count} 个文件`);
+        stepOk(1, 2, `已更新（离线包，${count} 个文件）`);
+      } catch (e) {
+        s.fail(`解压失败: ${e.message}`);
+        process.exit(1);
+      }
+    } else {
+      // 离线包不存在，回退网络下载
+      step(1, 3, '下载最新版本');
+      const urls = options.mirror
+        ? [`${options.mirror}${GITHUB_TARBALL}`]
+        : [GITHUB_TARBALL];
+      for (const m of MIRRORS) urls.push(`${m}${GITHUB_TARBALL}`);
 
-    const tmp = join(cwd, '_opencode_update.tar.gz');
-    const s = createSpinner('下载中');
-    s.start();
-    if (!(await downloadWithFallback(urls, tmp))) {
-      s.fail('下载失败');
-      process.stderr.write('\n');
-      process.stderr.write('  所有下载地址均不可用。\n');
-      process.stderr.write('  请检查网络连接，或使用镜像：\n');
-      process.stderr.write('    npx @cszx/webnovel-writer-opencode update --mirror https://ghproxy.com/\n');
-      process.stderr.write('  离线环境请重新运行 init 使用内置离线包安装。\n');
-      process.exit(1);
+      const tmp = join(cwd, '_opencode_update.tar.gz');
+      const s = createSpinner('下载中');
+      s.start();
+      if (!(await downloadWithFallback(urls, tmp))) {
+        s.fail('下载失败');
+        process.stderr.write('\n  所有下载地址均不可用。');
+        process.stderr.write('\n  请使用 init 离线安装:\n');
+        process.stderr.write('    npx @cszx/webnovel-writer-opencode init\n');
+        process.exit(1);
+      }
+      s.stop('下载完成');
+      stepOk(1, 3, '下载完成');
+
+      step(2, 3, '解压更新');
+      const es = createSpinner('解压中');
+      es.start();
+      try {
+        const count = await extractTarGz(tmp, dest, PREFIX);
+        if (count === 0) throw new Error('压缩包为空');
+        es.stop(`已更新 ${count} 个文件`);
+        stepOk(2, 3, `已更新 ${count} 个文件`);
+        try { unlinkSync(tmp); } catch {}
+      } catch (e) {
+        es.fail('解压失败');
+        try { unlinkSync(tmp); } catch {}
+        process.stderr.write(`\n  解压失败: ${e.message}\n`);
+        process.stderr.write('  请使用 init 离线安装:\n');
+        process.stderr.write('    npx @cszx/webnovel-writer-opencode init\n');
+        process.exit(1);
+      }
     }
-    s.stop('下载完成');
-    stepOk(1, 3, '下载完成');
 
-    step(2, 3, '解压更新');
-    const es = createSpinner('解压中');
-    es.start();
-    try {
-      const fileSize = statSync(tmp).size;
-      if (fileSize < 1024) throw new Error('下载文件不完整（文件过小）');
-
-      const count = await extractTarGz(tmp, dest, PREFIX);
-      if (count === 0) throw new Error('压缩包为空或格式异常');
-      es.stop(`已更新 ${count} 个文件`);
-      stepOk(2, 3, `已更新 ${count} 个文件`);
-      try { unlinkSync(tmp); } catch {}
-    } catch (e) {
-      es.fail('解压失败');
-      try { unlinkSync(tmp); } catch {}
-      process.stderr.write(`\n  解压失败: ${e.message}\n`);
-      process.stderr.write('  可能是下载不完整。离线环境请使用 init 安装：\n');
-      process.stderr.write('    npx @cszx/webnovel-writer-opencode init\n');
-      process.exit(1);
-    }
-
-    step(3, 3, '更新 Python 依赖');
+    const stepNum = existsSync(join(__pkgRoot, 'offline', 'opencode-bundle.tar.gz')) ? 2 : 3;
+    const total = stepNum;
+    step(stepNum, total, '更新 Python 依赖');
     const pr = await installPythonDeps(cwd);
-    stepOk(3, 3, pr === 'updated' ? 'Python 依赖已更新' : '已跳过');
+    stepOk(stepNum, total, pr === 'updated' ? 'Python 依赖已更新' : '已跳过');
 
     const info = {
       installer: getInstallerVersion(),
