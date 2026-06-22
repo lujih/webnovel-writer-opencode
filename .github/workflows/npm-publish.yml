@@ -1,6 +1,5 @@
 name: npm-publish
 
-# 仅在 manifest.yml 创建新 tag 后触发，自动发布到 npm
 on:
   push:
     tags:
@@ -9,6 +8,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: .npm-package
@@ -36,3 +37,9 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
+
+      - name: 生成 Release Notes
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: .npm-package/cszx-webnovel-writer-opencode-*.tgz
