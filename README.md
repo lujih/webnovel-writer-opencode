@@ -58,7 +58,7 @@ Webnovel Writer for OpenCode 是一个面向长篇中文网文的 AI 辅助写�
 ## 3. 安装和使用说明
 > **新手指南** &nbsp; 从安装到完成第一本书的手把手教程，每一步都有详细说明：[docs/guides/getting-started.md](docs/guides/getting-started.md)
 
-### 3.1 一键安装（推荐）
+### 3.1 安装
 
 **系统要求**：Node.js ≥ 22、Python 3.10+、OpenCode 运行环境。
 
@@ -68,42 +68,10 @@ npx @cszx/webnovel-writer-opencode init
 
 离线包内置（1.7 MB），无需联网下载。自动检测 Python 并安装依赖。完成后在工作目录打开 OpenCode 即可开始写作。
 
-后续更新和卸载：
-
 ```bash
-npx @cszx/webnovel-writer-opencode update   # 更新到最新版
+npx @cszx/webnovel-writer-opencode update   # 更新
 npx @cszx/webnovel-writer-opencode uninstall # 卸载
 ```
-
-### 3.2 Python 安装脚本（备选）
-
-适用于无 Node.js 环境的场景。
-
-**macOS / Linux**：
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/lujih/webnovel-writer-opencode/master/install.py | python3
-```
-
-**Windows**（PowerShell）：
-
-```powershell
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/lujih/webnovel-writer-opencode/master/install.py -OutFile install.py
-python install.py
-```
-
-运行 `python install.py`（无参数）进入交互式菜单：
-
-| 命令 | 说明 |
-|------|------|
-| `python install.py` | 交互菜单 |
-| `python install.py --update` | 更新到最新版 |
-| `python install.py --incremental` | 增量更新（仅变更文件） |
-| `python install.py --clean` | 清洁安装 |
-| `python install.py --uninstall` | 卸载 |
-| `python install.py --venv` | 虚拟环境安装 |
-
-中国大陆用户下载失败时自动切换 GitHub 镜像。
 
 ### 3.2 配置 API Key
 
