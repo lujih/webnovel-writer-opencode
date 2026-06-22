@@ -1,52 +1,37 @@
 {
-  "version": "v2.9.1-20260621.1436",
+  "version": "v2.9.1-20260622.0310",
   "tag": "v2.9.1",
-  "updated": "2026-06-21T14:36:02Z",
+  "updated": "2026-06-22T03:10:39Z",
   "changelog": [
     {
-      "hash": "3ffaf33",
+      "hash": "b1ca86d",
       "type": "refactor",
-      "message": "refactor: remove .opencode/agents/references/context-agent-example.md (moved to correct location)"
+      "message": "refactor: \u5220\u9664 Python \u5b89\u88c5\u811a\u672c"
     },
     {
-      "hash": "e4df507",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u8bbe\u5b9a\u96c6/\u4e16\u754c\u89c2.md (moved to correct location)"
+      "hash": "267a366",
+      "type": "docs",
+      "message": "docs: \u6587\u6863\u66f4\u65b0\u4e3a npx \u5b89\u88c5\u65b9\u5f0f"
     },
     {
-      "hash": "9e6f211",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u6b63\u6587/\u7b2c0004\u7ae0-\u8fe6\u5357\u5b66\u9662\u7684\u8003\u9a8c.md (moved to correct location)"
+      "hash": "55ba910",
+      "type": "docs",
+      "message": "docs: \u79fb\u9664 Python \u5b89\u88c5\u65b9\u5f0f\uff0cnpx \u4e3a\u552f\u4e00\u5b89\u88c5\u5165\u53e3"
     },
     {
-      "hash": "1631653",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u8be6\u7ec6\u5927\u7eb2.md (moved to correct location)"
-    },
-    {
-      "hash": "674137d",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u65f6\u95f4\u7ebf.md (moved to correct location)"
-    },
-    {
-      "hash": "cf21fe6",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u603b\u7eb2.md (moved to correct location)"
-    },
-    {
-      "hash": "73b0d38",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/evals.json (moved to correct location)"
-    },
-    {
-      "hash": "baafcc2",
-      "type": "refactor",
-      "message": "refactor: move evals/test-project and context-agent-example to conform to OpenCode spec"
-    },
-    {
-      "hash": "680e7f7",
+      "hash": "e50b870",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260611.1539 [skip ci]"
+      "message": "chore: \u6392\u9664 npm pack \u4ea7\u7269\u548c\u6d4f\u89c8\u5668\u4e34\u65f6\u6587\u4ef6"
+    },
+    {
+      "hash": "da45d50",
+      "type": "feat",
+      "message": "feat: npx \u4e00\u952e\u5b89\u88c5\u5668 + README \u66f4\u65b0"
+    },
+    {
+      "hash": "ad08be2",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260621.1436 [skip ci]"
     }
   ],
   "files": {
@@ -890,38 +875,6 @@
       "sha256": "94ffcfa972335dc31b342effd529b9d7ba8ab1adef00ec50eaaa6a3a1c06c64c",
       "size": 3785
     },
-    ".opencode/scripts/tests/installer/__init__.py": {
-      "sha256": "a8da9be7a8c61b69713efe7a704aacde5afdb2d328c61fa0d5ecfcfb705d40a5",
-      "size": 39
-    },
-    ".opencode/scripts/tests/installer/test_preflight.py": {
-      "sha256": "b7da8362167b8883704562b8bee465ca7a3460dff3b1c8ada905d5b649a55533",
-      "size": 1368
-    },
-    ".opencode/scripts/tests/installer/test_deps.py": {
-      "sha256": "11f49f52d81b0bf35557a035c17ecb5c63af2a0d70883674778490818851753a",
-      "size": 1055
-    },
-    ".opencode/scripts/tests/installer/test_check.py": {
-      "sha256": "e52d2b5fcaaef49837e89b5b178692cc71a5ea954a44a73a32b1a9e5ccf94c6d",
-      "size": 2104
-    },
-    ".opencode/scripts/tests/installer/test_integration.py": {
-      "sha256": "1aa4826b7e504a724030e50783d8c81c2493809bcf6d23d4b13e820dd296babf",
-      "size": 2864
-    },
-    ".opencode/scripts/tests/installer/test_update.py": {
-      "sha256": "a66242289a94fdd932b9e75ec6c39ce5a31f3b6133980aff58766ceafc1fe5f5",
-      "size": 2411
-    },
-    ".opencode/scripts/tests/installer/test_ui.py": {
-      "sha256": "fad80bade028b9e35a48b7a66f171fa3ef222b19c1f11a695e7ecdb4b39c5a07",
-      "size": 1411
-    },
-    ".opencode/scripts/tests/installer/test_fetch.py": {
-      "sha256": "a0e9beafbcaa4ad985ae03c5fc5bd0ddd872e7c3dd276c08243a04129a89d22e",
-      "size": 1905
-    },
     ".opencode/dashboard/watcher.py": {
       "sha256": "996a429848580e105ed77aa03b5fdd5591dd3fc91e64536e92100b6c38c8e3d4",
       "size": 4843
@@ -1305,38 +1258,6 @@
     ".opencode/skills/webnovel-init/references/worldbuilding/power-systems.md": {
       "sha256": "627a35713d25ddd0f41560c21160e6511f75edffde9f2ea112fed383d03f0523",
       "size": 5063
-    },
-    ".opencode/installer/__init__.py": {
-      "sha256": "fca41afd97d96cf110768a2ec1275dea5ddacd5571c1cd2c0e14c72c2c1abfd0",
-      "size": 58
-    },
-    ".opencode/installer/preflight.py": {
-      "sha256": "d6ba08e3b897fe02353f31c2ca43841796ef90da62aa0426187c18cb472f07ad",
-      "size": 5852
-    },
-    ".opencode/installer/check.py": {
-      "sha256": "77baceeb4e3d4589b1d468cef15cf039eb44f78fc1a72f2356b7fdf230a84a15",
-      "size": 5735
-    },
-    ".opencode/installer/uninstall.py": {
-      "sha256": "7b235b632990778a950ce90995e6999ab347ede31240925fe599d1f5b60f96f3",
-      "size": 1918
-    },
-    ".opencode/installer/deps.py": {
-      "sha256": "041d2c8c566d78e2f180178b05574cb8900d264a7d8d73ec5ed1327f05a78277",
-      "size": 5647
-    },
-    ".opencode/installer/fetch.py": {
-      "sha256": "313e502d9e76d6a77241bf44746b257b282e68714213d0dc49e501f05811a929",
-      "size": 3143
-    },
-    ".opencode/installer/update.py": {
-      "sha256": "b59a114bfa8a2be2ae6217fc82377737425df15651594a29d44ba8dca95f2e27",
-      "size": 6942
-    },
-    ".opencode/installer/ui.py": {
-      "sha256": "5c2da74162794f4f1c8bf1e98100c98eee887ac0269293ccc288c9f1c6e56c75",
-      "size": 8671
     },
     ".opencode/agents/observer-agent.md": {
       "sha256": "74dd7ce22b111e4f788a3c33639e80e1048ebea196032668ae4cc024c4d6262d",
