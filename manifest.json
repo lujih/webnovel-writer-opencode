@@ -1,8 +1,18 @@
 {
-  "version": "v2.9.2-20260622.0323",
+  "version": "v2.9.2",
   "tag": "v2.9.2",
-  "updated": "2026-06-22T03:23:10Z",
+  "updated": "2026-06-22T03:29:54Z",
   "changelog": [
+    {
+      "hash": "7c80f9f",
+      "type": "ci",
+      "message": "ci: \u4fee\u590d npm-publish \u89e6\u53d1 + \u6dfb\u52a0 Release Notes"
+    },
+    {
+      "hash": "bbf807c",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.2-20260622.0323 [skip ci]"
+    },
     {
       "hash": "dc72122",
       "type": "fix",
@@ -22,6 +32,166 @@
       "hash": "270c8f4",
       "type": "chore",
       "message": "chore: update manifest to v2.9.1-20260622.0310 [skip ci]"
+    },
+    {
+      "hash": "b1ca86d",
+      "type": "refactor",
+      "message": "refactor: \u5220\u9664 Python \u5b89\u88c5\u811a\u672c"
+    },
+    {
+      "hash": "267a366",
+      "type": "docs",
+      "message": "docs: \u6587\u6863\u66f4\u65b0\u4e3a npx \u5b89\u88c5\u65b9\u5f0f"
+    },
+    {
+      "hash": "55ba910",
+      "type": "docs",
+      "message": "docs: \u79fb\u9664 Python \u5b89\u88c5\u65b9\u5f0f\uff0cnpx \u4e3a\u552f\u4e00\u5b89\u88c5\u5165\u53e3"
+    },
+    {
+      "hash": "e50b870",
+      "type": "chore",
+      "message": "chore: \u6392\u9664 npm pack \u4ea7\u7269\u548c\u6d4f\u89c8\u5668\u4e34\u65f6\u6587\u4ef6"
+    },
+    {
+      "hash": "da45d50",
+      "type": "feat",
+      "message": "feat: npx \u4e00\u952e\u5b89\u88c5\u5668 + README \u66f4\u65b0"
+    },
+    {
+      "hash": "ad08be2",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260621.1436 [skip ci]"
+    },
+    {
+      "hash": "3ffaf33",
+      "type": "refactor",
+      "message": "refactor: remove .opencode/agents/references/context-agent-example.md (moved to correct location)"
+    },
+    {
+      "hash": "e4df507",
+      "type": "refactor",
+      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u8bbe\u5b9a\u96c6/\u4e16\u754c\u89c2.md (moved to correct location)"
+    },
+    {
+      "hash": "9e6f211",
+      "type": "refactor",
+      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u6b63\u6587/\u7b2c0004\u7ae0-\u8fe6\u5357\u5b66\u9662\u7684\u8003\u9a8c.md (moved to correct location)"
+    },
+    {
+      "hash": "1631653",
+      "type": "refactor",
+      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u8be6\u7ec6\u5927\u7eb2.md (moved to correct location)"
+    },
+    {
+      "hash": "674137d",
+      "type": "refactor",
+      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u65f6\u95f4\u7ebf.md (moved to correct location)"
+    },
+    {
+      "hash": "cf21fe6",
+      "type": "refactor",
+      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u603b\u7eb2.md (moved to correct location)"
+    },
+    {
+      "hash": "73b0d38",
+      "type": "refactor",
+      "message": "refactor: remove .opencode/agents/evals/evals.json (moved to correct location)"
+    },
+    {
+      "hash": "baafcc2",
+      "type": "refactor",
+      "message": "refactor: move evals/test-project and context-agent-example to conform to OpenCode spec"
+    },
+    {
+      "hash": "680e7f7",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260611.1539 [skip ci]"
+    },
+    {
+      "hash": "898d506",
+      "type": "fix",
+      "message": "fix: \u6e05\u6d01\u5b89\u88c5 PermissionError \u65f6\u53cb\u597d\u63d0\u793a\u5173\u95ed IDE"
+    },
+    {
+      "hash": "0b2c95f",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260611.0637 [skip ci]"
+    },
+    {
+      "hash": "ef0208f",
+      "type": "fix",
+      "message": "fix: \u5b89\u88c5\u811a\u672c UI \u7ec6\u8282\u4f18\u5316"
+    },
+    {
+      "hash": "f76ab06",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260611.0627 [skip ci]"
+    },
+    {
+      "hash": "aaa53d4",
+      "type": "fix",
+      "message": "fix: \u6697\u8272\u6a21\u5f0f\u91cd\u8bbe\u8ba1 + 7 \u9879\u4ee3\u7801\u4fee\u590d"
+    },
+    {
+      "hash": "b3d33fe",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260611.0557 [skip ci]"
+    },
+    {
+      "hash": "2b725ca",
+      "type": "fix",
+      "message": "fix: \u770b\u677f UI \u4f18\u5316 \u2014 ThemeToggle \u4f4d\u7f6e + \u4f0f\u7b14\u63d0\u9192\u5185\u5bb9\u663e\u793a"
+    },
+    {
+      "hash": "5ed514e",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260611.0538 [skip ci]"
+    },
+    {
+      "hash": "1d5efff",
+      "type": "fix",
+      "message": "fix: Windows \u63a7\u5236\u53f0 ANSI \u4e71\u7801 \u2014 SetConsoleMode \u6b63\u786e\u7528\u6cd5 + \u964d\u7ea7\u56de\u9000"
+    },
+    {
+      "hash": "2933503",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260610.1225 [skip ci]"
+    },
+    {
+      "hash": "d8175d4",
+      "type": "fix",
+      "message": "fix: \u5ba1\u67e5\u53d1\u73b0\u7684 6 \u9879\u4fee\u590d\uff08P0-P2\uff09"
+    },
+    {
+      "hash": "c8a2b79",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260610.1159 [skip ci]"
+    },
+    {
+      "hash": "fc3ae87",
+      "type": "fix",
+      "message": "fix: \u5b89\u88c5\u811a\u672c UI \u91cd\u6784 + \u591a\u5904 Bug \u4fee\u590d + \u6587\u6863\u7ef4\u62a4"
+    },
+    {
+      "hash": "8e839ad",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.1-20260609.1604 [skip ci]"
+    },
+    {
+      "hash": "3acad17",
+      "type": "fix",
+      "message": "fix: \u5ba1\u67e5\u5206\u6790\u9875\u9762\u6e32\u67d3\u9519\u8bef \u2014 dimension_averages/dimension_trends \u4e3a null \u65f6 Object.keys \u5d29\u6e83"
+    },
+    {
+      "hash": "6b90b7a",
+      "type": "chore",
+      "message": "chore: release v2.9.1 [skip ci]"
+    },
+    {
+      "hash": "14185cf",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.0-20260609.1514 [skip ci]"
     }
   ],
   "files": {
