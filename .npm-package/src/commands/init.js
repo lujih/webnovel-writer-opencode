@@ -99,8 +99,18 @@ async function downloadFile(url, destPath, redirectCount = 0) {
         return reject(new Error(`HTTP ${response.statusCode}`));
       }
 
-      response.on('data', (chunk) => { file.write(chunk); });
-      response.on('end', () => { file.end(); resolve(); });
+      const total = parseInt(response.headers['content-length'], 10) || 0;
+      let dl = 0;
+      response.on('data', (chunk) => { dl += chunk.length; file.write(chunk); });
+      response.on('end', () => {
+        file.end();
+        if (total > 0 && dl < total) {
+          try { unlinkSync(destPath); } catch {}
+          reject(new Error(`下载不完整 (${dl}/${total})，请重试或使用 --offline`));
+        } else {
+          resolve();
+        }
+      });
       response.on('error', (err) => { file.close(); reject(err); });
     }).on('error', reject);
   });

@@ -2,7 +2,7 @@
  * update 命令 — 更新 .opencode/ 到最新版本
  */
 
-import { existsSync, unlinkSync, createWriteStream, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, unlinkSync, createWriteStream, mkdirSync, readFileSync, writeFileSync, statSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { get as httpsGet } from 'node:https';
@@ -66,8 +66,18 @@ async function downloadFile(url, destPath, redirectCount = 0) {
         try { unlinkSync(destPath); } catch {}
         return reject(new Error(`HTTP ${response.statusCode}`));
       }
-      response.on('data', (chunk) => file.write(chunk));
-      response.on('end', () => { file.end(); resolve(); });
+      const totalSize = parseInt(response.headers['content-length'], 10) || 0;
+      let downloaded = 0;
+      response.on('data', (chunk) => { downloaded += chunk.length; file.write(chunk); });
+      response.on('end', () => {
+        file.end();
+        if (totalSize > 0 && downloaded < totalSize) {
+          try { unlinkSync(destPath); } catch {}
+          reject(new Error(`下载不完整 (${downloaded}/${totalSize})，请重试或使用 init 离线安装`));
+        } else {
+          resolve();
+        }
+      });
       response.on('error', (err) => { file.close(); reject(err); });
     }).on('error', reject);
   });
@@ -149,8 +159,6 @@ export async function update(options = {}) {
     const es = createSpinner('解压中');
     es.start();
     try {
-      // 验证下载完整性
-      const { statSync } = await import('node:fs');
       const fileSize = statSync(tmp).size;
       if (fileSize < 1024) throw new Error('下载文件不完整（文件过小）');
 
