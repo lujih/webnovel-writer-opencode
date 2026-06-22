@@ -25,6 +25,7 @@ from pathlib import Path
 from runtime_compat import enable_windows_utf8_stdio
 from typing import Any, Dict, List
 import re
+import shutil
 
 # 安全修复：导入安全工具函数
 from security_utils import sanitize_commit_message, atomic_write_json, is_git_available
@@ -326,9 +327,12 @@ def init_project(
         try:
             state: Dict[str, Any] = json.loads(state_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+            corrupt_path = state_path.with_name(f"state.corrupt_{timestamp}.json")
+            shutil.copy2(state_path, corrupt_path)
             raise SystemExit(
                 f"state.json 已损坏，无法解析：{e}\n"
-                f"请先修复或从备份恢复：{state_path}.bak\n"
+                f"原文件已备份至 {corrupt_path.name} 供手工抢救。\n"
                 f"如需强制重建，请删除 {state_path} 后重新运行初始化。"
             )
     else:

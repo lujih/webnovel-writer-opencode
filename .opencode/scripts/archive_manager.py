@@ -123,9 +123,8 @@ class ArchiveManager:
             return json.load(f)
 
     def save_archive(self, archive_file, data):
-        """保存归档文件"""
-        with open(archive_file, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        """保存归档文件（原子化写入）"""
+        atomic_write_json(archive_file, data, use_lock=True, backup=True)
 
     def check_trigger_conditions(self, state):
         """检查是否需要触发归档"""
@@ -477,7 +476,11 @@ class ArchiveManager:
         print(f"\n💾 文件大小: {trigger['file_size_mb']:.2f} MB → {new_size_mb:.2f} MB (节省 {saved_mb:.2f} MB)")
 
     def restore_character(self, name):
-        """恢复归档的角色（v5.1 引入：使用 IndexManager 恢复状态）"""
+        """恢复归档的角色（v5.1 引入：使用 IndexManager 恢复状态）
+
+        delete-last 模式：先尝试恢复实体，成功后再从归档删除。
+        避免在恢复实体失败时归档记录已删除导致的数据丢失。
+        """
         archived = self.load_archive(self.characters_archive)
 
         # 查找角色
@@ -489,23 +492,29 @@ class ArchiveManager:
 
         if not char_to_restore:
             print(f"❌ 归档中未找到角色: {name}")
-            return
+            return False
 
-        # 移除 archived_at 字段
-        char_to_restore.pop("archived_at", None)
+        restored_character = dict(char_to_restore)
+        restored_character.pop("archived_at", None)
 
-        # 原子性修复：先从归档中移除
-        archived = [char for char in archived if char["name"] != name]
-        self.save_archive(self.characters_archive, archived)
-
-        # v5.1 引入: 恢复到 SQLite (通过 IndexManager)
-        char_id = char_to_restore.get("id", char_to_restore.get("name", "unknown"))
+        # v5.1 引入: 先恢复到 SQLite (通过 IndexManager)
+        char_id = restored_character.get("id", restored_character.get("name", "unknown"))
         try:
-            # 更新实体状态为 active
             self._index_manager.update_entity_field(char_id, "status", "active")
-            print(f"✅ 角色已恢复: {name}")
         except Exception as e:
-            print(f"⚠️ 实体状态恢复失败: {e}")
+            print(f"❌ 实体状态恢复失败，归档已保留: {e}")
+            return False
+
+        # 恢复成功后才从归档中移除
+        archived = [char for char in archived if char.get("name") != name]
+        try:
+            self.save_archive(self.characters_archive, archived)
+        except Exception as e:
+            print(f"❌ 归档更新失败，角色已恢复但归档未删除: {e}")
+            return False
+
+        print(f"✅ 角色已恢复: {name}")
+        return True
 
     def show_stats(self):
         """显示归档统计"""

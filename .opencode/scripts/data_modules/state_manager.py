@@ -252,7 +252,7 @@ class StateManager:
             ]
         )
         if not has_pending:
-            return
+            return {"saved": False, "sqlite_sync_ok": True}
 
         self.config.ensure_dirs()
 
@@ -407,6 +407,8 @@ class StateManager:
                 else:
                     self._restore_sqlite_pending(sqlite_pending_snapshot)
 
+                return {"saved": True, "sqlite_sync_ok": sqlite_sync_ok}
+
         except filelock.Timeout:
             raise RuntimeError("无法获取 state.json 文件锁，请稍后重试")
 
@@ -445,7 +447,11 @@ class StateManager:
 
         # 方式2: 使用 add_entity/update_entity 收集的增量数据。
         # 数据缓存在 _pending_entity_patches 等变量中。
-        return self._sync_pending_patches_to_sqlite(processed_appearances)
+        try:
+            return self._sync_pending_patches_to_sqlite(processed_appearances)
+        except Exception as exc:
+            logger.warning("SQLite sync (pending patches) 失败: %s", exc)
+            return False
 
     def _sync_pending_patches_to_sqlite(self, processed_appearances: set = None) -> bool:
         """同步 _pending_entity_patches 等到 SQLite（v5.1 引入，v5.4 沿用）
