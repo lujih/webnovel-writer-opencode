@@ -57,6 +57,13 @@ _v52_*.txt
 *_utf8_sample.txt
 C*tool-results*.txt
 
+# npm package build artifacts
+.npm-package/*.tgz
+.npm-package/offline/_download.tar.gz
+
+# Browser automation artifacts
+.playwright-mcp/
+
 # Test / diagnostic files
 test_gemini.env
 test_gemini_diag.py
