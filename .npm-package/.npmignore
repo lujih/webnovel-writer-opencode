@@ -1,0 +1,6 @@
+# 排除不需要发布的文件
+.DS_Store
+node_modules/
+*.log
+.git/
+scripts/_download.tar.gz

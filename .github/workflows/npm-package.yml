@@ -1,0 +1,34 @@
+name: npm-package
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - '.npm-package/**'
+      - '.opencode/**'
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .npm-package
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: 构建离线包
+        run: node scripts/build-bundle.js
+
+      - name: npm pack
+        run: npm pack
+
+      - name: 验证提取
+        run: node scripts/verify-bundle.js
+
+      - name: npm publish (dry run)
+        run: npm publish --dry-run

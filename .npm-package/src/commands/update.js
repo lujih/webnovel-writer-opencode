@@ -1,0 +1,155 @@
+/**
+ * update 命令 — 更新 .opencode/ 到最新版本
+ */
+
+import { existsSync, unlinkSync, createWriteStream, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { get as httpsGet } from 'node:https';
+import { get as httpGet } from 'node:http';
+import { spawn } from 'node:child_process';
+
+import { step, stepOk, info, createSpinner, confirm, success } from '../core/ui.js';
+import { extractTarGz } from '../core/extract.js';
+import { detectPython } from '../core/python.js';
+
+const __pkgRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
+
+function getInstallerVersion() {
+  try {
+    const mf = join(__pkgRoot, 'package.json');
+    if (existsSync(mf)) {
+      const { version } = JSON.parse(readFileSync(mf, 'utf-8'));
+      if (version) return version;
+    }
+  } catch {}
+  return '0.0.0';
+}
+
+const REPO = 'lujih/webnovel-writer-opencode';
+const BRANCH = 'master';
+const GITHUB_TARBALL = `https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz`;
+const MIRRORS = ['https://ghproxy.com/', 'https://mirror.ghproxy.com/'];
+const PREFIX = `${REPO.split('/')[1]}-${BRANCH}/.opencode`;
+
+async function downloadFile(url, destPath, redirectCount = 0) {
+  if (redirectCount > 10) throw new Error('重定向次数过多');
+  mkdirSync(dirname(destPath), { recursive: true });
+
+  return new Promise((resolve, reject) => {
+    const file = createWriteStream(destPath);
+    file.on('error', (err) => { file.close(); try { unlinkSync(destPath); } catch {} reject(err); });
+
+    const getFn = url.startsWith('https') ? httpsGet : httpGet;
+    getFn(url, (response) => {
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        file.close();
+        try { unlinkSync(destPath); } catch {}
+        return downloadFile(response.headers.location, destPath, redirectCount + 1).then(resolve).catch(reject);
+      }
+      if (response.statusCode !== 200) {
+        file.close();
+        try { unlinkSync(destPath); } catch {}
+        return reject(new Error(`HTTP ${response.statusCode}`));
+      }
+      response.on('data', (chunk) => file.write(chunk));
+      response.on('end', () => { file.end(); resolve(); });
+      response.on('error', (err) => { file.close(); reject(err); });
+    }).on('error', reject);
+  });
+}
+
+async function downloadWithFallback(urls, destPath) {
+  for (const url of urls) {
+    try { await downloadFile(url, destPath); return true; } catch {}
+  }
+  return false;
+}
+
+async function installPythonDeps(cwd) {
+  const reqFile = join(cwd, '.opencode', 'scripts', 'requirements.txt');
+  if (!existsSync(reqFile)) return 'skipped';
+
+  const python = await detectPython();
+  if (!python) { info('未检测到 Python，跳过依赖更新'); return 'skipped'; }
+
+  const s = createSpinner('更新 Python 依赖');
+  s.start();
+  return new Promise((resolve) => {
+    const child = spawn(python, ['-m', 'pip', 'install', '-r', reqFile, '--upgrade'], { stdio: 'pipe' });
+    child.on('close', (code) => {
+      if (code === 0) { s.stop('Python 依赖已更新'); resolve('updated'); }
+      else { s.fail('pip 更新失败'); resolve('failed'); }
+    });
+    child.on('error', () => { s.fail('pip 启动失败'); resolve('failed'); });
+  });
+}
+
+export async function update(options = {}) {
+  const cwd = process.cwd();
+  const dest = join(cwd, '.opencode');
+
+  if (!existsSync(dest)) {
+    process.stderr.write('未找到 .opencode/，请先运行 init 安装。\n');
+    process.exit(1);
+  }
+
+  try {
+    const doit = await confirm('将下载最新版本覆盖现有 .opencode/，继续？', true);
+    if (!doit) { info('已取消'); return; }
+
+    step(1, 3, '下载最新版本');
+    const urls = [GITHUB_TARBALL];
+    for (const m of MIRRORS) urls.push(`${m}${GITHUB_TARBALL}`);
+
+    const tmp = join(cwd, '_opencode_update.tar.gz');
+    const s = createSpinner('下载中');
+    s.start();
+    if (!(await downloadWithFallback(urls, tmp))) {
+      s.fail('下载失败');
+      process.stderr.write('请检查网络连接，或稍后重试。\n');
+      process.exit(1);
+    }
+    s.stop('下载完成');
+    stepOk(1, 3, '下载完成');
+
+    step(2, 3, '解压更新');
+    const es = createSpinner('解压中');
+    es.start();
+    try {
+      const count = await extractTarGz(tmp, dest, PREFIX);
+      es.stop(`已更新 ${count} 个文件`);
+      stepOk(2, 3, `已更新 ${count} 个文件`);
+      try { unlinkSync(tmp); } catch {}
+    } catch (e) {
+      es.fail(`解压失败: ${e.message}`);
+      try { unlinkSync(tmp); } catch {}
+      process.stderr.write('更新失败，请尝试重新运行 init。\n');
+      process.exit(1);
+    }
+
+    step(3, 3, '更新 Python 依赖');
+    const pr = await installPythonDeps(cwd);
+    stepOk(3, 3, pr === 'updated' ? 'Python 依赖已更新' : '已跳过');
+
+    const info = {
+      installer: getInstallerVersion(),
+      source: 'network',
+      timestamp: new Date().toISOString(),
+    };
+    try {
+      const mf = join(dest, 'manifest.json');
+      if (existsSync(mf)) {
+        const { version, tag } = JSON.parse(readFileSync(mf, 'utf-8'));
+        if (version) info.opencode_version = version;
+        if (tag) info.opencode_tag = tag;
+      }
+      writeFileSync(join(dest, 'version.json'), JSON.stringify(info, null, 2), 'utf-8');
+    } catch {}
+
+    success('更新完成！', ['已更新到最新版本']);
+  } catch (e) {
+    process.stderr.write(`\n更新失败: ${e.message}\n`);
+    process.exit(1);
+  }
+}

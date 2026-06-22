@@ -3,6 +3,7 @@
 [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 [![OpenCode](https://img.shields.io/badge/OpenCode-Compatible-purple.svg)](https://opencode.ai)
 [![Python](https://img.shields.io/badge/Python-3.10+-green.svg)](https://python.org)
+[![npm](https://img.shields.io/npm/v/@cszx/webnovel-writer-opencode?color=red)](https://www.npmjs.com/package/@cszx/webnovel-writer-opencode)
 
 ## 1. 引言
 
@@ -57,14 +58,26 @@ Webnovel Writer for OpenCode 是一个面向长篇中文网文的 AI 辅助写�
 ## 3. 安装和使用说明
 > **新手指南** &nbsp; 从安装到完成第一本书的手把手教程，每一步都有详细说明：[docs/guides/getting-started.md](docs/guides/getting-started.md)
 
-### 3.1 提供详细的安装步骤
+### 3.1 一键安装（推荐）
 
-安装过程分为三个步骤：环境准备、安装脚本、配置密钥。
+**系统要求**：Node.js ≥ 22、Python 3.10+、OpenCode 运行环境。
 
-**系统要求**：
-- Python 3.10 或更高版本
-- OpenCode 运行环境
-- 网络连接
+```bash
+npx @cszx/webnovel-writer-opencode init
+```
+
+离线包内置（1.7 MB），无需联网下载。自动检测 Python 并安装依赖。完成后在工作目录打开 OpenCode 即可开始写作。
+
+后续更新和卸载：
+
+```bash
+npx @cszx/webnovel-writer-opencode update   # 更新到最新版
+npx @cszx/webnovel-writer-opencode uninstall # 卸载
+```
+
+### 3.2 Python 安装脚本（备选）
+
+适用于无 Node.js 环境的场景。
 
 **macOS / Linux**：
 
@@ -79,11 +92,11 @@ Invoke-WebRequest -Uri https://raw.githubusercontent.com/lujih/webnovel-writer-o
 python install.py
 ```
 
-运行 `python install.py`（无参数）进入交互式菜单，自动检测安装状态并提供 6 种操作选项：
+运行 `python install.py`（无参数）进入交互式菜单：
 
 | 命令 | 说明 |
 |------|------|
-| `python install.py` | 交互菜单（推荐） |
+| `python install.py` | 交互菜单 |
 | `python install.py --update` | 更新到最新版 |
 | `python install.py --incremental` | 增量更新（仅变更文件） |
 | `python install.py --clean` | 清洁安装 |

@@ -1,0 +1,35 @@
+{
+  "name": "@cszx/webnovel-writer-opencode",
+  "version": "1.2.1",
+  "description": "Webnovel Writer OpenCode Edition — 网文 AI 写作工具链安装器 (lujih 分支)",
+  "bin": {
+    "webnovel-writer-opencode": "bin/webnovel-writer.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "files": [
+    "bin/",
+    "src/",
+    "offline/opencode-bundle.tar.gz",
+    "README.md"
+  ],
+  "scripts": {
+    "build:bundle": "node scripts/build-bundle.js",
+    "prepublishOnly": "node scripts/build-bundle.js"
+  },
+  "keywords": [
+    "webnovel",
+    "novel",
+    "writing",
+    "ai",
+    "opencode",
+    "chinese"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lujih/webnovel-writer-opencode.git"
+  }
+}
