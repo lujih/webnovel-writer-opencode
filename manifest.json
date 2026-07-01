@@ -1,197 +1,82 @@
 {
-  "version": "v2.9.2",
+  "version": "v2.9.2-20260701.1415",
   "tag": "v2.9.2",
-  "updated": "2026-06-22T03:29:54Z",
+  "updated": "2026-07-01T14:15:45Z",
   "changelog": [
     {
-      "hash": "7c80f9f",
+      "hash": "4c1cf08",
+      "type": "refactor",
+      "message": "refactor: \u5c06\u8349\u7a3f\u7ba1\u7406\u529f\u80fd\u5408\u5e76\u8fdb publisher \u6a21\u5757\u7edf\u4e00\u7ba1\u7406"
+    },
+    {
+      "hash": "67a7cf5",
+      "type": "fix",
+      "message": "fix: init/update \u8986\u76d6\u524d\u5148\u6e05\u9664\u65e7 .opencode/\uff0c\u907f\u514d\u6587\u4ef6\u6b8b\u7559"
+    },
+    {
+      "hash": "0c8b08c",
+      "type": "fix",
+      "message": "fix: update \u79bb\u7ebf\u5305\u5d4c\u5957 .opencode/.opencode/ \u4fee\u590d"
+    },
+    {
+      "hash": "c88732b",
+      "type": "security",
+      "message": "security: \u52a0\u56fa\u4f9b\u5e94\u94fe \u2014 \u5b89\u5168\u6a21\u578b\u6ce8\u91ca + pip options \u62e6\u622a"
+    },
+    {
+      "hash": "c24b050",
+      "type": "fix",
+      "message": "fix: update \u4f18\u5148\u4f7f\u7528 npx \u5185\u7f6e\u79bb\u7ebf\u5305\uff0c\u65e0\u9700\u8054\u7f51"
+    },
+    {
+      "hash": "0f8cd02",
+      "type": "fix",
+      "message": "fix: \u4e0b\u8f7d\u540e\u6821\u9a8c Content-Length\uff0c\u4e0d\u5b8c\u6574\u65f6\u660e\u786e\u62a5\u9519"
+    },
+    {
+      "hash": "2e8b062",
+      "type": "fix",
+      "message": "fix: update \u4e0b\u8f7d\u4e0d\u5b8c\u6574\u65f6\u7ed9\u51fa\u660e\u786e\u63d0\u793a"
+    },
+    {
+      "hash": "329c6bf",
+      "type": "chore",
+      "message": "chore: trigger npm prerelease publish"
+    },
+    {
+      "hash": "0fa012d",
       "type": "ci",
-      "message": "ci: \u4fee\u590d npm-publish \u89e6\u53d1 + \u6dfb\u52a0 Release Notes"
+      "message": "ci: npm-publish \u540c\u65f6\u76d1\u542c .opencode/ \u53d8\u66f4"
     },
     {
-      "hash": "bbf807c",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260622.0323 [skip ci]"
-    },
-    {
-      "hash": "dc72122",
-      "type": "fix",
-      "message": "fix: \u6838\u5fc3\u811a\u672c\u7d2f\u79ef\u4fee\u590d"
-    },
-    {
-      "hash": "07a4ef0",
+      "hash": "2027b1e",
       "type": "ci",
-      "message": "ci: npm \u81ea\u52a8\u6253\u5305\u53d1\u5e03 \u2014 \u53cc workflow \u8bbe\u8ba1"
+      "message": "ci: npm \u81ea\u52a8\u53d1\u5e03\u652f\u6301\u975e tag \u63a8\u9001\u7684 prerelease"
     },
     {
-      "hash": "78e90d0",
-      "type": "docs",
-      "message": "docs: \u6e05\u7406 README \u4e2d\u5df2\u5220\u9664\u7684 install.py \u548c installer/ \u5f15\u7528"
-    },
-    {
-      "hash": "270c8f4",
+      "hash": "a7e3231",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260622.0310 [skip ci]"
+      "message": "chore: npm \u7248\u672c\u4e0e git tag \u7edf\u4e00\u4e3a 2.9.2"
     },
     {
-      "hash": "b1ca86d",
-      "type": "refactor",
-      "message": "refactor: \u5220\u9664 Python \u5b89\u88c5\u811a\u672c"
-    },
-    {
-      "hash": "267a366",
-      "type": "docs",
-      "message": "docs: \u6587\u6863\u66f4\u65b0\u4e3a npx \u5b89\u88c5\u65b9\u5f0f"
-    },
-    {
-      "hash": "55ba910",
-      "type": "docs",
-      "message": "docs: \u79fb\u9664 Python \u5b89\u88c5\u65b9\u5f0f\uff0cnpx \u4e3a\u552f\u4e00\u5b89\u88c5\u5165\u53e3"
-    },
-    {
-      "hash": "e50b870",
-      "type": "chore",
-      "message": "chore: \u6392\u9664 npm pack \u4ea7\u7269\u548c\u6d4f\u89c8\u5668\u4e34\u65f6\u6587\u4ef6"
-    },
-    {
-      "hash": "da45d50",
-      "type": "feat",
-      "message": "feat: npx \u4e00\u952e\u5b89\u88c5\u5668 + README \u66f4\u65b0"
-    },
-    {
-      "hash": "ad08be2",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260621.1436 [skip ci]"
-    },
-    {
-      "hash": "3ffaf33",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/references/context-agent-example.md (moved to correct location)"
-    },
-    {
-      "hash": "e4df507",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u8bbe\u5b9a\u96c6/\u4e16\u754c\u89c2.md (moved to correct location)"
-    },
-    {
-      "hash": "9e6f211",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u6b63\u6587/\u7b2c0004\u7ae0-\u8fe6\u5357\u5b66\u9662\u7684\u8003\u9a8c.md (moved to correct location)"
-    },
-    {
-      "hash": "1631653",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u8be6\u7ec6\u5927\u7eb2.md (moved to correct location)"
-    },
-    {
-      "hash": "674137d",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u65f6\u95f4\u7ebf.md (moved to correct location)"
-    },
-    {
-      "hash": "cf21fe6",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/files/test-project/\u5927\u7eb2/\u603b\u7eb2.md (moved to correct location)"
-    },
-    {
-      "hash": "73b0d38",
-      "type": "refactor",
-      "message": "refactor: remove .opencode/agents/evals/evals.json (moved to correct location)"
-    },
-    {
-      "hash": "baafcc2",
-      "type": "refactor",
-      "message": "refactor: move evals/test-project and context-agent-example to conform to OpenCode spec"
-    },
-    {
-      "hash": "680e7f7",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260611.1539 [skip ci]"
-    },
-    {
-      "hash": "898d506",
+      "hash": "37e7ab0",
       "type": "fix",
-      "message": "fix: \u6e05\u6d01\u5b89\u88c5 PermissionError \u65f6\u53cb\u597d\u63d0\u793a\u5173\u95ed IDE"
+      "message": "fix: update \u547d\u4ee4\u589e\u52a0 --mirror \u652f\u6301\u548c\u7f51\u7edc\u5931\u8d25\u53cb\u597d\u63d0\u793a"
     },
     {
-      "hash": "0b2c95f",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260611.0637 [skip ci]"
-    },
-    {
-      "hash": "ef0208f",
+      "hash": "265736a",
       "type": "fix",
-      "message": "fix: \u5b89\u88c5\u811a\u672c UI \u7ec6\u8282\u4f18\u5316"
+      "message": "fix: \u4f9b\u5e94\u94fe\u5b89\u5168\u52a0\u56fa"
     },
     {
-      "hash": "f76ab06",
+      "hash": "0e95f7f",
+      "type": "refactor",
+      "message": "refactor: \u79bb\u7ebf\u5305\u9000\u51fa\u7248\u672c\u63a7\u5236"
+    },
+    {
+      "hash": "b36ba9b",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260611.0627 [skip ci]"
-    },
-    {
-      "hash": "aaa53d4",
-      "type": "fix",
-      "message": "fix: \u6697\u8272\u6a21\u5f0f\u91cd\u8bbe\u8ba1 + 7 \u9879\u4ee3\u7801\u4fee\u590d"
-    },
-    {
-      "hash": "b3d33fe",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260611.0557 [skip ci]"
-    },
-    {
-      "hash": "2b725ca",
-      "type": "fix",
-      "message": "fix: \u770b\u677f UI \u4f18\u5316 \u2014 ThemeToggle \u4f4d\u7f6e + \u4f0f\u7b14\u63d0\u9192\u5185\u5bb9\u663e\u793a"
-    },
-    {
-      "hash": "5ed514e",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260611.0538 [skip ci]"
-    },
-    {
-      "hash": "1d5efff",
-      "type": "fix",
-      "message": "fix: Windows \u63a7\u5236\u53f0 ANSI \u4e71\u7801 \u2014 SetConsoleMode \u6b63\u786e\u7528\u6cd5 + \u964d\u7ea7\u56de\u9000"
-    },
-    {
-      "hash": "2933503",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260610.1225 [skip ci]"
-    },
-    {
-      "hash": "d8175d4",
-      "type": "fix",
-      "message": "fix: \u5ba1\u67e5\u53d1\u73b0\u7684 6 \u9879\u4fee\u590d\uff08P0-P2\uff09"
-    },
-    {
-      "hash": "c8a2b79",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260610.1159 [skip ci]"
-    },
-    {
-      "hash": "fc3ae87",
-      "type": "fix",
-      "message": "fix: \u5b89\u88c5\u811a\u672c UI \u91cd\u6784 + \u591a\u5904 Bug \u4fee\u590d + \u6587\u6863\u7ef4\u62a4"
-    },
-    {
-      "hash": "8e839ad",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.1-20260609.1604 [skip ci]"
-    },
-    {
-      "hash": "3acad17",
-      "type": "fix",
-      "message": "fix: \u5ba1\u67e5\u5206\u6790\u9875\u9762\u6e32\u67d3\u9519\u8bef \u2014 dimension_averages/dimension_trends \u4e3a null \u65f6 Object.keys \u5d29\u6e83"
-    },
-    {
-      "hash": "6b90b7a",
-      "type": "chore",
-      "message": "chore: release v2.9.1 [skip ci]"
-    },
-    {
-      "hash": "14185cf",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.0-20260609.1514 [skip ci]"
+      "message": "chore: release v2.9.2 [skip ci]"
     }
   ],
   "files": {
@@ -340,8 +225,8 @@
       "size": 3290
     },
     ".opencode/scripts/publisher/__init__.py": {
-      "sha256": "8c53316f3a5b816d699e4dd6b3d7b38718424cfc6d3d3aeb36997066752a1671",
-      "size": 14884
+      "sha256": "db0bcb714b6c93b812f7e5d6665c02ffd587c5674bcc6976d6d75caa4d0b0fd0",
+      "size": 27236
     },
     ".opencode/scripts/publisher/config.py": {
       "sha256": "f773d5008b17670440ce67d2d0e6b10d2b2387e6b55f771ee22e65220124b34c",
@@ -360,8 +245,8 @@
       "size": 979
     },
     ".opencode/scripts/publisher/adapters/fanqie.py": {
-      "sha256": "011c4ebbd307026ee0114181fd4dd7629125fb076e295bb0365d9a087341e030",
-      "size": 15173
+      "sha256": "ac9591f5cccb2b687a203ea8b9456b3786e0066fdb10d7f04779d025a692bb33",
+      "size": 20281
     },
     ".opencode/scripts/publisher/adapters/qimao.py": {
       "sha256": "3f32d9763774bb02a56b53dc16d97c6aec1a1d41d5c1026b0a7493553f3bc297",
@@ -1227,6 +1112,38 @@
       "sha256": "fab865eb9bee3bf95ca7ea7bc86b23a50dfee04e31719e72611a0dde3b61ad14",
       "size": 2006
     },
+    ".opencode/skills/webnovel-qimao-write/SKILL.md": {
+      "sha256": "50049a483d6c753e3bf2ce67107243b397bfc57251c22ce328f7126c6bbfac65",
+      "size": 3249
+    },
+    ".opencode/skills/webnovel-qimao-write/references/audit.md": {
+      "sha256": "f405dbeebeb8f27bfdf6cd118640940443dd6d5040d1853ff5f2bfb048bc4856",
+      "size": 7656
+    },
+    ".opencode/skills/webnovel-qimao-write/references/pitfalls.md": {
+      "sha256": "fbee258b3f3bef38b60fc0e8f5a7862edf68f4956d6d58a360557f9e4dd17808",
+      "size": 7058
+    },
+    ".opencode/skills/webnovel-qimao-write/references/coolpoint.md": {
+      "sha256": "1df1b713cbae92d43d336b387621ed1ae96cfeeba9e465d0796321973f99d521",
+      "size": 7675
+    },
+    ".opencode/skills/webnovel-qimao-write/references/pacing.md": {
+      "sha256": "fb450a42aede763ba2f6c9ae42658f7eafc4fef8c53d3e33d7497ec8153b1ff5",
+      "size": 5264
+    },
+    ".opencode/skills/webnovel-qimao-write/references/character.md": {
+      "sha256": "d928e9a012533e1ea835e9477e1cfb132aa7fa1067915daa6e3cdff65d2c55d7",
+      "size": 5375
+    },
+    ".opencode/skills/webnovel-qimao-write/references/hook-expectation.md": {
+      "sha256": "0821f97d5ef739f8296adb2251e2583762efaf2ac2bd4ee33566a0e4f88dca52",
+      "size": 4065
+    },
+    ".opencode/skills/webnovel-qimao-write/references/checklist.md": {
+      "sha256": "6e2d14d50ce094d09e131ada0f4aaa4475bd0625a85379533700301721ee3c29",
+      "size": 1890
+    },
     ".opencode/skills/webnovel-dashboard/SKILL.md": {
       "sha256": "2289a815358fc9429b6b448252b94ea7a6410676361745222d334b02f6991e1d",
       "size": 4956
@@ -1234,6 +1151,26 @@
     ".opencode/skills/webnovel-dashboard/references/dashboard-api.md": {
       "sha256": "144e77f2026bbc74ca297da1ac77e78813afa1ead2c8ce26d4c79cb156b69d46",
       "size": 1718
+    },
+    ".opencode/skills/webnovel-fanqie-write/SKILL.md": {
+      "sha256": "d1e4d4fd7d6e26dec24e0a254fe4da2723f5ea15c497cf6fe49744bde2173acb",
+      "size": 1858
+    },
+    ".opencode/skills/webnovel-fanqie-write/references/pitfalls.md": {
+      "sha256": "315ec5244ca71c431025080b85e1948b5738069a9e7878a28d38c58899dcaebc",
+      "size": 1598
+    },
+    ".opencode/skills/webnovel-fanqie-write/references/pacing.md": {
+      "sha256": "f4eff26dbc07526e1a164f77e682683359da8455ce0c1ffebe14c16271d9e4c1",
+      "size": 1573
+    },
+    ".opencode/skills/webnovel-fanqie-write/references/dialogue.md": {
+      "sha256": "1cc7dda2674da6cbf6ef4297eff6654c98c599a7564654b2237f6b4d343856d0",
+      "size": 1182
+    },
+    ".opencode/skills/webnovel-fanqie-write/references/checklist.md": {
+      "sha256": "598dffd882785caebe3d78c71e9e003aa74f8e0be61d56be25b7303ea18ba8b4",
+      "size": 626
     },
     ".opencode/skills/webnovel-write-batch/SKILL.md": {
       "sha256": "8ab14088472271affe733b28c27a8b60d3595fc260602b27b46fccbb789345c5",
@@ -1244,8 +1181,12 @@
       "size": 10711
     },
     ".opencode/skills/webnovel-publish/SKILL.md": {
-      "sha256": "22fdd641c5c9ef5e726a744f2fa56984ac598b769ed71e58e94018d42acd7a1c",
-      "size": 5583
+      "sha256": "72d7543554cb2ac60db1aee77fe2b3d724d0bc0c4bd9b592ad877802c662496e",
+      "size": 8715
+    },
+    ".opencode/skills/webnovel-publish/\u4f7f\u7528\u8bf4\u660e.md": {
+      "sha256": "a308f10f92e8df8f0a84199b0dcf5c4c7305e254ff2e1efec5f764ce2dee2045",
+      "size": 6998
     },
     ".opencode/skills/webnovel-write/SKILL.md": {
       "sha256": "e850ddd5424bc3fd501c667719c6f556eeca94d59a76a062418811115b58a4bb",
