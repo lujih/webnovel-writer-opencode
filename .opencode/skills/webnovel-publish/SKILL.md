@@ -1,6 +1,6 @@
 ---
 name: webnovel-publish
-description: 将小说章节自动发布到国内主流小说平台（番茄等）。触发条件："发布小说"、"发布章节"、"上传到番茄"、"自动发布"。
+description: 将小说章节自动发布到国内主流小说平台（番茄等）。触发条件："发布小说"、"发布章节"、"上传到番茄"、"自动发布"、"清理草稿"、"发布草稿"。
 compatibility: opencode
 ---
 
@@ -115,6 +115,77 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish upload \
 已上传章节自动跳过，支持断点续传。  
 上传日志存储在 `~/.webnovel-publish/upload_log/{project_name}/{platform}_{book_id}.json`。
 
+### Step 5：草稿管理（新增功能）
+
+#### 5.1 清理重复草稿
+
+```bash
+# 预览模式（不实际删除，查看哪些章节有重复）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish clean-drafts \
+  --platform fanqie \
+  --project-root "${PROJECT_ROOT}" \
+  --dry-run
+
+# 清理重复草稿（同章节号保留最新修改时间的，删除旧版本）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish clean-drafts \
+  --platform fanqie \
+  --project-root "${PROJECT_ROOT}"
+
+# 跳过确认
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish clean-drafts \
+  --platform fanqie \
+  --project-root "${PROJECT_ROOT}" \
+  -y
+```
+
+**适用场景**：多次上传同一章导致草稿箱有重复，想保留最新版本删除旧版本。
+
+#### 5.2 清空草稿箱
+
+```bash
+# 清空草稿箱所有章节（跳过已发布的）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish clear-drafts \
+  --platform fanqie \
+  --project-root "${PROJECT_ROOT}"
+```
+
+**适用场景**：想清空草稿箱重新开始，但不删除已正式发布的章节。
+
+#### 5.3 删除全部草稿
+
+```bash
+# 删除草稿箱全部章节（包括已发布的，需二次确认 yes）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish delete-drafts \
+  --platform fanqie \
+  --project-root "${PROJECT_ROOT}"
+
+# 跳过确认（危险操作）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish delete-drafts \
+  --platform fanqie \
+  --project-root "${PROJECT_ROOT}" \
+  -y
+```
+
+**危险操作**：会删除所有草稿，包括已发布状态的章节，并清除上传记录。
+
+#### 5.4 发布草稿
+
+```bash
+# 发布草稿箱中的章节（将草稿改为已发布状态）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish publish-drafts \
+  --platform fanqie \
+  --range 1-10 \
+  --project-root "${PROJECT_ROOT}"
+
+# 发布全部草稿
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish publish-drafts \
+  --platform fanqie \
+  --project-root "${PROJECT_ROOT}"
+```
+
+**适用场景**：章节已在草稿箱，想批量发布到正式站。  
+**注意**：发布时会用草稿箱现有的 item_id，标题和内容从本地文件读取。
+
 ## 参数说明
 
 | 参数 | 说明 | 默认值 |
@@ -123,9 +194,23 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" publish upload \
 | `--book` | 书籍 ID 或书名 | 从项目绑定读取 |
 | `--range` | 章节范围（1-50 / 1,3,5 / all） | all |
 | `--mode` | 发布模式（当前仅 draft） | draft |
-| `--yes` | 跳过交互确认 | — |
+| `--yes` / `-y` | 跳过交互确认 | — |
+| `--dry-run` | 预览模式（仅 clean-drafts 支持） | — |
 | `--abstract` | 书籍简介（create-book） | 自动生成 |
 | `--project-root` | 书项目根目录 | 自动探测 |
+
+## 子命令列表
+
+| 命令 | 功能 | 典型用法 |
+|------|------|---------|
+| `setup-auth` | 扫码登录平台 | 首次使用 |
+| `list-books` | 列出已有书籍 | 查询 book_id |
+| `create-book` | 创建新书 | 自动从项目元数据生成 |
+| `upload` | 上传章节到草稿箱 | 日常更新 |
+| `clean-drafts` | 清理重复草稿 | 多次上传同章后去重 |
+| `clear-drafts` | 清空草稿箱（跳过已发布） | 重新开始前清理 |
+| `delete-drafts` | 删除全部草稿（危险） | 完全清空草稿箱 |
+| `publish-drafts` | 发布草稿到正式站 | 批量上架 |
 
 ## 自动绑定机制
 
@@ -166,3 +251,6 @@ rm "${PROJECT_ROOT}/.webnovel/publish_config.json"
 | 项目未绑定 | 传 `--book <id>` 或先 `create-book` |
 | book_id 不匹配 | 检查是否误用了其他书的 ID |
 | 非交互环境报错 | 添加 `--yes` 跳过确认 |
+| 草稿箱有重复章节 | 运行 `clean-drafts --dry-run` 预览，再去掉 `--dry-run` 执行 |
+| 想重新上传所有章节 | 先 `delete-drafts` 删除草稿和上传记录，再重新 `upload` |
+| 草稿上传了但想发布 | 运行 `publish-drafts --range <范围>` |

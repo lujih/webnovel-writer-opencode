@@ -389,3 +389,137 @@ class FanqieAdapter(BasePlatform):
             success=True, chapter_index=chapter.index,
             message=f"草稿已保存: {full_title}",
         )
+
+    # ── 草稿管理 ─────────────────────────────────────────
+    # 来源：合并自根目录的 fanqie_publish.py, clean_drafts.py, clear_drafts.py
+    # 功能：获取草稿列表、删除草稿、发布草稿、清理重复草稿
+
+    async def get_all_drafts(self, page, book_id: str) -> list[dict]:
+        """全量获取草稿箱章节列表（支持分页）。
+        
+        通过两种方式获取：
+        1. 导航到草稿箱页面，拦截 draft_list API 响应（首页）
+        2. 用 JS fetch 直接调用 API（后续分页）
+        
+        返回：草稿列表，每个草稿包含 item_id, title, modify_time 等字段
+        """
+        await self._ensure_writer_context(page)
+        
+        # 导航到草稿箱页面并拦截响应
+        chap_url = f"https://fanqienovel.com/main/writer/chapter-manage/{book_id}?type=2"
+        
+        all_drafts = []
+        total = 0
+        page_size = 15
+        captured = []
+
+        async def on_resp(resp):
+            if 'draft_list' in resp.url and book_id in resp.url:
+                try:
+                    body = await resp.json()
+                    if body.get('code') == 0:
+                        data = body.get('data') or {}
+                        captured.append({
+                            'total': data.get('total_count', 0),
+                            'items': data.get('draft_list') or []
+                        })
+                except Exception:
+                    pass
+
+        page.on('response', on_resp)
+        await page.goto(chap_url, wait_until='networkidle', timeout=30000)
+        await asyncio.sleep(5)
+        page.remove_listener('response', on_resp)
+
+        for c in captured:
+            all_drafts.extend(c['items'])
+            total = c['total']
+
+        logger.info("Drafts page 1: %d items, total=%d", len(all_drafts), total)
+
+        # 后续分页：通过 JS 直接调用 API
+        page_index = 1
+        while len(all_drafts) < total:
+            result = await page.evaluate("""async ([book_id, page_index, page_size]) => {
+                const params = new URLSearchParams({
+                    aid: '2503', app_name: 'muye_novel',
+                    book_id,
+                    page_index: String(page_index),
+                    page_count: String(page_size)
+                });
+                const r = await fetch(
+                    'https://fanqienovel.com/api/author/chapter/draft_list/v1?' + params.toString(),
+                    {credentials: 'include'}
+                );
+                return await r.json();
+            }""", [book_id, page_index, page_size])
+
+            items = (result.get('data') or {}).get('draft_list') or [] if isinstance(result, dict) else []
+            if not items:
+                break
+            all_drafts.extend(items)
+            logger.info("Drafts page %d: %d items, cumulative=%d", page_index + 1, len(items), len(all_drafts))
+            page_index += 1
+            if page_index > 50:  # 安全阈值：最多 50 页
+                break
+            await asyncio.sleep(0.5)
+
+        return all_drafts
+
+    async def delete_draft(self, page, book_id: str, item_id: str) -> bool:
+        """删除单个草稿。
+        
+        Args:
+            page: Playwright page 对象
+            book_id: 书籍 ID
+            item_id: 章节草稿 ID
+            
+        Returns:
+            是否删除成功
+        """
+        try:
+            await _page_fetch(
+                page, "POST",
+                "/api/author/delete_article/v1",
+                form={**_COMMON_FORM, "book_id": book_id, "item_id": item_id}
+            )
+            return True
+        except RuntimeError as e:
+            logger.warning("Failed to delete draft %s: %s", item_id, e)
+            return False
+
+    async def publish_draft(self, page, book_id: str, item_id: str, 
+                           title: str, content: str) -> bool:
+        """发布草稿箱中的章节（将草稿状态改为已发布）。
+        
+        Args:
+            page: Playwright page 对象
+            book_id: 书籍 ID
+            item_id: 草稿 ID
+            title: 章节标题
+            content: 章节内容（纯文本，会自动转为 HTML）
+            
+        Returns:
+            是否发布成功
+        """
+        await self._ensure_writer_context(page)
+        
+        volume_id, volume_name = await self._get_first_volume(page, book_id)
+        html_content = _text_to_html(content)
+        
+        form = {
+            **_COMMON_FORM,
+            "book_id": book_id,
+            "item_id": item_id,
+            "volume_id": volume_id,
+            "volume_name": volume_name,
+            "title": title,
+            "content": html_content,
+        }
+        
+        try:
+            await _page_fetch(page, "POST", "/api/author/publish_article/v0/", form=form)
+            return True
+        except RuntimeError as e:
+            logger.warning("Failed to publish draft %s: %s", item_id, e)
+            return False

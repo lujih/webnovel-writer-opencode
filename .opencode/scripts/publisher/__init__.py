@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -244,6 +245,275 @@ async def _cmd_upload(args: argparse.Namespace):
     print(f"\n上传完成: 成功 {success_count}, 失败 {fail_count}")
 
 
+# ── 草稿管理命令 ───────────────────────────────────────────────────────────────
+# 来源：合并自根目录的 fanqie_publish.py, clean_drafts.py, clear_drafts.py
+# 功能：清理重复草稿、清空草稿箱、删除全部草稿、发布草稿
+
+async def _cmd_clean_drafts(args: argparse.Namespace):
+    """清理草稿箱中的重复章节（同章节号保留最新修改时间的）。
+    
+    适用场景：多次上传同一章导致草稿箱有重复，只想保留最新版本。
+    """
+    from collections import defaultdict
+    from publisher.browser import Browser
+    from publisher.config import resolve_book_id
+    
+    project_root = Path(args.project_root).expanduser().resolve()
+    book_id = resolve_book_id(project_root, args.platform, getattr(args, 'book', None))
+    
+    adapter = _get_adapter(args.platform)
+    browser = Browser(platform=args.platform)
+    page = await browser.start()
+    
+    try:
+        drafts = await adapter.get_all_drafts(page, book_id)
+        if not drafts:
+            print('草稿箱为空。')
+            return
+        
+        # 按章节号分组
+        groups = defaultdict(list)
+        for d in drafts:
+            title = d.get('title', '')
+            m = re.search(r'第\s*(\d+)\s*章', title)
+            idx = int(m.group(1)) if m else 0
+            groups[idx].append(d)
+        
+        # 找重复
+        to_delete = []
+        for idx, items in sorted(groups.items()):
+            if len(items) <= 1:
+                continue
+            sorted_items = sorted(items, key=lambda x: int(x.get('modify_time', 0)), reverse=True)
+            keep = sorted_items[0]
+            delete = sorted_items[1:]
+            print(f'第{idx}章 ({len(items)}篇): 保留 {keep["item_id"]} ({keep["title"]})')
+            for d in delete:
+                print(f'  将删除 {d["item_id"]} ({d["title"]})')
+                to_delete.append(d)
+        
+        if not to_delete:
+            print('没有重复草稿，无需清理。')
+            return
+        
+        print(f'\n共需删除 {len(to_delete)} 篇重复草稿')
+        if getattr(args, 'dry_run', False):
+            print('[DRY-RUN] 不执行实际删除')
+            return
+        
+        if not getattr(args, 'yes', False):
+            resp = _safe_input('确认删除？(y/N): ', default='n')
+            if resp.lower() != 'y':
+                print('已取消。')
+                return
+        
+        success = fail = 0
+        for d in to_delete:
+            item_id = str(d.get('item_id', ''))
+            title = d.get('title', '')
+            if await adapter.delete_draft(page, book_id, item_id):
+                print(f'  [DEL] {title} ({item_id})')
+                success += 1
+            else:
+                print(f'  [FAIL] {title}')
+                fail += 1
+            await asyncio.sleep(0.8)
+        
+        print(f'\n清理完成: 删除 {success}, 失败 {fail}')
+    finally:
+        await browser.close()
+
+
+async def _cmd_clear_drafts(args: argparse.Namespace):
+    """清空草稿箱所有章节（跳过已发布的）。
+    
+    适用场景：想清空草稿箱重新开始，但不删除已正式发布的章节。
+    """
+    from publisher.browser import Browser
+    from publisher.config import resolve_book_id
+    
+    project_root = Path(args.project_root).expanduser().resolve()
+    book_id = resolve_book_id(project_root, args.platform, getattr(args, 'book', None))
+    
+    adapter = _get_adapter(args.platform)
+    browser = Browser(platform=args.platform)
+    page = await browser.start()
+    
+    try:
+        drafts = await adapter.get_all_drafts(page, book_id)
+        if not drafts:
+            print('草稿箱为空。')
+            return
+        
+        print(f'准备删除全部 {len(drafts)} 篇草稿')
+        if not getattr(args, 'yes', False):
+            resp = _safe_input('确认清空草稿箱？(y/N): ', default='n')
+            if resp.lower() != 'y':
+                print('已取消。')
+                return
+        
+        success = fail = skip = 0
+        for d in drafts:
+            item_id = str(d.get('item_id', ''))
+            title = d.get('title', '')
+            if await adapter.delete_draft(page, book_id, item_id):
+                print(f'  [DEL] {title}')
+                success += 1
+            else:
+                # 删除失败可能是已发布
+                print(f'  [SKIP] {title} (可能已发布)')
+                skip += 1
+            await asyncio.sleep(0.5)
+        
+        print(f'\n清空完成: 删除 {success}, 跳过 {skip}')
+    finally:
+        await browser.close()
+
+
+async def _cmd_delete_drafts(args: argparse.Namespace):
+    """删除草稿箱所有章节（包括已发布的，需二次确认）。
+    
+    危险操作：会删除所有草稿，包括已发布状态的章节。
+    """
+    from publisher.browser import Browser
+    from publisher.config import resolve_book_id, get_log_path
+    
+    project_root = Path(args.project_root).expanduser().resolve()
+    book_id = resolve_book_id(project_root, args.platform, getattr(args, 'book', None))
+    project_name = project_root.name
+    
+    adapter = _get_adapter(args.platform)
+    browser = Browser(platform=args.platform)
+    page = await browser.start()
+    
+    try:
+        drafts = await adapter.get_all_drafts(page, book_id)
+        if not drafts:
+            print('草稿箱为空。')
+            return
+        
+        print(f'找到 {len(drafts)} 个章节:')
+        for ch in drafts[:5]:
+            print(f'  - {ch.get("title", "未知")}')
+        if len(drafts) > 5:
+            print(f'  ... 共 {len(drafts)} 章')
+        
+        if not getattr(args, 'yes', False):
+            resp = _safe_input(f'确认删除全部 {len(drafts)} 章？(yes/N): ', default='n')
+            if resp.lower() != 'yes':
+                print('已取消。')
+                return
+        
+        success = fail = 0
+        for ch in drafts:
+            item_id = str(ch.get('item_id', '') or ch.get('article_id', ''))
+            title = ch.get('title', '未知')
+            if not item_id:
+                print(f'  [SKIP] {title} 无 item_id')
+                fail += 1
+                continue
+            
+            if await adapter.delete_draft(page, book_id, item_id):
+                print(f'  [DEL] {title}')
+                success += 1
+            else:
+                print(f'  [FAIL] {title}')
+                fail += 1
+            await asyncio.sleep(1)
+        
+        print(f'\n删除完成: 成功 {success}, 失败 {fail}')
+        
+        # 清除上传记录
+        if success > 0:
+            log_path = get_log_path(args.platform, book_id, project_name)
+            if log_path.is_file():
+                log_path.unlink()
+                print('上传记录已清除。')
+    finally:
+        await browser.close()
+
+
+async def _cmd_publish_drafts(args: argparse.Namespace):
+    """发布草稿箱中的章节（将草稿改为已发布状态）。
+    
+    适用场景：章节已在草稿箱，想批量发布到正式站。
+    注意：发布时会用草稿箱现有的 item_id，标题和内容从本地文件读取。
+    """
+    from publisher.browser import Browser
+    from publisher.config import resolve_book_id
+    from publisher.formatter import format_for_platform
+    
+    project_root = Path(args.project_root).expanduser().resolve()
+    book_id = resolve_book_id(project_root, args.platform, getattr(args, 'book', None))
+    
+    chapter_indices = _parse_range(args.range, project_root)
+    if not chapter_indices:
+        print('未找到匹配的章节文件。')
+        return
+    
+    adapter = _get_adapter(args.platform)
+    browser = Browser(platform=args.platform)
+    page = await browser.start()
+    
+    try:
+        # 获取草稿箱列表
+        drafts = await adapter.get_all_drafts(page, book_id)
+        if not drafts:
+            print('草稿箱为空，无法发布。请先上传章节。')
+            return
+        
+        print(f'草稿箱: {len(drafts)} 篇, 待发布: {len(chapter_indices)} 章')
+        if not getattr(args, 'yes', False):
+            resp = _safe_input('继续发布？(Y/n): ', default='y')
+            if resp.lower() in ('n', 'no'):
+                print('已取消。')
+                return
+        
+        # 按顺序发布：每章取一个草稿 item_id
+        success_count = fail_count = 0
+        draft_queue = list(drafts)
+        
+        for idx in chapter_indices:
+            if not draft_queue:
+                print(f'  [WARN] 草稿用完，第{idx}章起无法发布')
+                fail_count += len(chapter_indices) - success_count - fail_count
+                break
+            
+            chapter_file = _find_chapter_file(project_root, idx)
+            if not chapter_file:
+                print(f'  [WARN] 第{idx}章文件未找到，跳过')
+                fail_count += 1
+                continue
+            
+            raw_md = chapter_file.read_text(encoding='utf-8')
+            title = _extract_title(raw_md) or f'第{idx}章'
+            raw_md = _strip_heading_line(raw_md)
+            content = format_for_platform(raw_md, args.platform)
+            
+            # 标题格式化（番茄要求 5-30 字符）
+            clean_title = re.sub(r'^第\s*[\d零一二三四五六七八九十百千]+\s*章\s*', '', title).strip()
+            full_title = f'第 {idx} 章 {clean_title}'
+            if len(full_title) > 30:
+                full_title = full_title[:30]
+            
+            # 取一个草稿 item_id
+            draft = draft_queue.pop(0)
+            item_id = str(draft.get('item_id', ''))
+            
+            if await adapter.publish_draft(page, book_id, item_id, full_title, content):
+                print(f'  [PUB] 第{idx}章 {full_title}')
+                success_count += 1
+            else:
+                print(f'  [FAIL] 第{idx}章')
+                fail_count += 1
+            
+            await asyncio.sleep(5.0)  # 章间间隔，避免触发反爬
+        
+        print(f'\n发布完成: 成功 {success_count}, 失败 {fail_count}')
+    finally:
+        await browser.close()
+
+
 def _safe_input(prompt: str, default: str = "y") -> str:
     """Wrap input() with EOFError guard for non-TTY environments."""
     try:
@@ -376,6 +646,33 @@ def main():
     p_upload.add_argument("--yes", action="store_true",
                           help="跳过交叉校验的交互确认")
 
+    # 草稿管理命令
+    p_clean = sub.add_parser("clean-drafts", 
+                             help="清理草稿箱重复章节（同章节号保留最新）")
+    p_clean.add_argument("--platform", required=True, help="平台名称")
+    p_clean.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
+    p_clean.add_argument("--dry-run", action="store_true", help="预览模式，不执行实际删除")
+    p_clean.add_argument("-y", "--yes", action="store_true", help="跳过确认")
+
+    p_clear = sub.add_parser("clear-drafts", 
+                            help="清空草稿箱所有章节（跳过已发布）")
+    p_clear.add_argument("--platform", required=True, help="平台名称")
+    p_clear.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
+    p_clear.add_argument("-y", "--yes", action="store_true", help="跳过确认")
+
+    p_delete = sub.add_parser("delete-drafts", 
+                             help="删除草稿箱全部章节（危险操作，需二次确认）")
+    p_delete.add_argument("--platform", required=True, help="平台名称")
+    p_delete.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
+    p_delete.add_argument("-y", "--yes", action="store_true", help="跳过确认")
+
+    p_publish = sub.add_parser("publish-drafts", 
+                              help="发布草稿箱中的章节（将草稿改为已发布状态）")
+    p_publish.add_argument("--platform", required=True, help="平台名称")
+    p_publish.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
+    p_publish.add_argument("--range", default="all", help="章节范围")
+    p_publish.add_argument("-y", "--yes", action="store_true", help="跳过确认")
+
     args = parser.parse_args()
 
     cmd_map = {
@@ -383,6 +680,10 @@ def main():
         "list-books": _cmd_list_books,
         "create-book": _cmd_create_book,
         "upload": _cmd_upload,
+        "clean-drafts": _cmd_clean_drafts,
+        "clear-drafts": _cmd_clear_drafts,
+        "delete-drafts": _cmd_delete_drafts,
+        "publish-drafts": _cmd_publish_drafts,
     }
     handler = cmd_map.get(args.command)
     if handler:
