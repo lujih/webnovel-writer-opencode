@@ -276,15 +276,17 @@ async def _cmd_clean_drafts(args: argparse.Namespace):
         for d in drafts:
             title = d.get('title', '')
             m = re.search(r'第\s*(\d+)\s*章', title)
-            idx = int(m.group(1)) if m else 0
+            if not m:
+                continue  # 序章、楔子、番外等不参与去重
+            idx = int(m.group(1))
             groups[idx].append(d)
-        
+
         # 找重复
         to_delete = []
         for idx, items in sorted(groups.items()):
             if len(items) <= 1:
                 continue
-            sorted_items = sorted(items, key=lambda x: int(x.get('modify_time', 0)), reverse=True)
+            sorted_items = sorted(items, key=lambda x: int(str(x.get('modify_time', 0)) or 0), reverse=True)
             keep = sorted_items[0]
             delete = sorted_items[1:]
             print(f'第{idx}章 ({len(items)}篇): 保留 {keep["item_id"]} ({keep["title"]})')
@@ -469,14 +471,20 @@ async def _cmd_publish_drafts(args: argparse.Namespace):
                 print('已取消。')
                 return
         
-        # 按顺序发布：每章取一个草稿 item_id
+        # 按章节号排序草稿，确保与 chapter_indices 顺序匹配
+        def _extract_chapter_num(draft):
+            m = re.search(r'第\s*(\d+)\s*章', draft.get('title', ''))
+            return int(m.group(1)) if m else 0
+        drafts.sort(key=_extract_chapter_num)
+
         success_count = fail_count = 0
         draft_queue = list(drafts)
         
         for idx in chapter_indices:
             if not draft_queue:
-                print(f'  [WARN] 草稿用完，第{idx}章起无法发布')
-                fail_count += len(chapter_indices) - success_count - fail_count
+                remaining = len(chapter_indices) - chapter_indices.index(idx)
+                print(f'  [WARN] 草稿用完，第{idx}章起共 {remaining} 章无法发布')
+                fail_count += remaining
                 break
             
             chapter_file = _find_chapter_file(project_root, idx)
@@ -649,26 +657,26 @@ def main():
     # 草稿管理命令
     p_clean = sub.add_parser("clean-drafts", 
                              help="清理草稿箱重复章节（同章节号保留最新）")
-    p_clean.add_argument("--platform", required=True, help="平台名称")
+    p_clean.add_argument("--platform", required=True, choices=['fanqie'], help="平台名称")
     p_clean.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
     p_clean.add_argument("--dry-run", action="store_true", help="预览模式，不执行实际删除")
     p_clean.add_argument("-y", "--yes", action="store_true", help="跳过确认")
 
-    p_clear = sub.add_parser("clear-drafts", 
+    p_clear = sub.add_parser("clear-drafts",
                             help="清空草稿箱所有章节（跳过已发布）")
-    p_clear.add_argument("--platform", required=True, help="平台名称")
+    p_clear.add_argument("--platform", required=True, choices=['fanqie'], help="平台名称")
     p_clear.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
     p_clear.add_argument("-y", "--yes", action="store_true", help="跳过确认")
 
-    p_delete = sub.add_parser("delete-drafts", 
+    p_delete = sub.add_parser("delete-drafts",
                              help="删除草稿箱全部章节（危险操作，需二次确认）")
-    p_delete.add_argument("--platform", required=True, help="平台名称")
+    p_delete.add_argument("--platform", required=True, choices=['fanqie'], help="平台名称")
     p_delete.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
     p_delete.add_argument("-y", "--yes", action="store_true", help="跳过确认")
 
-    p_publish = sub.add_parser("publish-drafts", 
+    p_publish = sub.add_parser("publish-drafts",
                               help="发布草稿箱中的章节（将草稿改为已发布状态）")
-    p_publish.add_argument("--platform", required=True, help="平台名称")
+    p_publish.add_argument("--platform", required=True, choices=['fanqie'], help="平台名称")
     p_publish.add_argument("--book", default=None, help="书籍 ID（未指定时从项目绑定读取）")
     p_publish.add_argument("--range", default="all", help="章节范围")
     p_publish.add_argument("-y", "--yes", action="store_true", help="跳过确认")

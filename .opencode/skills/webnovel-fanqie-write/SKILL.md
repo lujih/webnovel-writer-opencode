@@ -15,7 +15,6 @@ allowed-tools: Agent AskUserQuestion
 - `references/pacing.md`：开书、大纲、开篇、节奏、留存、过渡、中期瓶颈
 - `references/dialogue.md`：句式、对白、代入感、人物、群像
 - `references/pitfalls.md`：标题承诺一致性、改稿、数据、避雷项
-- `../../../docs/research/fanqie-files-index.md`：番茄相关文件总索引
 
 ## 平台内容规范
 

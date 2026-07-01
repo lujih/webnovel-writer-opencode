@@ -423,8 +423,8 @@ class FanqieAdapter(BasePlatform):
                             'total': data.get('total_count', 0),
                             'items': data.get('draft_list') or []
                         })
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning("draft_list response parse error: %s", e)
 
         page.on('response', on_resp)
         await page.goto(chap_url, wait_until='networkidle', timeout=30000)
@@ -454,7 +454,11 @@ class FanqieAdapter(BasePlatform):
                 return await r.json();
             }""", [book_id, page_index, page_size])
 
-            items = (result.get('data') or {}).get('draft_list') or [] if isinstance(result, dict) else []
+            try:
+                items = (result.get('data') or {}).get('draft_list') or [] if isinstance(result, dict) else []
+            except Exception as e:
+                logger.error("draft_list API error at page %d: %s", page_index, e)
+                break
             if not items:
                 break
             all_drafts.extend(items)

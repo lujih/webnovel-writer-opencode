@@ -18,7 +18,6 @@ allowed-tools: Agent AskUserQuestion
 - `references/coolpoint.md`：爽感、对比、冲突矛盾、虐点、升级体系
 - `references/pitfalls.md`：毒点、崩文、改稿、拒稿模板、题材选择
 - `references/audit.md`：七猫内容审核红线（避免章节驳回，男频都市重灾区）
-- `../../../docs/research/qimao-files-index.md`：七猫相关文件总索引
 
 ## 平台内容规范
 
