@@ -31,6 +31,12 @@ MINIMAL_STATE = {
         {"content": "三年之约", "planted_chapter": 1, "urgency": 90, "status": "active"},
         {"content": "获取青莲地心火", "planted_chapter": 3, "urgency": 60, "status": "closed", "closed_chapter": 5},
     ],
+    "plot_threads": {
+        "foreshadowing": [
+            {"content": "悬念甲", "status": "active", "planted_chapter": 2, "tier": "核心", "target_chapter": 10},
+            {"content": "悬念乙", "status": "resolved", "planted_chapter": 1, "resolved_chapter": 4},
+        ],
+    },
     "relationships": [
         {"from": "xiaoyan", "to": "yunlanzong", "type": "敌对", "last_seen_chapter": 5},
     ],
@@ -63,10 +69,22 @@ class TestWorldState:
 class TestForeshadowingPanel:
     def test_renders_active_and_closed(self):
         result = _render_foreshadowing_panel(MINIMAL_STATE, Path("."))
-        assert "三年之约" in result
-        assert "青莲地心火" in result
+        # 数据源为 plot_threads.foreshadowing（SSOT writer 聚合路径）
+        assert "悬念甲" in result
+        assert "悬念乙" in result
         assert "活跃伏笔" in result
         assert "已闭合伏笔" in result
+
+    def test_prefer_nested_plot_threads_over_legacy_top_level(self):
+        result = _render_foreshadowing_panel(MINIMAL_STATE, Path("."))
+        assert "三年之约" not in result  # 顶层旧占位被忽略
+
+    def test_legacy_top_level_fallback_when_no_plot_threads(self):
+        state = dict(MINIMAL_STATE)
+        state.pop("plot_threads")
+        result = _render_foreshadowing_panel(state, Path("."))
+        assert "三年之约" in result
+        assert "青莲地心火" in result
 
     def test_empty_foreshadowing_no_crash(self):
         result = _render_foreshadowing_panel({}, Path("."))

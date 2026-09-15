@@ -599,6 +599,84 @@ def test_memory_projection_writer_is_idempotent_for_replay(tmp_path):
     assert len(matching) == 1
 
 
+def _loop_event(event_type, content, chapter=None, **payload_extra):
+    payload = {"content": content}
+    payload.update(payload_extra)
+    event = {"event_type": event_type, "subject": "narrator", "payload": payload}
+    if chapter is not None:
+        event["chapter"] = chapter
+    return event
+
+
+def test_state_writer_aggregates_foreshadowing_from_open_loop_events(tmp_path):
+    """open_loop 事件必须聚合进 plot_threads.foreshadowing。"""
+    (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
+    writer = StateProjectionWriter(tmp_path)
+
+    writer.apply(
+        {
+            "meta": {"status": "accepted", "chapter": 5},
+            "accepted_events": [
+                _loop_event("open_loop_created", "三年之约提及", target_chapter=30, tier="major"),
+            ],
+        }
+    )
+    rows = json.loads((tmp_path / ".webnovel" / "state.json").read_text(encoding="utf-8"))["plot_threads"]["foreshadowing"]
+    assert len(rows) == 1
+    row = rows[0]
+    assert row["content"] == "三年之约提及"
+    assert row["status"] == "active"
+    assert row["planted_chapter"] == 5
+    assert row["target_chapter"] == 30
+    assert row["tier"] == "major"
+
+    writer.apply(
+        {
+            "meta": {"status": "accepted", "chapter": 28},
+            "accepted_events": [_loop_event("open_loop_closed", "三年之约提及")],
+        }
+    )
+    rows = json.loads((tmp_path / ".webnovel" / "state.json").read_text(encoding="utf-8"))["plot_threads"]["foreshadowing"]
+    assert len(rows) == 1
+    assert rows[0]["status"] == "resolved"
+    assert rows[0]["resolved_chapter"] == 28
+    assert rows[0]["planted_chapter"] == 5
+
+
+def test_state_writer_foreshadowing_replay_is_idempotent(tmp_path):
+    """事件重放同章不得产生重复伏笔条目。"""
+    (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
+    writer = StateProjectionWriter(tmp_path)
+    payload = {
+        "meta": {"status": "accepted", "chapter": 7},
+        "accepted_events": [_loop_event("open_loop_created", "黑色棺材的来历")],
+    }
+    writer.apply(payload)
+    writer.apply(payload)
+    rows = json.loads((tmp_path / ".webnovel" / "state.json").read_text(encoding="utf-8"))["plot_threads"]["foreshadowing"]
+    assert len(rows) == 1
+    assert rows[0]["planted_chapter"] == 7
+
+
+def test_state_writer_foreshadowing_orphan_close_keeps_record(tmp_path):
+    """closed 事件找不到对应条目时保留为 resolved 记录，不丢数据。"""
+    (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
+    writer = StateProjectionWriter(tmp_path)
+    writer.apply(
+        {
+            "meta": {"status": "accepted", "chapter": 9},
+            "accepted_events": [_loop_event("open_loop_closed", "从未登记过的旧约")],
+        }
+    )
+    rows = json.loads((tmp_path / ".webnovel" / "state.json").read_text(encoding="utf-8"))["plot_threads"]["foreshadowing"]
+    assert len(rows) == 1
+    assert rows[0]["status"] == "resolved"
+    assert rows[0]["resolved_chapter"] == 9
+
+
 def test_state_projection_writer_is_idempotent_for_replay(tmp_path):
     """state writer 重复 apply 时 entity_state 不会累积重复 key。"""
     (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)

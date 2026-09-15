@@ -100,6 +100,31 @@ def test_required_writers_includes_index_for_accepted_commit():
     assert "index" in writers
 
 
+def test_router_maps_open_loop_events_to_state_and_memory():
+    router = EventProjectionRouter()
+    for event_type in ("open_loop_created", "open_loop_closed"):
+        targets = router.route(
+            {"event_type": event_type, "subject": "三年之约", "payload": {"content": "三年之约"}}
+        )
+        assert targets == ["state", "memory"]
+
+
+def test_required_writers_includes_state_for_open_loop_events():
+    router = EventProjectionRouter()
+    writers = router.required_writers(
+        {
+            "meta": {"status": "accepted", "chapter": 3},
+            "accepted_events": [
+                {"event_type": "open_loop_created", "subject": "三年之约", "payload": {}},
+            ],
+            "entity_deltas": [],
+            "summary_text": "",
+        }
+    )
+    assert "state" in writers
+    assert "memory" in writers
+
+
 def test_router_ignores_unknown_and_non_dict_events():
     router = EventProjectionRouter()
     assert router.route({"event_type": "unknown"}) == []

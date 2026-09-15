@@ -143,12 +143,14 @@ class StateProjectionWriter:
                     progress["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
             strand_applied = self._apply_strand_tracker(state, chapter, commit_payload)
+            foreshadow_applied = self._apply_foreshadowing(state, chapter, commit_payload)
 
         return {
             "applied": applied_count > 0 or chapter > 0,
             "writer": "state",
             "applied_count": applied_count,
             "strand_tracker": strand_applied,
+            "foreshadowing": foreshadow_applied,
         }
 
     def _collect_state_deltas(self, commit_payload: dict) -> list[dict]:
@@ -283,6 +285,89 @@ class StateProjectionWriter:
             ):
                 ids.add(eid)
         return ids
+
+    def _apply_foreshadowing(self, state: dict, chapter: int, commit_payload: dict) -> int:
+        """把 open_loop 事件聚合进 plot_threads.foreshadowing。
+
+        幂等：created 按 content 去重；closed 对已 resolved 条目不重复改写，
+        因此 ssot rebuild / 事件重放任意章节区间不会产生重复或抖动。
+        """
+        if chapter <= 0:
+            return 0
+        loop_events = [
+            event
+            for event in extraction_list(commit_payload, "accepted_events")
+            if isinstance(event, dict)
+            and str(event.get("event_type") or "").strip()
+            in ("open_loop_created", "open_loop_closed")
+        ]
+        if not loop_events:
+            return 0
+
+        plot_threads = state.get("plot_threads")
+        if not isinstance(plot_threads, dict):
+            plot_threads = {}
+            state["plot_threads"] = plot_threads
+        rows = plot_threads.get("foreshadowing")
+        if not isinstance(rows, list):
+            rows = []
+            plot_threads["foreshadowing"] = rows
+
+        applied = 0
+        for event in loop_events:
+            payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
+            content = str(
+                payload.get("content")
+                or payload.get("unanswered_question")
+                or payload.get("description")
+                or event.get("subject")
+                or ""
+            ).strip()
+            if not content:
+                continue
+            event_type = str(event.get("event_type") or "").strip()
+            row = next(
+                (
+                    r
+                    for r in rows
+                    if isinstance(r, dict) and str(r.get("content") or "").strip() == content
+                ),
+                None,
+            )
+            if event_type == "open_loop_created":
+                if row is not None:
+                    row.setdefault("planted_chapter", chapter)
+                    continue
+                new_row: dict[str, Any] = {
+                    "content": content,
+                    "status": "active",
+                    "planted_chapter": chapter,
+                }
+                target = self._safe_int(
+                    payload.get("target_chapter") or payload.get("due_chapter")
+                )
+                if target > 0:
+                    new_row["target_chapter"] = target
+                tier = str(payload.get("tier") or "").strip()
+                if tier:
+                    new_row["tier"] = tier
+                rows.append(new_row)
+                applied += 1
+            else:
+                if row is None:
+                    rows.append(
+                        {
+                            "content": content,
+                            "status": "resolved",
+                            "resolved_chapter": chapter,
+                        }
+                    )
+                    applied += 1
+                elif str(row.get("status") or "") != "resolved":
+                    row["status"] = "resolved"
+                    row["resolved_chapter"] = chapter
+                    applied += 1
+        return applied
 
     def _apply_strand_tracker(self, state: dict, chapter: int, commit_payload: dict) -> bool:
         strand = self._dominant_strand(commit_payload)

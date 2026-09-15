@@ -57,25 +57,37 @@ def _render_world_state(state: dict, project_root: Path) -> str:
 
 
 def _render_foreshadowing_panel(state: dict, project_root: Path) -> str:
-    """伏笔面板：活跃伏笔 + 已闭合伏笔。"""
+    """伏笔面板：活跃伏笔 + 已闭合伏笔。
+
+    数据源为 state.plot_threads.foreshadowing（SSOT writer 从 open_loop
+    事件聚合的真相，dashboard 伏笔面板也读同一路径）；兼容顶层
+    foreshadowing 旧占位。
+    """
     lines = [HEADER, "# 伏笔面板\n"]
-    fs = state.get("foreshadowing") or []
+    nested = (state.get("plot_threads") or {}).get("foreshadowing")
+    legacy = state.get("foreshadowing") or []
+    fs = nested if isinstance(nested, list) else legacy
     active = [f for f in fs if f.get("status") == "active"]
-    closed = [f for f in fs if f.get("status") == "closed"]
+    closed = [f for f in fs if f.get("status") in ("resolved", "closed")]
 
     lines.append(f"## 活跃伏笔（{len(active)}）\n")
     for f in active:
         urgency_raw = f.get("urgency")
         urgency = urgency_raw if isinstance(urgency_raw, (int, float)) and not isinstance(urgency_raw, bool) else 50
         bar = "█" * min(10, max(1, urgency // 10)) + "░" * (10 - min(10, max(1, urgency // 10)))
-        lines.append(f"- **第{f.get('planted_chapter', '?')}章**: {f.get('content', '')}")
+        tier = f.get("tier")
+        tier_label = f"（{tier}）" if tier else ""
+        target = f.get("target_chapter")
+        target_label = f"，目标第{target}章回收" if target else ""
+        lines.append(f"- **第{f.get('planted_chapter', '?')}章**: {f.get('content', '')}{tier_label}{target_label}")
         lines.append(f"  - 紧迫度: [{bar}] {urgency}%")
     if not active:
         lines.append("（暂无活跃伏笔）\n")
 
     lines.append(f"\n## 已闭合伏笔（{len(closed)}）\n")
     for f in closed[-10:]:
-        lines.append(f"- ~~第{f.get('planted_chapter', '?')}章: {f.get('content', '')}~~ → 第{f.get('closed_chapter', '?')}章闭合")
+        resolved_chapter = f.get("resolved_chapter") or f.get("closed_chapter")
+        lines.append(f"- ~~第{f.get('planted_chapter', '?')}章: {f.get('content', '')}~~ → 第{resolved_chapter if resolved_chapter is not None else '?'}章闭合")
     if not closed:
         lines.append("（暂无已闭合伏笔）\n")
 
