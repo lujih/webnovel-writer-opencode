@@ -62,6 +62,7 @@ class ContextManager:
     EXTRA_SECTIONS = {
         "story_skeleton",
         "memory",
+        "author_style_patterns",
         "long_term_memory",
         "preferences",
         "alerts",
@@ -92,6 +93,7 @@ class ContextManager:
         "plot_structure",
         "story_skeleton",
         "memory",
+        "author_style_patterns",
         "long_term_memory",
         "preferences",
         "alerts",
@@ -160,7 +162,7 @@ class ContextManager:
         }
 
         for section_name in self.SECTION_ORDER:
-            if section_name in pack and section_name != "global":
+            if section_name in pack:
                 content = pack[section_name]
                 weight = weights.get(section_name, 0.0)
                 if weight > 0 or section_name in self.EXTRA_SECTIONS:
@@ -254,11 +256,20 @@ class ContextManager:
         global_ctx = {
             "worldview_skeleton": self._load_setting("世界观"),
             "power_system_skeleton": self._load_setting("力量体系"),
-            "style_contract_ref": self._load_setting("风格契约"),
+            "style_contract_ref": self._trunc(
+                self._load_setting("风格契约"), self._STYLE_CONTRACT_MAX_CHARS
+            ),
         }
 
         preferences = self._load_json_optional(self.config.webnovel_dir / "preferences.json")
         memory = self._load_json_optional(self.config.webnovel_dir / "project_memory.json")
+        author_style_patterns = self._author_style_patterns(
+            memory.get("patterns") if isinstance(memory, dict) else None
+        )
+        if author_style_patterns:
+            # patterns 已由 author_style_patterns（排序截断）单独消费；
+            # 其余键（如有）仍保留在 memory，避免丢失数据
+            memory = {k: v for k, v in memory.items() if k != "patterns"}
         long_term_memory: Dict[str, Any] = orchestrator_pack if orchestrator_pack else {}
         story_skeleton = self._load_story_skeleton(chapter)
         alert_slice = max(0, int(self.config.context_alerts_slice))
@@ -290,6 +301,7 @@ class ContextManager:
             "story_skeleton": story_skeleton,
             "preferences": preferences,
             "memory": memory,
+            "author_style_patterns": author_style_patterns,
             "long_term_memory": long_term_memory,
             "alerts": {
                 "disambiguation_warnings": (
@@ -889,6 +901,66 @@ class ContextManager:
             return json.loads(path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             return {}
+
+    # 作者文风记忆（project_memory.json patterns）与风格契约的消费上限，
+    # 控制注入 context pack 的 token 体积（对齐 /webnovel-learn 的写入约定）。
+    _STYLE_PATTERNS_LIMIT = 10
+    _STYLE_PATTERN_DESC_MAX_CHARS = 200
+    _STYLE_CONTRACT_MAX_CHARS = 2000
+
+    _IMPORTANCE_NAMED_WEIGHTS: Dict[str, float] = {
+        "critical": 5.0,
+        "highest": 5.0,
+        "high": 4.0,
+        "medium": 3.0,
+        "normal": 3.0,
+        "low": 2.0,
+        "lowest": 1.0,
+    }
+
+    @classmethod
+    def _importance_weight(cls, value: Any) -> float:
+        """importance 归一为数值权重（越大越靠前）；兼容命名档位与数字字符串。"""
+        raw = str(value if value is not None else "").strip().lower()
+        if raw in cls._IMPORTANCE_NAMED_WEIGHTS:
+            return cls._IMPORTANCE_NAMED_WEIGHTS[raw]
+        try:
+            return float(raw)
+        except ValueError:
+            return cls._IMPORTANCE_NAMED_WEIGHTS["medium"]
+
+    @staticmethod
+    def _trunc(text: str, limit: int) -> str:
+        text = str(text or "")
+        return text if len(text) <= limit else text[:limit].rstrip()
+
+    def _author_style_patterns(self, patterns: Optional[List[Any]]) -> List[Dict[str, Any]]:
+        """project_memory.json 的 patterns 按 importance 排序取前 N 条，
+        description 截断，控制注入 context 的 token 体积。
+
+        返回 [] 表示无有效数据；调用方据此决定是否保留 patterns 在 memory 段。
+        """
+        if not isinstance(patterns, list):
+            return []
+        valid = [
+            p for p in patterns
+            if isinstance(p, dict) and str(p.get("description") or "").strip()
+        ]
+        if not valid:
+            return []
+        valid.sort(key=lambda p: self._importance_weight(p.get("importance")), reverse=True)
+        result: List[Dict[str, Any]] = []
+        for p in valid[: self._STYLE_PATTERNS_LIMIT]:
+            item: Dict[str, Any] = {
+                "pattern_type": str(p.get("pattern_type", "other")),
+                "description": self._trunc(
+                    p.get("description"), self._STYLE_PATTERN_DESC_MAX_CHARS
+                ),
+            }
+            if p.get("source_chapter") is not None:
+                item["source_chapter"] = p["source_chapter"]
+            result.append(item)
+        return result
 
 
 def main():

@@ -73,6 +73,63 @@ def test_context_manager_build_and_filter(temp_project):
     assert "long_term_memory" in payload
 
 
+def test_author_style_patterns_sorted_truncated_and_style_contract_capped(temp_project):
+    patterns = [
+        {
+            "pattern_type": "hook",
+            "description": "low" + "低" * 500,
+            "importance": "low",
+            "source_chapter": 2,
+        },
+        {
+            "pattern_type": "dialogue",
+            "description": "critical" + "核" * 500,
+            "importance": "critical",
+        },
+        {
+            "pattern_type": "pacing",
+            "description": "high" + "高" * 500,
+            "importance": "high",
+            "source_chapter": 5,
+        },
+        {"pattern_type": "empty", "description": "   "},  # 无描述，应被过滤
+        "not-a-dict",  # 非 dict，应被过滤
+    ]
+    temp_project.state_file.write_text(
+        json.dumps({"protagonist_state": {}, "chapter_meta": {}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    # 大纲文件（_load_outline 强依赖）
+    outline_dir = temp_project.project_root / "大纲"
+    outline_dir.mkdir(parents=True, exist_ok=True)
+    (outline_dir / "第1卷-详细大纲.md").write_text(
+        "# 第1章\n主角登场，埋下三年之约伏笔。", encoding="utf-8"
+    )
+    (temp_project.webnovel_dir / "project_memory.json").write_text(
+        json.dumps({"patterns": patterns, "notes": ["保留的其它键"]}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    temp_project.settings_dir.mkdir(parents=True, exist_ok=True)
+    (temp_project.settings_dir / "风格契约.md").write_text("风格规则" * 1000, encoding="utf-8")
+
+    manager = ContextManager(temp_project)
+    payload = manager.build_context(1, template="plot")
+
+    sp = payload.get("author_style_patterns") or []
+    assert [p["pattern_type"] for p in sp] == ["dialogue", "pacing", "hook"]
+    assert all(len(p["description"]) <= 200 for p in sp)
+    assert sp[1]["source_chapter"] == 5
+    assert "source_chapter" not in sp[0]
+    # patterns 已被消费出独立 section，不再随 memory 段全量注入
+    assert "patterns" not in payload["memory"]
+    assert payload["memory"].get("notes") == ["保留的其它键"]
+    # 风格契约截断 2000 字（global section 由 _build_pack 产出，
+    # _assemble_json_payload 不注入 global，故直接验证 pack）
+    pack = manager._build_pack(1)
+    sc = pack["global"]["style_contract_ref"]
+    assert len(sc) == 2000
+
+
 def test_context_manager_uses_memory_orchestrator_for_working_when_enabled(temp_project, monkeypatch):
     state = {
         "protagonist_state": {"name": "旧快照"},
