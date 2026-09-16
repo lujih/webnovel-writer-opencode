@@ -13,6 +13,7 @@ import os
 import re
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 from runtime_compat import enable_windows_utf8_stdio
@@ -343,6 +344,34 @@ class AtomicWriteError(Exception):
     pass
 
 
+def _replace_with_retry(
+    temp_path: Union[str, Path],
+    file_path: Union[str, Path],
+    *,
+    attempts: int = 10,
+    first_delay: float = 0.02,
+    max_delay: float = 0.5,
+) -> None:
+    """
+    os.replace 带退避重试（仅针对 PermissionError）。
+
+    Windows 上目标文件被其他进程瞬时打开（编辑器 file watcher、杀毒软件、
+    同步盘、索引器——均未开 FILE_SHARE_DELETE 共享位）时，os.replace 报
+    WinError 5；占用通常是毫秒级，短退避重试即可穿过（issue #125）。
+    重试穷尽后抛出最后一次的 PermissionError；其余异常不吞。
+    """
+    delay = first_delay
+    for attempt in range(attempts):
+        try:
+            os.replace(temp_path, file_path)
+            return
+        except PermissionError:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 2, max_delay)
+
+
 def atomic_write_json(
     file_path: Union[str, Path],
     data: Dict[str, Any],
@@ -424,9 +453,9 @@ def atomic_write_json(
                 except OSError:
                     pass  # 备份失败不阻止写入
 
-            # Step 4: 原子重命名
+            # Step 4: 原子重命名（Windows 上目标被瞬时占用会 WinError 5，带退避重试）
             try:
-                os.replace(temp_path, file_path)
+                _replace_with_retry(temp_path, file_path)
                 temp_path = None  # 标记已成功，不需要清理
             except PermissionError:
                 if os.environ.get("WEBNOVEL_TEST_RELAX_ATOMIC_REPLACE") != "1":
