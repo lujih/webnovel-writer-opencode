@@ -64,7 +64,8 @@ def _render_foreshadowing_panel(state: dict, project_root: Path) -> str:
     foreshadowing 旧占位。
     """
     lines = [HEADER, "# 伏笔面板\n"]
-    nested = (state.get("plot_threads") or {}).get("foreshadowing")
+    plot_threads = state.get("plot_threads")
+    nested = plot_threads.get("foreshadowing") if isinstance(plot_threads, dict) else None
     legacy = state.get("foreshadowing") or []
     fs = nested if isinstance(nested, list) else legacy
     active = [f for f in fs if f.get("status") == "active"]

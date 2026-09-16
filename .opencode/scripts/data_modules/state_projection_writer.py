@@ -316,13 +316,7 @@ class StateProjectionWriter:
         applied = 0
         for event in loop_events:
             payload = event.get("payload") if isinstance(event.get("payload"), dict) else {}
-            content = str(
-                payload.get("content")
-                or payload.get("unanswered_question")
-                or payload.get("description")
-                or event.get("subject")
-                or ""
-            ).strip()
+            content = self._coerce_loop_content(payload, event)
             if not content:
                 continue
             event_type = str(event.get("event_type") or "").strip()
@@ -368,6 +362,28 @@ class StateProjectionWriter:
                     row["resolved_chapter"] = chapter
                     applied += 1
         return applied
+
+    @staticmethod
+    def _coerce_loop_content(payload: dict, event: dict) -> str:
+        """从 open_loop 事件提取伏笔 content（与 memory/writer._coerce_loop_content
+        同一规则：content → unanswered_question → loop_type+description → description
+        → loop_type → subject 兜底）。state 与 memory 两侧必须提取出相同的 content
+        字符串，否则 open_loop_closed 事件在两路投影中匹配不到同一条目，
+        会造成"活跃伏笔"残留。"""
+        for key in ("content", "unanswered_question"):
+            value = str(payload.get(key) or "").strip()
+            if value:
+                return value
+        description = str(payload.get("description") or "").strip()
+        loop_type = str(payload.get("loop_type") or "").strip()
+        if description and loop_type:
+            return f"{loop_type}：{description}"
+        if description:
+            return description
+        if loop_type:
+            return loop_type
+        subject = str(event.get("subject") or payload.get("_subject") or "").strip()
+        return subject
 
     def _apply_strand_tracker(self, state: dict, chapter: int, commit_payload: dict) -> bool:
         strand = self._dominant_strand(commit_payload)

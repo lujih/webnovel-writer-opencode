@@ -67,6 +67,64 @@ class TestSSOTEventLog:
         assert state["progress"]["current_chapter"] == 2
         assert "萧炎" in state["entities_v3"]
 
+    def test_rebuild_populates_plot_threads_foreshadowing_from_open_loop_events(self, tmp_path):
+        """open_loop 事件必须同时聚合进 plot_threads.foreshadowing（与
+        StateProjectionWriter 增量路径同构），否则 ssot rebuild 会冲掉
+        dashboard 消费的 plot_threads.foreshadowing。"""
+        from data_modules.ssot_enforcer import publish_event, rebuild_state_json
+
+        publish_event(
+            tmp_path, "open_loop_created",
+            {"content": "黑色棺材的来历", "tier": "major",
+             "target_chapter": 30, "_subject": "narrator"},
+            chapter=7,
+        )
+        publish_event(
+            tmp_path, "open_loop_closed",
+            {"content": "黑色棺材的来历", "resolution": "揭棺"},
+            chapter=28,
+        )
+
+        state = rebuild_state_json(tmp_path)
+        rows = state.get("plot_threads", {}).get("foreshadowing")
+        assert isinstance(rows, list), "ssot rebuild 必须产出 plot_threads.foreshadowing"
+        assert len(rows) == 1
+        assert rows[0]["content"] == "黑色棺材的来历"
+        assert rows[0]["status"] == "resolved"
+        assert rows[0]["planted_chapter"] == 7
+        assert rows[0]["resolved_chapter"] == 28
+        # 顶层 foreshadowing 旧路径仍保留（向后兼容）
+        assert len(state.get("foreshadowing", [])) == 1
+
+    def test_rebuild_open_loop_content_matches_coerce_rule(self, tmp_path):
+        """结构化事件（loop_type + description，无 content）必须提取出
+        与 memory 侧 _coerce_loop_content 相同的 content 字符串。"""
+        from data_modules.ssot_enforcer import publish_event, rebuild_state_json, _loop_content
+
+        payload = {"loop_type": "信息悬疑", "description": "芯片设计者身份",
+                   "_subject": "chen_sheng"}
+        publish_event(tmp_path, "open_loop_created", payload, chapter=3)
+
+        state = rebuild_state_json(tmp_path)
+        rows = state.get("plot_threads", {}).get("foreshadowing", [])
+        assert rows and rows[0]["content"] == "信息悬疑：芯片设计者身份"
+        assert _loop_content(payload) == "信息悬疑：芯片设计者身份"
+
+    def test_rebuild_open_loop_orphan_close_keeps_record(self, tmp_path):
+        """孤儿 closed 事件（无对应 created）保留为 resolved 记录，不丢数据。"""
+        from data_modules.ssot_enforcer import publish_event, rebuild_state_json
+
+        publish_event(
+            tmp_path, "open_loop_closed",
+            {"content": "从未登记过的旧约"},
+            chapter=9,
+        )
+
+        rows = rebuild_state_json(tmp_path).get("plot_threads", {}).get("foreshadowing", [])
+        assert len(rows) == 1
+        assert rows[0]["status"] == "resolved"
+        assert rows[0]["resolved_chapter"] == 9
+
     def test_verify_consistency_clean(self, tmp_path):
         from data_modules.ssot_enforcer import publish_event, rebuild_state_json, verify_consistency
 

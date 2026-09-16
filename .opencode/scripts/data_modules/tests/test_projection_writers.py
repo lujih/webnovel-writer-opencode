@@ -677,6 +677,59 @@ def test_state_writer_foreshadowing_orphan_close_keeps_record(tmp_path):
     assert rows[0]["resolved_chapter"] == 9
 
 
+def test_state_writer_structured_loop_events_match_memory_content(tmp_path):
+    """结构化 open_loop 事件（loop_type+description，无 content 字段）：
+    state writer 提取的 content 必须与 memory/writer._coerce_loop_content
+    一致，否则 closed 事件在 state 侧匹配不到 created 条目 → 活跃伏笔残留。"""
+    from data_modules.memory.writer import MemoryWriter
+
+    (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
+    writer = StateProjectionWriter(tmp_path)
+
+    structured_payload = {
+        "loop_type": "信息悬疑",
+        "description": "芯片设计者身份",
+        "_subject": "chen_sheng",
+    }
+
+    created_event = {
+        "event_type": "open_loop_created",
+        "subject": "chen_sheng",
+        "payload": dict(structured_payload),
+    }
+    writer.apply(
+        {
+            "meta": {"status": "accepted", "chapter": 3},
+            "accepted_events": [created_event],
+        }
+    )
+
+    closed_event = {
+        "event_type": "open_loop_closed",
+        "subject": "chen_sheng",
+        "payload": dict(structured_payload),
+    }
+    writer.apply(
+        {
+            "meta": {"status": "accepted", "chapter": 9},
+            "accepted_events": [closed_event],
+        }
+    )
+
+    rows = json.loads((tmp_path / ".webnovel" / "state.json").read_text(encoding="utf-8"))["plot_threads"]["foreshadowing"]
+    assert len(rows) == 1  # created 与 closed 必须匹配到同一条目
+    assert rows[0]["content"] == "信息悬疑：芯片设计者身份"  # 与 memory 侧同规则
+    assert rows[0]["status"] == "resolved"
+    assert rows[0]["planted_chapter"] == 3
+    assert rows[0]["resolved_chapter"] == 9
+
+    # 交叉验证：memory 侧 _coerce_loop_content 提取结果一致
+    mem_content = MemoryWriter._coerce_loop_content(structured_payload, closed_event)
+    assert mem_content == "信息悬疑：芯片设计者身份"
+    assert mem_content == rows[0]["content"]
+
+
 def test_state_projection_writer_is_idempotent_for_replay(tmp_path):
     """state writer 重复 apply 时 entity_state 不会累积重复 key。"""
     (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)

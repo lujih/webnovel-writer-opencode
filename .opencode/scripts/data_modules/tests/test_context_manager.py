@@ -124,9 +124,8 @@ def test_author_style_patterns_sorted_truncated_and_style_contract_capped(temp_p
     assert "patterns" not in payload["memory"]
     assert payload["memory"].get("notes") == ["保留的其它键"]
     # 风格契约截断 2000 字（global section 由 _build_pack 产出，
-    # _assemble_json_payload 不注入 global，故直接验证 pack）
-    pack = manager._build_pack(1)
-    sc = pack["global"]["style_contract_ref"]
+    # 且 _assemble_json_payload 已恢复注入 global，payload 中也可验证）
+    sc = payload["global"]["style_contract_ref"]
     assert len(sc) == 2000
 
 

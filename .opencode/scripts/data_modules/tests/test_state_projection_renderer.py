@@ -90,6 +90,17 @@ class TestForeshadowingPanel:
         result = _render_foreshadowing_panel({}, Path("."))
         assert "暂无活跃伏笔" in result
 
+    def test_non_dict_plot_threads_does_not_crash(self):
+        """plot_threads 为非 dict（脏数据）时回退顶层 foreshadowing，不抛异常。"""
+        state = {
+            "plot_threads": "corrupted-string",
+            "foreshadowing": [
+                {"content": "三年之约", "planted_chapter": 1, "status": "active"},
+            ],
+        }
+        result = _render_foreshadowing_panel(state, Path("."))
+        assert "三年之约" in result
+
 
 class TestCharacterMatrix:
     def test_renders_relationship_table(self):

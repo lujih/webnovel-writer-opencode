@@ -309,14 +309,96 @@ def rebuild_state_json(project_root: Path,
                 "status": "active",
             }
             state.setdefault("foreshadowing", []).append(loop)
+            # 与 StateProjectionWriter._apply_foreshadowing 同构的 plot_threads
+            # 聚合路径（dashboard 消费）：created 按 content 去重，幂等。
+            _apply_foreshadowing_event(
+                state, evt["chapter"], "open_loop_created", payload,
+            )
 
         elif etype == "open_loop_closed":
             for loop in state.get("foreshadowing", []):
                 if loop.get("content") == payload.get("content"):
                     loop["status"] = "closed"
                     loop["closed_chapter"] = evt["chapter"]
+            _apply_foreshadowing_event(
+                state, evt["chapter"], "open_loop_closed", payload,
+            )
 
     return state
+
+
+def _loop_content(payload: dict) -> str:
+    """从 open_loop 事件 payload 多候选字段提取 content（与 memory 侧
+    _coerce_loop_content 的提取规则一致：content → unanswered_question →
+    loop_type+description → description → subject 兜底）。"""
+    for key in ("content", "unanswered_question"):
+        value = str(payload.get(key) or "").strip()
+        if value:
+            return value
+    description = str(payload.get("description") or "").strip()
+    loop_type = str(payload.get("loop_type") or "").strip()
+    if description and loop_type:
+        return f"{loop_type}：{description}"
+    if description:
+        return description
+    if loop_type:
+        return loop_type
+    subject = str(payload.get("_subject") or "").strip()
+    return subject
+
+
+def _apply_foreshadowing_event(state: dict, chapter: int, event_type: str,
+                               payload: dict) -> None:
+    """把单个 open_loop 事件聚合进 plot_threads.foreshadowing（与
+    StateProjectionWriter._apply_foreshadowing 的幂等规则一致）。
+
+    用于 rebuild_state_json 的独立 replay 路径，确保重建结果与增量
+    投影路径写入的字段保持一致，避免 ssot rebuild 冲掉 plot_threads。
+    """
+    content = _loop_content(payload)
+    if not content:
+        return
+    plot_threads = state.get("plot_threads")
+    if not isinstance(plot_threads, dict):
+        plot_threads = {}
+        state["plot_threads"] = plot_threads
+    rows = plot_threads.get("foreshadowing")
+    if not isinstance(rows, list):
+        rows = []
+        plot_threads["foreshadowing"] = rows
+
+    row = next(
+        (r for r in rows
+         if isinstance(r, dict) and str(r.get("content") or "").strip() == content),
+        None,
+    )
+    if event_type == "open_loop_created":
+        if row is not None:
+            row.setdefault("planted_chapter", chapter)
+            return
+        new_row: dict = {"content": content, "status": "active",
+                         "planted_chapter": chapter}
+        target = _to_int(payload.get("target_chapter") or payload.get("due_chapter"))
+        if target > 0:
+            new_row["target_chapter"] = target
+        tier = str(payload.get("tier") or "").strip()
+        if tier:
+            new_row["tier"] = tier
+        rows.append(new_row)
+    else:
+        if row is None:
+            rows.append({"content": content, "status": "resolved",
+                         "resolved_chapter": chapter})
+        elif str(row.get("status") or "") != "resolved":
+            row["status"] = "resolved"
+            row["resolved_chapter"] = chapter
+
+
+def _to_int(value) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
 
 
 def _empty_state() -> dict:
