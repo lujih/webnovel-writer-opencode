@@ -416,13 +416,69 @@ def _empty_state() -> dict:
     }
 
 
+_NON_EVENT_FIELDS = (
+    "project_info", "chapter_meta", "review_checkpoints", "world_settings",
+    "strand_tracker", "entities", "entity_state", "schema_version",
+    "disambiguation_warnings", "disambiguation_pending",
+)
+# protagonist_state 是 dict 但会被 _empty_state 初始化为 {}，
+# 事件日志可能向其中追加 character_state_changed 子字段；
+# 需做子字段级补全（k not in new_dict）而非整字段跳过。
+_DICT_MERGE_FIELDS = ("protagonist_state",)
+
+
+def _merge_non_event_fields(old_state: dict, new_state: dict) -> dict:
+    """把旧 state.json 中非事件日志产生的顶层字段合并进重建结果。
+
+    仅回填 key 缺失（``k not in new_state``）的字段；事件日志能推进的
+    字段（``k in new_state``）一律以重建结果为准，避免旧值覆盖新值
+    （如既有 65 章的 progress.current_chapter 不应覆盖事件日志推进的 1）。
+
+    ``_DICT_MERGE_FIELDS`` 中的字段（如 protagonist_state）：dict 时做
+    子字段级补全——事件日志推进的子字段保留重建值，缺失子字段回填
+    既有值；非 dict 类型仅整字段补缺。
+    """
+    if not isinstance(old_state, dict) or not isinstance(new_state, dict):
+        return new_state
+    merged = new_state
+    for k in _NON_EVENT_FIELDS:
+        if k not in merged and k in old_state:
+            merged[k] = old_state[k]
+    for k in _DICT_MERGE_FIELDS:
+        old_v = old_state.get(k)
+        new_v = merged.get(k)
+        if not isinstance(new_v, dict):
+            if k not in merged and old_v is not None:
+                merged[k] = old_v
+        elif isinstance(old_v, dict):
+            for sub_k, sub_v in old_v.items():
+                if sub_k not in new_v:
+                    new_v[sub_k] = sub_v
+    return merged
+
+
 def rebuild_projections(project_root: Path) -> dict:
-    """Rebuild all projections from event log. Returns summary."""
+    """Rebuild all projections from event log. Returns summary.
+
+    P0 fix: 重建时保留非事件字段（project_info/chapter_meta/review_checkpoints/
+    world_settings/strand_tracker 等 init 初始化与审查流水线写入的顶层键），
+    避免用户跑 ssot rebuild 擦掉项目元数据。事件日志可推进的字段以重建
+    结果为准，二者互补。
+    """
     state = rebuild_state_json(project_root)
     state_path = project_root / ".webnovel" / "state.json"
 
     from security_utils import atomic_write_json
     state_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # P0：保留既有 state.json 的非事件顶层字段（仅补缺，事件字段以重建为准）
+    try:
+        if state_path.is_file():
+            existing = json.loads(state_path.read_text(encoding="utf-8"))
+            state = _merge_non_event_fields(existing, state)
+    except (OSError, ValueError) as exc:
+        logger.warning("ssot rebuild: 无法读取既有 state.json 合并非事件字段: %s", exc)
+
     atomic_write_json(state_path, state, use_lock=True, backup=True)
 
     event_count = sum(1 for _ in _event_log_dir(project_root).glob("*.event.json"))
