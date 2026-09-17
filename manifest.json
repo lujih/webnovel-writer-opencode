@@ -1,42 +1,22 @@
 {
-  "version": "v2.9.2-20260917.1504",
+  "version": "v2.9.2-20260917.1555",
   "tag": "v2.9.2",
-  "updated": "2026-09-17T15:04:20Z",
+  "updated": "2026-09-17T15:55:57Z",
   "changelog": [
     {
-      "hash": "a8f2041",
-      "type": "fix",
-      "message": "fix: ssot rebuild \u4fdd\u7559\u975e\u4e8b\u4ef6\u9876\u5c42\u5b57\u6bb5\uff08P0 \u9632\u64e6\u9664\uff09"
+      "hash": "566d4cd",
+      "type": "test",
+      "message": "test: \u4fee\u590d 17 \u4e2a\u9884\u5b58\u6d4b\u8bd5\u5931\u8d25\uff08\u5927\u7eb2 fixture + prompt \u5f15\u7528\u6587\u4ef6\uff09"
     },
     {
-      "hash": "2e2340f",
-      "type": "fix",
-      "message": "fix: \u4f0f\u7b14\u805a\u5408\u53cc\u8f68/\u5185\u5bb9\u5bf9\u9f50/\u6e32\u67d3\u9632\u62a4 3 \u9879\u5ba1\u67e5\u4fee\u590d"
+      "hash": "4abb75e",
+      "type": "docs",
+      "message": "docs: \u7ef4\u62a4 5 \u7b14 fix \u5408\u5e76\u7684\u6587\u6863\uff08CLAUDE.md/commands/\u5408\u5e76\u8bb0\u5f55\uff09"
     },
     {
-      "hash": "e5f124d",
-      "type": "fix",
-      "message": "fix: global \u6bb5\u6ce8\u5165 + \u6587\u98ce\u8bb0\u5fc6\u6392\u5e8f\u622a\u65ad\uff08project_memory patterns\uff0c#131\uff09"
-    },
-    {
-      "hash": "4bda741",
-      "type": "fix",
-      "message": "fix: atomic_write_json \u5bf9 WinError 5 \u9000\u907f\u91cd\u8bd5\uff08#125\uff09"
-    },
-    {
-      "hash": "82a0a5b",
-      "type": "fix",
-      "message": "fix: open_loop \u4e8b\u4ef6\u805a\u5408\u8fdb plot_threads.foreshadowing\uff08#130\uff09"
-    },
-    {
-      "hash": "2cf7be7",
-      "type": "fix",
-      "message": "fix: PR #23 \u5408\u5e76\u540e 7 \u9879\u4fee\u590d"
-    },
-    {
-      "hash": "f84f352",
+      "hash": "e772ae0",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260701.1415 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260917.1504 [skip ci]"
     }
   ],
   "files": {
@@ -399,6 +379,10 @@
     ".opencode/agents/data-agent.md": {
       "sha256": "8d168e9c1bcaff697b3b36d46a8079e52b4d04780b8046986bfe19fe29dfb0bb",
       "size": 7723
+    },
+    ".opencode/agents/references/context-agent-example.md": {
+      "sha256": "5b8da19bca68db90cf89c0d3c43d1e365bcf144c85d316ab8e0dfc7d4d109622",
+      "size": 3619
     },
     ".opencode/references/review-schema.md": {
       "sha256": "133d731c513b30767ac76b8a18988b149d99611b9a38dab819a67ccc1102c911",
@@ -1633,8 +1617,8 @@
       "size": 6163
     },
     ".opencode/scripts/data_modules/tests/test_memory_orchestrator.py": {
-      "sha256": "3bda0b682859716260efd10471d05d6eadfd8facc6a1f06b56d6e6f1488758f9",
-      "size": 2038
+      "sha256": "6329f2be3d99138754932cfae1803c0426ffbc06f631c0f402449db9b0711252",
+      "size": 2425
     },
     ".opencode/scripts/data_modules/tests/test_project_locator.py": {
       "sha256": "fcff76d1ec95c5526a4abdf683087ca1f697d5b76b606f4c2e95af2f16c7a841",
@@ -1745,8 +1729,8 @@
       "size": 14497
     },
     ".opencode/scripts/data_modules/tests/test_context_manager.py": {
-      "sha256": "b9f1fae803eb5ac4eb672df0cc11b6d5133d2d8c49b5fe48a1c53f4be769c590",
-      "size": 34646
+      "sha256": "5ce9678648fc213788889df4ef9561187abbaef8ccc5b3c763a3e74c07a2f30a",
+      "size": 35378
     },
     ".opencode/scripts/data_modules/tests/test_chapter_outline_directive.py": {
       "sha256": "fbe75821b305f5b13e0792891b183a37fa14801d34f3c0cf23f79a467069e1fb",
