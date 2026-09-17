@@ -236,7 +236,7 @@ python -X utf8 "<OPENCODE_ROOT>/scripts/webnovel.py" --project-root "<PROJECT_RO
 | 子命令 | 说明 |
 |--------|------|
 | `ssot verify` | 校验 state.json 与事件日志的一致性 |
-| `ssot rebuild` | 从事件日志重建所有投影 |
+| `ssot rebuild` | 从事件日志重建所有投影。**保留非事件字段**（`project_info`/`chapter_meta`/`review_checkpoints`/`world_settings`/`strand_tracker`/`entities`/`entity_state`/`protagonist_state`）——这些来自 init 初始化与审查流水线，不被事件日志覆盖。事件字段（如 `progress.current_chapter`、`entities_v3`、`plot_threads.foreshadowing`）以重建结果为准 |
 | `ssot events` | 查看完整事件历史 |
 | `workflow checkpoint --chapter N --stage STAGE` | 记录章节工作流检查点 |
 | `workflow status` | 查看所有章节阶段状态 |

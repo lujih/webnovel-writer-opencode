@@ -26,7 +26,7 @@ python -m pytest .opencode/scripts/data_modules/tests/test_config.py -q -p no:co
 python -m pytest .opencode/scripts/data_modules/tests/test_config.py::test_load_env -q -p no:cov -o "addopts="
 ```
 
-Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety. 24 pre-existing failures in `test_api_client.py` (13, needs network mock), `test_memory_bootstrap.py` (1), `test_prompt_integrity.py` (4), and others (6) — these are known, not caused by recent changes.
+Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety. 17 pre-existing failures (as of v2.9.2+): 15 in `test_context_manager.py` (缺失的「大纲」文件 fixtures), 1 in `test_memory_orchestrator.py`, 1 in `test_prompt_integrity.py` (context-agent.md 缺失的 references 文件) — these are known, not caused by recent changes.
 
 ### CLI
 
@@ -97,7 +97,11 @@ Code is organized as a pipeline — each layer feeds the next:
 
 **Story Contract Engine** — MASTER_SETTING.json is the source of truth. Runtime contracts derive from it per chapter. Core files: `story_system_engine.py`, `story_contracts.py`.
 
-**SSOT Event Sourcing** (v2.8) — Append-only event log (`.story-system/events/*.event.json`) as immutable truth. `publish_event()` is the single write path; `rebuild_state_json()` deterministically replays all 14 event types to rebuild projections. `verify_consistency()` detects drift between state.json and event log. File: `ssot_enforcer.py`. `state_manager.py` uses pending queue + filelock + snapshot rollback for atomic writes. `state_projection_writer.py` uses `filelock` to protect state.json read-modify-write.
+**SSOT Event Sourcing** (v2.8) — Append-only event log (`.story-system/events/*.event.json`) as immutable truth. `publish_event()` is the single write path; `rebuild_state_json()` deterministically replays all 14 event types to rebuild projections. `verify_consistency()` detects drift between state.json and event log. File: `ssot_enforcer.py`. `state_manager.py` uses pending queue + filelock + snapshot rollback for atomic writes. `state_projection_writer.py` uses `filelock` to protect state.json read-modify-write. **v2.9.x additions**: `open_loop_created/closed` 事件路由到 `state` 投影，`StateProjectionWriter._apply_foreshadowing()` 聚合进 `plot_threads.foreshadowing`（dashboard 伏笔面板消费路径）；`rebuild_projections()` 保留非事件顶层字段（`project_info`/`chapter_meta` 等 9 个），避免 `ssot rebuild` 擦除项目元数据（P0 修复）；`_render_foreshadowing_panel()` 读 `plot_threads.foreshadowing`（嵌套优先），兼容顶层 `foreshadowing` legacy。
+
+**Atomic JSON Writes / WinError 5 退避** (v2.9.x) — `security_utils.atomic_write_json()` 用 `tempfile.mkstemp` + `os.replace` 原子写盘，`_replace_with_retry()` 对 `PermissionError` 指数退避（20ms→500ms ×10，约 2.6s 窗口），穷尽后抛 `AtomicWriteError`。Windows 下目标文件被 VSCode file watcher/杀软/同步盘瞬时打开（未开 `FILE_SHARE_DELETE`）报 WinError 5 时自动重试自愈；`WEBNOVEL_TEST_RELAX_ATOMIC_REPLACE=1` 降级为非原子覆写兜底（测试沙箱专用）。所有 JSON 投影（state.json/memory_scratchpad.json/summaries）统一受益。
+
+**Context Assembly — global 段注入 + 文风记忆** (v2.9.x) — `context_manager._assemble_json_payload()` 恢复注入 `global` 段（世界观骨架/力量体系/风格契约，此前 `!= "global"` 特例误丢弃），按 `TEMPLATE_WEIGHTS` 权重分配；`author_style_patterns` section 消费 `/webnovel-learn` 写入的 `project_memory.json` patterns——按 importance 排序取前 10 条、description 截断 200 字、从 memory 段剥离避免重复注入；`style_contract_ref` 截断 2000 字控制 token 预算。
 
 **Override Contract Engine** (v2.8) — Versioned world rule evolution (e.g., "金丹期不可飞行 → 获得混沌珠后可飞行"). `add_override()` creates new version and supersedes previous. `build_context_hints()` generates AI-injectable context. File: `override_contract_engine.py`.
 
