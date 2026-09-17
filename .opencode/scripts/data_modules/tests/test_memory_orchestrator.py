@@ -10,11 +10,18 @@ from data_modules.memory.store import ScratchpadManager
 def _cfg(tmp_path):
     cfg = DataModulesConfig.from_project_root(tmp_path)
     cfg.ensure_dirs()
+    # 默认大纲文件（build_memory_pack / build_context 强依赖）
+    cfg.outline_dir.mkdir(parents=True, exist_ok=True)
+    (cfg.outline_dir / "第1卷-详细大纲.md").write_text(
+        "### 第1章：测试大纲\n主角登场。\n\n### 第3章：测试大纲三\n冲突升级。\n\n### 第10章：测试大纲十\n突破。",
+        encoding="utf-8",
+    )
     return cfg
 
 
 def test_build_memory_pack_empty(tmp_path):
-    orchestrator = MemoryOrchestrator(_cfg(tmp_path))
+    cfg = _cfg(tmp_path)
+    orchestrator = MemoryOrchestrator(cfg)
     pack = orchestrator.build_memory_pack(1)
     assert pack["stats"]["total"] == 0
     assert pack["semantic_memory"] == []

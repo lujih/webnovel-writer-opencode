@@ -24,6 +24,14 @@ from data_modules.query_router import QueryRouter
 def temp_project(tmp_path):
     cfg = DataModulesConfig.from_project_root(tmp_path)
     cfg.ensure_dirs()
+    # 大纲文件（_load_outline 强依赖，build_context 会阻断）
+    # 第 1 卷覆盖 1-30 章，第 3 卷覆盖 401-600 章（build_context(150) 等晚期测试需要）
+    cfg.outline_dir.mkdir(parents=True, exist_ok=True)
+    sections = [f"### 第{i}章：测试大纲{i}\n测试内容第{i}章。" for i in range(1, 31)]
+    (cfg.outline_dir / "第1卷-详细大纲.md").write_text("\n\n".join(sections), encoding="utf-8")
+    # build_context(150) 走第 3 卷（volume_num_for_chapter: 150 // 50 + 1 = 3）
+    sections_3 = [f"### 第{i}章：测试大纲{i}\n测试内容第{i}章。" for i in range(101, 151)]
+    (cfg.outline_dir / "第3卷-详细大纲.md").write_text("\n\n".join(sections_3), encoding="utf-8")
     return cfg
 
 
