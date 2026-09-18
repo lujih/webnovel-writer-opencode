@@ -6,13 +6,16 @@ from pathlib import Path
 
 import pytest
 
-from data_modules.ssot_enforcer import publish_event, rebuild_projections, read_events
+from data_modules.ssot_enforcer import publish_event, rebuild_projections, read_events, verify_consistency
 
 
 @pytest.fixture
 def project_with_events_and_meta(tmp_path):
     """构造带事件日志 + 既有非事件字段 state.json 的项目。"""
     publish_event(tmp_path, "chapter_status_changed", {"status": "committed"}, chapter=1)
+    publish_event(tmp_path, "chapter_status_changed", {"status": "committed"}, chapter=2)
+    publish_event(tmp_path, "chapter_status_changed", {"status": "committed"}, chapter=3)
+    # entity_created 走 rebuild_state_json（与 chapter_status_changed 同族）
     publish_event(tmp_path, "entity_created",
                   {"entity_id": "xiao_yan", "entity_type": "角色", "entity_name": "萧炎"},
                   chapter=1)
@@ -28,7 +31,13 @@ def project_with_events_and_meta(tmp_path):
             {"chapter": 1, "dominant": "quest"}]},
         "entities": {"chen_sheng": {"name": "陈升", "type": "主角"}},
         "entity_state": {"chen_sheng": {"realm": "凡人"}},
-        "progress": {"current_chapter": 65},
+        # 增量 chapter-commit 累积的章节（事件日志只推进到 3，state 有 6）
+        "progress": {"current_chapter": 6,
+                     "chapter_status": {
+                         "4": "chapter_committed",
+                         "5": "chapter_committed",
+                         "6": "chapter_committed",
+                     }},
         "protagonist_state": {"name": "陈升", "entity_id": "chen_sheng"},
     }
     (tmp_path / ".webnovel").mkdir(exist_ok=True)
@@ -64,8 +73,8 @@ def test_rebuild_advances_event_fields(project_with_events_and_meta):
     rebuild_projections(root)
     state = json.loads((root / ".webnovel" / "state.json").read_text(encoding="utf-8"))
 
-    # progress.current_chapter 由事件日志推进（原 state 里是 65，事件日志只有第 1 章）
-    assert state["progress"]["current_chapter"] == 1  # 事件日志决定
+    # progress.current_chapter 由事件日志推进（原 state 里是 6，事件日志推进到 3）
+    assert state["progress"]["current_chapter"] == 3  # 事件日志决定
     # entities_v3 / plot_threads.foreshadowing 由事件日志产生
     assert "xiao_yan" in state["entities_v3"]
     assert state["plot_threads"]["foreshadowing"][0]["content"] == "三年之约"
@@ -86,3 +95,13 @@ def test_rebuild_preserves_schema_version(project_with_events_and_meta):
     rebuild_projections(root)
     state = json.loads((root / ".webnovel" / "state.json").read_text(encoding="utf-8"))
     assert state.get("schema_version") in ("5.1", None)
+
+
+def test_rebuild_then_verify_is_clean(project_with_events_and_meta):
+    """P0 合并后的 state.json 必须通过 verify_consistency（真实 CLI 用法：
+    ssot rebuild 之后 ssot verify 不应误报 drift）。"""
+    root = project_with_events_and_meta
+    rebuild_projections(root)
+    drifts = verify_consistency(root)
+    warning_fields = [d.get("field") or "" for d in drifts if d["severity"] != "info"]
+    assert not warning_fields, f"rebuild 后 verify 误报 drift: {warning_fields}"

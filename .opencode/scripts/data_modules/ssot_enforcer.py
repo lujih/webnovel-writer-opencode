@@ -522,19 +522,23 @@ def verify_consistency(project_root: Path) -> list[dict]:
     actual_chs = set((actual_state.get("progress") or {}).get("chapter_status") or {})
     expected_chs = set((expected.get("progress") or {}).get("chapter_status") or {})
 
-    if actual_chs != expected_chs:
+    # progress.chapter_status 只报事件日志有而 state 缺的（缺口是真漂移；
+    # state 超集——增量 chapter-commit 累积 + P0 合并保留 chapter_meta——合法）
+    missing_chs = expected_chs - actual_chs
+    if missing_chs:
         drifts.append({
             "severity": "warning",
             "field": "progress.chapter_status",
             "actual": sorted(actual_chs),
             "expected": sorted(expected_chs),
-            "detail": f"State has keys {sorted(actual_chs)}, event log projects {sorted(expected_chs)}",
+            "detail": f"Event log projects chapters {sorted(missing_chs)} not in state.json",
         })
 
-    # Compare foreshadowing count
+    # Compare foreshadowing count（多报少不报：顶层孤儿闭合合法——
+    # created 无顶层条目而 closed 补了，如 凡尘之舞 顶层 26 vs 27）
     actual_fs = len(actual_state.get("foreshadowing") or [])
     expected_fs = len(expected.get("foreshadowing") or [])
-    if actual_fs != expected_fs:
+    if expected_fs > actual_fs:
         drifts.append({
             "severity": "warning",
             "field": "foreshadowing",

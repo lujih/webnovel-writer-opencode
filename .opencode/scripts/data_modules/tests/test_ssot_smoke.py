@@ -126,14 +126,51 @@ class TestSSOTEventLog:
         assert rows[0]["resolved_chapter"] == 9
 
     def test_verify_consistency_clean(self, tmp_path):
-        from data_modules.ssot_enforcer import publish_event, rebuild_state_json, verify_consistency
+        """rebuild 产物 + P0 合并后的 state.json 通过 verify（真实 CLI：先 rebuild 再 verify）。"""
+        from data_modules.ssot_enforcer import publish_event, rebuild_projections, verify_consistency
 
-        # Manually build state.json the same way rebuild does
         publish_event(tmp_path, "chapter_status_changed",
                       {"status": "committed"}, chapter=1)
-        state = rebuild_state_json(tmp_path)
+        publish_event(tmp_path, "chapter_status_changed",
+                      {"status": "committed"}, chapter=2)
+        rebuild_projections(tmp_path)
+        result = verify_consistency(tmp_path)
+        assert all(d["severity"] == "info" for d in result), result
+
+    def test_verify_detects_chapter_status_gap(self, tmp_path):
+        """事件日志有而 state 缺的章节（缺口）= 真漂移，必须报 warning。
+
+        注：rebuild_state_json 只消费 chapter_status_changed（14 种事件类型
+        之一），chapter_committed 是 chapter_commit_service 发布的别名事件，
+        由事件日志的 chapter_status_changed 路径消费。"""
+        from data_modules.ssot_enforcer import publish_event, verify_consistency
+
+        publish_event(tmp_path, "chapter_status_changed",
+                      {"status": "committed"}, chapter=7)
         (tmp_path / ".webnovel").mkdir(exist_ok=True)
         (tmp_path / ".webnovel" / "state.json").write_text(
-            json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
-        result = verify_consistency(tmp_path)
-        assert result[0]["severity"] == "info"
+            json.dumps({
+                "progress": {"current_chapter": 1,
+                             "chapter_status": {"1": "chapter_committed"}},
+            }, ensure_ascii=False), encoding="utf-8")
+        drifts = verify_consistency(tmp_path)
+        assert "progress.chapter_status" in [d.get("field") or "" for d in drifts], drifts
+
+    def test_verify_state_superset_is_not_drift(self, tmp_path):
+        """state 超集（增量 chapter-commit 累积 + P0 合并保留章节）不是缺口，不报 drift。"""
+        from data_modules.ssot_enforcer import publish_event, verify_consistency
+
+        publish_event(tmp_path, "chapter_status_changed",
+                      {"status": "committed"}, chapter=1)
+        (tmp_path / ".webnovel").mkdir(exist_ok=True)
+        (tmp_path / ".webnovel" / "state.json").write_text(
+            json.dumps({
+                "progress": {"current_chapter": 3,
+                             "chapter_status": {
+                                 "1": "chapter_committed",
+                                 "2": "chapter_committed",
+                                 "3": "chapter_committed",
+                             }},
+            }, ensure_ascii=False), encoding="utf-8")
+        drifts = verify_consistency(tmp_path)
+        assert "progress.chapter_status" not in [d.get("field") or "" for d in drifts], drifts
