@@ -26,7 +26,7 @@ python -m pytest .opencode/scripts/data_modules/tests/test_config.py -q -p no:co
 python -m pytest .opencode/scripts/data_modules/tests/test_config.py::test_load_env -q -p no:cov -o "addopts="
 ```
 
-Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety. 17 pre-existing failures (as of v2.9.2+): 15 in `test_context_manager.py` (缺失的「大纲」文件 fixtures), 1 in `test_memory_orchestrator.py`, 1 in `test_prompt_integrity.py` (context-agent.md 缺失的 references 文件) — these are known, not caused by recent changes.
+Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety. **0 pre-existing failures as of 2026-09-17**（test fixtures 补齐 + verify_consistency drift 对齐后基线全绿；`ssot verify` 的 `progress.chapter_status` / `foreshadowing` 计数检查已对齐 rebuild P0 合并语义——只报缺口与少报，state 超集与顶层孤儿闭合不误报）。
 
 ### CLI
 
