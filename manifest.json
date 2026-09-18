@@ -1,22 +1,22 @@
 {
-  "version": "v2.9.2-20260917.1555",
+  "version": "v2.9.2-20260918.1508",
   "tag": "v2.9.2",
-  "updated": "2026-09-17T15:55:57Z",
+  "updated": "2026-09-18T15:08:55Z",
   "changelog": [
     {
-      "hash": "566d4cd",
-      "type": "test",
-      "message": "test: \u4fee\u590d 17 \u4e2a\u9884\u5b58\u6d4b\u8bd5\u5931\u8d25\uff08\u5927\u7eb2 fixture + prompt \u5f15\u7528\u6587\u4ef6\uff09"
-    },
-    {
-      "hash": "4abb75e",
+      "hash": "214ece5",
       "type": "docs",
-      "message": "docs: \u7ef4\u62a4 5 \u7b14 fix \u5408\u5e76\u7684\u6587\u6863\uff08CLAUDE.md/commands/\u5408\u5e76\u8bb0\u5f55\uff09"
+      "message": "docs: CLAUDE.md \u6d4b\u8bd5\u57fa\u7ebf\u66f4\u65b0\uff0817 \u9884\u5b58\u5931\u8d25 \u2192 0\uff0c\u542b verify \u8bed\u4e49\u5bf9\u9f50\u8bf4\u660e\uff09"
     },
     {
-      "hash": "e772ae0",
+      "hash": "30eea2b",
+      "type": "fix",
+      "message": "fix: verify_consistency \u5bf9\u9f50 rebuild P0 \u5408\u5e76\u8bed\u4e49\uff082 \u4e2a\u6f02\u79fb\u8bef\u62a5\uff09"
+    },
+    {
+      "hash": "b550c85",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260917.1504 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260917.1555 [skip ci]"
     }
   ],
   "files": {
@@ -1329,8 +1329,8 @@
       "size": 21853
     },
     ".opencode/scripts/data_modules/ssot_enforcer.py": {
-      "sha256": "fa486032446a057ba6bb0047effb4cba63b86a93fd7e9270f2a0e774edf0281a",
-      "size": 25617
+      "sha256": "083d21e44f92f0cba32196ffd36a4a572a0234548d731b1c14f9662a3b1aa0b0",
+      "size": 25961
     },
     ".opencode/scripts/data_modules/amend_proposal_schema.py": {
       "sha256": "809c9d24c2863535c4e55f604c295dea23556fce7805f20e250b792cf67f1691",
@@ -1641,8 +1641,8 @@
       "size": 1797
     },
     ".opencode/scripts/data_modules/tests/test_ssot_smoke.py": {
-      "sha256": "be9294b8a77cf20dbbd356564d7395eb33ad02a84cda114f0d874a0329b7fed2",
-      "size": 6104
+      "sha256": "c441fda2676f37bcf64b9553063b83c6d1111c8dcf385bbaabcc977bc45067ab",
+      "size": 8181
     },
     ".opencode/scripts/data_modules/tests/test_memory_schema_compat.py": {
       "sha256": "0d40e167be3794f3e5599d6847a46662a27a515894e994855567f60a61649c86",
@@ -1737,8 +1737,8 @@
       "size": 3013
     },
     ".opencode/scripts/data_modules/tests/test_ssot_rebuild_preserve.py": {
-      "sha256": "0b9debeb874c656751ae855801a86f19b873eee854984ccb4dbfb19e00746d83",
-      "size": 4588
+      "sha256": "e0fb60058ad01099cb174364ada4867e95648db10162faa6a61fe09b3b1fb824",
+      "size": 5680
     },
     ".opencode/scripts/data_modules/tests/test_observer_settler.py": {
       "sha256": "c6a173d348f78704883aecdb94132deee7261b861aa9b8f9ee1c03186c928446",
