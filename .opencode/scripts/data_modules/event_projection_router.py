@@ -19,6 +19,10 @@ class EventProjectionRouter:
         "promise_created": ["memory"],
         "promise_paid_off": ["memory"],
         "artifact_obtained": ["index", "vector"],
+        # rebuild_state_json 消费 entity_created/entity_updated 写 entities_v3，
+        # 补入路由行保证纯实体事件 commit 也触发 state 投影（否则只能靠 rebuild 补）
+        "entity_created": ["state"],
+        "entity_updated": ["state"],
     }
 
     def route(self, event: Dict) -> List[str]:

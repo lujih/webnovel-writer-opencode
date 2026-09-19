@@ -1018,8 +1018,10 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
         except Exception:
             pass  # 备份失败不阻断写入
 
-        # 写入新内容
-        resolved.write_text(content, encoding="utf-8")
+        # 写入新内容（原子写：tmp → os.replace，崩溃中写不会留下半截文件）
+        tmp = resolved.with_suffix(resolved.suffix + ".tmp")
+        tmp.write_text(content, encoding="utf-8")
+        tmp.replace(resolved)
 
         # 触发 SSE 通知
         try:

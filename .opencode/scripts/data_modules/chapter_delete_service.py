@@ -13,6 +13,14 @@ from pathlib import Path
 
 from chapter_paths import extract_chapter_num_from_filename, parse_chapter_range
 
+try:
+    from data_modules.ssot_enforcer import publish_event
+except ImportError:  # pragma: no cover
+    try:
+        from ssot_enforcer import publish_event
+    except ImportError:
+        publish_event = None
+
 
 def _find_chapter_files(project_root: Path, chapter_nums: list[int]) -> dict[int, Path]:
     text_dir = project_root / "正文"
@@ -127,6 +135,12 @@ def cmd_delete_chapters(args) -> int:
 
     for msg in _clean_memory(project_root, chapters, dry_run):
         print(f"{label}  {msg}")
+
+    if not dry_run and publish_event is not None:
+        try:
+            publish_event(project_root, "chapter_deleted", {"chapters": list(chapters)})
+        except Exception:
+            pass
 
     if dry_run:
         print(f"\nDry run complete. Run without --dry-run to apply.")
