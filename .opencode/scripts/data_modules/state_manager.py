@@ -298,7 +298,12 @@ class StateManager:
                         progress["chapter_status"] = chapter_status
 
                     for chapter_key, pending_status in self._pending_chapter_status.items():
-                        current_status = str(chapter_status.get(chapter_key) or "")
+                        raw_current = chapter_status.get(chapter_key)
+                        # 兼容旧 rebuild 的 dict 形状 {"status": ...}（统一归一为 str）
+                        current_status = (
+                            str(raw_current.get("status") or "") if isinstance(raw_current, dict)
+                            else str(raw_current or "")
+                        )
                         if current_status == pending_status:
                             continue
                         if current_status and self._chapter_status_rank(pending_status) < self._chapter_status_rank(current_status):
@@ -704,11 +709,6 @@ class StateManager:
             return self.CHAPTER_STATUS_ORDER.index(status)
         except ValueError:
             return -1
-
-    def _save_state(self) -> None:
-        """直接持久化当前内存状态到 state.json（轻量写入，不走 pending 合并）。"""
-        self.config.ensure_dirs()
-        atomic_write_json(self.config.state_file, self._state, backup=False)
 
     # ==================== 实体管理 (v5.1 SQLite-first) ====================
 

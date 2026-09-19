@@ -174,3 +174,131 @@ class TestSSOTEventLog:
             }, ensure_ascii=False), encoding="utf-8")
         drifts = verify_consistency(tmp_path)
         assert "progress.chapter_status" not in [d.get("field") or "" for d in drifts], drifts
+
+    def test_publish_event_is_serialized_by_filelock(self, tmp_path):
+        """P0：并发 publish 不得争抢同一 seq（.events.lock 串行化）。
+
+        模拟 8 线程并发 publish，断言 8 个事件 seq 互不重复且全部落盘。
+        """
+        import threading
+        from data_modules.ssot_enforcer import publish_event, read_events
+
+        n = 8
+        errors = []
+
+        def worker(i):
+            try:
+                publish_event(tmp_path, f"evt_{i}", {"i": i}, chapter=i + 1)
+            except Exception as e:
+                errors.append(e)
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(n)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, errors
+        events = read_events(tmp_path)
+        assert len(events) == n, f"concurrent publish lost events: {len(events)}/{n}"
+        seqs = [e["seq"] for e in events]
+        assert len(set(seqs)) == n, f"seq collision: {seqs}"
+
+    def test_publish_event_cleans_orphan_tmp(self, tmp_path):
+        """P0/P2：publish 前清理崩溃遗留的 .tmp.* 事件文件（seq 不复用）。"""
+        from data_modules.ssot_enforcer import _event_log_dir, publish_event, read_events
+
+        log_dir = _event_log_dir(tmp_path)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        # 模拟崩溃遗留：tmp 文件对应 seq 3，但 000003.event.json 不存在
+        (log_dir / ".tmp.000003.99999").write_text("{}", encoding="utf-8")
+
+        publish_event(tmp_path, "event_a", {}, chapter=1)
+        publish_event(tmp_path, "event_b", {}, chapter=2)
+
+        # 孤儿 tmp 已被清理
+        assert not list(log_dir.glob(".tmp.*")), "orphan .tmp not cleaned"
+        # 新事件 seq 从 1 开始，不复用孤儿 tmp 的 seq 3
+        events = read_events(tmp_path)
+        assert [e["seq"] for e in events] == [1, 2]
+
+    def test_read_events_logs_corrupt_event_files(self, tmp_path):
+        """P1：坏事件文件（半写 JSON）被跳过且打 error 日志，不静默。"""
+        import logging
+        from data_modules.ssot_enforcer import publish_event, read_events, _event_log_dir
+
+        publish_event(tmp_path, "good_event", {}, chapter=1)
+        log_dir = _event_log_dir(tmp_path)
+        # 制造一个 seq 4 的坏事件文件（模拟崩溃半写）
+        (log_dir / "000004.event.json").write_text('{"broken": ', encoding="utf-8")
+
+        with logging_capture() as records:
+            events = read_events(tmp_path)
+        assert len(events) == 1  # 好事件保留
+        assert any("解析" in r.message or "corrupt" in r.message.lower() or r.levelno >= logging.ERROR
+                   for r in records if "ssot" in r.getMessage().lower()), \
+            f"corrupt event file not logged: {[r.getMessage() for r in records]}"
+
+    def test_rebuild_chapter_status_uses_string_shape(self, tmp_path):
+        """P1：rebuild 产出的 chapter_status 值必须是字符串（与增量
+        writer 同形状），并维护 progress.chapter_status_seq 事件序。
+
+        legacy dict 形状 {"status":...} 会让 doctor / _project_total_words
+        的 `v == "chapter_committed"` 比较全部失效。
+        """
+        from data_modules.ssot_enforcer import publish_event, rebuild_state_json
+
+        publish_event(tmp_path, "chapter_status_changed",
+                      {"status": "committed"}, chapter=1)
+        publish_event(tmp_path, "chapter_status_changed",
+                      {"status": "rejected"}, chapter=2)
+
+        state = rebuild_state_json(tmp_path)
+        cs = state["progress"]["chapter_status"]
+        assert cs["1"] == "chapter_committed", f"shape must be str, got {cs['1']!r}"
+        assert cs["2"] == "chapter_rejected", f"shape must be str, got {cs['2']!r}"
+        seqs = state["progress"]["chapter_status_seq"]
+        assert seqs["1"] == 1 and seqs["2"] == 2
+
+    def test_verify_flags_legacy_dict_chapter_status(self, tmp_path):
+        """P1：state.json 残留 legacy dict 形状 chapter_status 时，verify
+        必须报值形状不一致（缺口/超集语义之外的新增防护）。"""
+        from data_modules.ssot_enforcer import publish_event, verify_consistency
+
+        publish_event(tmp_path, "chapter_status_changed",
+                      {"status": "committed"}, chapter=1)
+        (tmp_path / ".webnovel").mkdir(exist_ok=True)
+        # legacy dict 形状（旧版 rebuild 产物）
+        (tmp_path / ".webnovel" / "state.json").write_text(
+            json.dumps({"progress": {
+                "current_chapter": 1,
+                "chapter_status": {"1": {"status": "committed", "last_event_seq": 1}},
+            }}, ensure_ascii=False), encoding="utf-8")
+        drifts = verify_consistency(tmp_path)
+        assert any(d.get("field") == "progress.chapter_status"
+                   and "legacy dict 形状" in d.get("detail", "") for d in drifts), drifts
+
+
+# 轻量 logging 捕获（避免引入 caplog fixture 依赖）
+import logging as _logging
+from contextlib import contextmanager
+
+
+@contextmanager
+def logging_capture():
+    records = []
+
+    class _Handler(_logging.Handler):
+        def emit(self, record):
+            records.append(record)
+
+    h = _Handler()
+    logger = _logging.getLogger("data_modules.ssot_enforcer")
+    old_level = logger.level
+    logger.setLevel(_logging.DEBUG)
+    logger.addHandler(h)
+    try:
+        yield records
+    finally:
+        logger.removeHandler(h)
+        logger.setLevel(old_level)

@@ -117,7 +117,16 @@ class ChapterCommitService:
         return path
 
     def _sync_foreshadowing(self, commit_payload: dict) -> None:
-        """Sync foreshadowing events from commit payload to debt tracker."""
+        """Sync foreshadowing events from commit payload to debt tracker.
+
+        债务 note 使用与 state/memory 投影**同一**的归一 content
+        （foreshadowing_utils.coerce_loop_content），保证 created 建债与
+        closed 销债匹配到同一条目——裸 payload.content 在字段缺失/
+        多候选 schema（unanswered_question/loop_type+description）下
+        会与投影侧 content 分叉，导致伏笔债永远无法闭合、active
+        计数虚高。
+        """
+        from .foreshadowing_utils import coerce_loop_content
         events = extraction_list(commit_payload, "accepted_events")
         if not events:
             return
@@ -131,7 +140,7 @@ class ChapterCommitService:
             etype = evt.get("event_type", "")
             payload = evt.get("payload") or {}
             subject = evt.get("subject", payload.get("subject", ""))
-            content = payload.get("content", "")
+            content = coerce_loop_content(payload, evt)
             if etype == "open_loop_created":
                 due = chapter + _FORESHADOW_DUE_OFFSET
                 note = content or subject or f"ch{chapter} foreshadowing"
@@ -156,6 +165,7 @@ class ChapterCommitService:
                            chapter, payload.get("meta"))
 
         # 只有 accepted 章节才写入事件日志和 SSOT
+        ssot_publish_failures = 0
         if status == "accepted":
             # Use commit_artifacts helper for backward compat (nested vs top-level)
             accepted_events = extraction_list(payload, "accepted_events")
@@ -183,6 +193,7 @@ class ChapterCommitService:
                             chapter=chapter,
                         )
                     except Exception as exc:
+                        ssot_publish_failures += 1
                         logger.warning("SSOT publish_event failed for chapter %s event %s: %s",
                                        chapter, event.get("event_type", ""), exc)
 
@@ -194,7 +205,16 @@ class ChapterCommitService:
                         chapter=chapter,
                     )
                 except Exception as exc:
+                    ssot_publish_failures += 1
                     logger.warning("SSOT chapter_status_changed failed for chapter %s: %s", chapter, exc)
+
+            if ssot_publish_failures:
+                # 事件日志与 commit 产物分叉：commit 仍标记 accepted（投影
+                # 已应用），但 SSOT 缺事件——升级日志并计入 payload，
+                # postcommit gate / 操作者可感知"需 ssot rebuild 补跑"。
+                logger.error("chapter %s: %d SSOT 事件发布失败——事件日志与 commit 分叉，"
+                             "建议运行 `ssot rebuild` 补齐投影", chapter, ssot_publish_failures)
+                payload.setdefault("ssot", {})["publish_failures"] = ssot_publish_failures
 
             # Normalize events and store back into extraction_result
             normalized = EventLogStore(self.project_root).normalize_events(chapter, accepted_events)

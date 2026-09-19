@@ -25,6 +25,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+try:
+    from filelock import FileLock
+except (ImportError, OSError):  # pragma: no cover
+    FileLock = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 
@@ -35,6 +40,27 @@ _EVENT_LOG_DIR = ".story-system/events"
 
 def _event_log_dir(project_root: Path) -> Path:
     return project_root / _EVENT_LOG_DIR
+
+
+def _event_log_lock_path(log_dir: Path) -> Path:
+    return log_dir / ".events.lock"
+
+
+def _cleanup_orphan_tmp(log_dir: Path) -> None:
+    """清理崩溃遗留的 .tmp.* 事件临时文件（publish 到 replace 窗口被杀）。
+
+    这些文件不被 _next_event_seq 感知（glob 只匹配 *.event.json）；
+    若下次 publish 重算出同一 seq 会写新 .tmp 并 replace 成同名事件文件，
+    造成 seq 复用 + 两条逻辑事件争抢同一编号。这里在持锁后统一清理。
+    """
+    if not log_dir.is_dir():
+        return
+    for tmp in log_dir.glob(".tmp.*"):
+        if tmp.is_file():
+            try:
+                tmp.unlink()
+            except OSError:
+                pass
 
 
 def _next_event_seq(log_dir: Path) -> int:
@@ -60,6 +86,12 @@ def publish_event(project_root: Path, event_type: str, payload: dict,
     SSOT-specific meta events (chapter_status_changed, override_rule_added, etc.)
     exist only in the JSON event log and are consumed by rebuild_state_json.
 
+    Concurrency: the whole compute-seq → write tmp → os.replace sequence runs
+    under a directory-level file lock (``.events.lock``), so two parallel
+    publishers (e.g. batch orchestrate workers) cannot claim the same seq and
+    silently clobber each other's event file.  The lock also serializes
+    cleanup of crash-orphan ``.tmp.*`` files (tmp written but never replaced).
+
     event_type examples:
       chapter_status_changed, entity_created, entity_updated,
       override_rule_added, override_rule_superseded,
@@ -69,53 +101,77 @@ def publish_event(project_root: Path, event_type: str, payload: dict,
     log_dir = _event_log_dir(project_root)
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    seq = _next_event_seq(log_dir)
-    event_id = f"evt_{chapter}_{event_type}_{seq}"
-    subject = payload.get("_subject", "")
-    event = {
-        "seq": seq,
-        "event_id": event_id,
-        "event_type": event_type,
-        "chapter": chapter,
-        "subject": subject,
-        "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "payload": payload,
-    }
+    if FileLock is not None:
+        _lock = FileLock(str(_event_log_lock_path(log_dir)), timeout=15)
+        _lock.acquire()
+    else:  # pragma: no cover - filelock is a required runtime dep
+        _lock = None
 
-    event_path = log_dir / f"{seq:06d}.event.json"
-    # Atomic write: temp file → rename
-    tmp = log_dir / f".tmp.{seq:06d}.{os.getpid()}"
-    tmp.write_text(json.dumps(event, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(str(tmp), str(event_path))
-    return event_path
+    try:
+        _cleanup_orphan_tmp(log_dir)
+        seq = _next_event_seq(log_dir)
+        event_id = f"evt_{chapter}_{event_type}_{seq}"
+        subject = payload.get("_subject", "")
+        event = {
+            "seq": seq,
+            "event_id": event_id,
+            "event_type": event_type,
+            "chapter": chapter,
+            "subject": subject,
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+            "payload": payload,
+        }
+
+        event_path = log_dir / f"{seq:06d}.event.json"
+        # Atomic write: temp file → rename
+        tmp = log_dir / f".tmp.{seq:06d}.{os.getpid()}"
+        tmp.write_text(json.dumps(event, ensure_ascii=False, indent=2), encoding="utf-8")
+        os.replace(str(tmp), str(event_path))
+        return event_path
+    finally:
+        if _lock is not None:
+            _lock.release()
 
 
 def read_events(project_root: Path,
                 event_type: Optional[str] = None,
                 chapter: Optional[int] = None,
                 after_seq: int = 0) -> list[dict]:
-    """Read events from the log, optionally filtered."""
+    """Read events from the log, optionally filtered.
+
+    Corrupt / half-written event files are skipped but **logged** (and
+    counted via the ``skipped`` return-channel) instead of vanishing silently:
+    an operator rebuilding after a crash must see which events were dropped.
+    """
     log_dir = _event_log_dir(project_root)
     if not log_dir.is_dir():
         return []
 
     events = []
+    skipped = 0
     for path in sorted(log_dir.glob("*.event.json")):
         try:
             seq = int(path.stem.split(".")[0])
         except ValueError:
+            logger.error("ssot: 事件文件名无法解析，跳过: %s", path.name)
+            skipped += 1
             continue
         if seq <= after_seq:
             continue
         try:
             event = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
+        except (OSError, ValueError) as exc:
+            logger.error("ssot: 事件文件读取/解析失败，跳过: %s (%s) — "
+                         "可能为崩溃遗留的半写文件", path.name, exc)
+            skipped += 1
             continue
         if event_type and event.get("event_type") != event_type:
             continue
         if chapter is not None and event.get("chapter") != chapter:
             continue
         events.append(event)
+    if skipped:
+        logger.warning("ssot: read_events 跳过 %d 个事件文件（详见上方 error 日志）", skipped)
     return events
 
 
@@ -147,17 +203,30 @@ def rebuild_state_json(project_root: Path,
         subject = payload.get("_subject", "")
 
         if etype == "chapter_status_changed":
-            state.setdefault("progress", {}).setdefault("chapter_status", {})[ch] = {
-                "status": payload.get("status", "unknown"),
-                "last_event_seq": evt["seq"],
-            }
-            if payload.get("status") == "committed":
+            # 与 StateProjectionWriter 增量路径保持同一值形状（字符串），
+            # 保证 rebuild 后 doctor / _project_total_words 等按
+            # `v == "chapter_committed"` 比较的消费者仍可用。
+            # 事件日志 payload.status 取归一后的字符串；无 status 键时
+            # 默认视为 committed（与增量 writer 同语义）。
+            raw_status = payload.get("status")
+            status = (str(raw_status).strip() or "committed") if raw_status else "committed"
+            # 事件日志写的是归一 status（"committed"），state 侧存的是
+            # 带前缀字符串（"chapter_committed"）。verify 比较时统一归一。
+            cs = state.setdefault("progress", {}).setdefault("chapter_status", {})
+            cs[ch] = status if status.startswith("chapter_") else f"chapter_{status}"
+            # 事件序单独维护在 progress.chapter_status_seq，
+            # 不污染 chapter_status 的值形状。
+            seqs = state["progress"].setdefault("chapter_status_seq", {})
+            seqs[ch] = evt["seq"]
+            if status in ("committed", "chapter_committed"):
                 state["progress"]["current_chapter"] = evt["chapter"]
                 state["progress"]["last_updated"] = evt["timestamp"]
 
         elif etype == "chapter_deleted":
+            progress = state.setdefault("progress", {})
             for c in payload.get("chapters", []):
-                state.setdefault("progress", {}).setdefault("chapter_status", {}).pop(str(c), None)
+                progress.setdefault("chapter_status", {}).pop(str(c), None)
+                progress.get("chapter_status_seq", {}).pop(str(c), None)
 
         elif etype == "entity_created":
             eid = payload.get("entity_id", subject)
@@ -327,24 +396,13 @@ def rebuild_state_json(project_root: Path,
     return state
 
 
-def _loop_content(payload: dict) -> str:
-    """从 open_loop 事件 payload 多候选字段提取 content（与 memory 侧
-    _coerce_loop_content 的提取规则一致：content → unanswered_question →
-    loop_type+description → description → subject 兜底）。"""
-    for key in ("content", "unanswered_question"):
-        value = str(payload.get(key) or "").strip()
-        if value:
-            return value
-    description = str(payload.get("description") or "").strip()
-    loop_type = str(payload.get("loop_type") or "").strip()
-    if description and loop_type:
-        return f"{loop_type}：{description}"
-    if description:
-        return description
-    if loop_type:
-        return loop_type
-    subject = str(payload.get("_subject") or "").strip()
-    return subject
+def _loop_content(payload: dict, event: Optional[dict] = None) -> str:
+    """从 open_loop 事件 payload 多候选字段提取 content（统一委托
+    foreshadowing_utils.coerce_loop_content，与 state/memory 投影两侧
+    同一字符串；rebuild 回放时 event 为 None，subject 兜底走
+    payload["_subject"] 扁平化字段）。"""
+    from .foreshadowing_utils import coerce_loop_content
+    return coerce_loop_content(payload, event)
 
 
 def _apply_foreshadowing_event(state: dict, chapter: int, event_type: str,
@@ -481,11 +539,9 @@ def rebuild_projections(project_root: Path) -> dict:
 
     atomic_write_json(state_path, state, use_lock=True, backup=True)
 
+    # 先发布 projection_rebuilt 事件，再统计（避免 event_count 恒少 1）
+    publish_event(project_root, "projection_rebuilt", {"target": "state.json"})
     event_count = sum(1 for _ in _event_log_dir(project_root).glob("*.event.json"))
-    publish_event(project_root, "projection_rebuilt", {
-        "target": "state.json",
-        "event_count": event_count,
-    })
 
     # Render markdown projections after rebuild
     try:
@@ -519,11 +575,10 @@ def verify_consistency(project_root: Path) -> list[dict]:
     expected = rebuild_state_json(project_root, events=events)
 
     # Compare chapter_status
-    actual_chs = set((actual_state.get("progress") or {}).get("chapter_status") or {})
-    expected_chs = set((expected.get("progress") or {}).get("chapter_status") or {})
-
     # progress.chapter_status 只报事件日志有而 state 缺的（缺口是真漂移；
     # state 超集——增量 chapter-commit 累积 + P0 合并保留 chapter_meta——合法）
+    actual_chs = set((actual_state.get("progress") or {}).get("chapter_status") or {})
+    expected_chs = set((expected.get("progress") or {}).get("chapter_status") or {})
     missing_chs = expected_chs - actual_chs
     if missing_chs:
         drifts.append({
@@ -532,6 +587,46 @@ def verify_consistency(project_root: Path) -> list[dict]:
             "actual": sorted(actual_chs),
             "expected": sorted(expected_chs),
             "detail": f"Event log projects chapters {sorted(missing_chs)} not in state.json",
+        })
+
+    # 值形状一致性：事件日志推进过的章节，state 中值必须与事件 status 归一
+    # 一致。legacy dict 形状 {"status":...} 视为值漂移（旧版 rebuild 产物——
+    # 会让 doctor/_project_total_words 的 str 比较全部失效），单独报 dict 漂移。
+    actual_cs = (actual_state.get("progress") or {}).get("chapter_status") or {}
+    expected_cs = (expected.get("progress") or {}).get("chapter_status") or {}
+
+    def _norm_status(v):
+        s = str(v or "").strip()
+        if s.startswith("chapter_"):
+            return s[len("chapter_"):]
+        return s
+
+    shape_mismatch = []
+    legacy_dict_chs = []
+    for ch in expected_chs & set(actual_cs):
+        exp_v = expected_cs.get(ch)
+        act_v = actual_cs.get(ch)
+        if isinstance(act_v, dict):
+            legacy_dict_chs.append(ch)
+        elif _norm_status(act_v) != _norm_status(exp_v):
+            shape_mismatch.append(ch)
+    if shape_mismatch:
+        drifts.append({
+            "severity": "warning",
+            "field": "progress.chapter_status",
+            "actual": {ch: actual_cs.get(ch) for ch in sorted(shape_mismatch)},
+            "expected": {ch: expected_cs.get(ch) for ch in sorted(shape_mismatch)},
+            "detail": f"chapter_status 值与事件日志不一致: {sorted(shape_mismatch)}",
+        })
+    if legacy_dict_chs:
+        drifts.append({
+            "severity": "warning",
+            "field": "progress.chapter_status",
+            "actual": {ch: actual_cs.get(ch) for ch in sorted(legacy_dict_chs)},
+            "detail": ("chapter_status 含 legacy dict 形状 {"
+                       "'status','last_event_seq'}: "
+                       f"{sorted(legacy_dict_chs)}（旧版 rebuild 产物，"
+                       "运行 ssot rebuild 可修复为字符串形状）"),
         })
 
     # Compare foreshadowing count（多报少不报：顶层孤儿闭合合法——

@@ -36,27 +36,12 @@ class MemoryWriter:
     def _coerce_loop_content(payload: Dict[str, Any], event: Dict[str, Any]) -> str:
         """从 open_loop 事件 payload 多个候选字段里取出有意义的悬念内容。
 
-        优先级：content（旧 schema）→ unanswered_question（信息悬疑）
-        → loop_type + description（结构化）→ description → subject 兜底。
-        若兜底到 subject（通常是角色 ID），加上 loop_type 前缀避免变成纯 ID。
+        统一委托 foreshadowing_utils.coerce_loop_content（与 state 投影、
+        ssot_enforcer rebuild 三侧同一字符串），避免三侧实现分叉导致
+        open_loop_closed 在两路投影中匹配不到同一条目。
         """
-        for key in ("content", "unanswered_question"):
-            value = str(payload.get(key) or "").strip()
-            if value:
-                return value
-
-        description = str(payload.get("description") or "").strip()
-        loop_type = str(payload.get("loop_type") or "").strip()
-
-        if description and loop_type:
-            return f"{loop_type}：{description}"
-        if description:
-            return description
-        if loop_type:
-            return loop_type
-
-        subject = str(event.get("subject") or "").strip()
-        return subject
+        from ..foreshadowing_utils import coerce_loop_content
+        return coerce_loop_content(payload, event)
 
     def update_from_chapter_result(self, chapter: int, result: Dict[str, Any]) -> Dict[str, Any]:
         stats: Dict[str, Any] = {

@@ -237,8 +237,16 @@ def _projection_checks(project_root: Path) -> List[Dict[str, Any]]:
             state = json.loads(state_path.read_text(encoding="utf-8"))
             progress = state.get("progress") or {}
             chapter_status = progress.get("chapter_status") or {}
-            committed = sum(1 for v in chapter_status.values() if v == "chapter_committed")
-            rejected = sum(1 for v in chapter_status.values() if v == "chapter_rejected")
+
+            def _status_of(v) -> str:
+                # 兼容两种形状：增量路径写 "chapter_committed"（str），
+                # 旧版 rebuild 曾写 {"status": ...}（dict）——统一取 status。
+                if isinstance(v, dict):
+                    return str(v.get("status") or "")
+                return str(v or "")
+
+            committed = sum(1 for v in chapter_status.values() if _status_of(v) == "chapter_committed")
+            rejected = sum(1 for v in chapter_status.values() if _status_of(v) == "chapter_rejected")
             checks.append(_check(
                 "章节状态",
                 True,

@@ -4,7 +4,10 @@ from __future__ import annotations
 
 import re
 
-_CHAPTERS_PER_VOLUME = 20
+# 与 chapter_paths.volume_num_for_chapter 默认 50 章/卷保持一致——
+# 大纲卷定位、正文卷目录、进度 current_volume 三处必须同一节奏，
+# 否则跨卷边界章场景下大纲加载与进度卷号漂移。
+_CHAPTERS_PER_VOLUME = 50
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -73,7 +76,9 @@ class StateProjectionWriter:
                 with self._locked_state() as state:
                     progress = state.setdefault("progress", {})
                     chapter_status = progress.setdefault("chapter_status", {})
-                    current = str(chapter_status.get(str(chapter)) or "")
+                    raw_current = chapter_status.get(str(chapter))
+                    # 兼容旧 rebuild 的 dict 形状 {"status": ...}（统一归一为 str）
+                    current = raw_current.get("status") if isinstance(raw_current, dict) else str(raw_current or "")
                     # 已 committed 的章节不允许降级为 rejected（单调递进保护）
                     if current == "chapter_committed":
                         return {"applied": False, "writer": "state", "reason": "cannot_downgrade_committed"}
@@ -131,7 +136,11 @@ class StateProjectionWriter:
                 progress["current_volume"] = max(1, (chapter - 1) // _CHAPTERS_PER_VOLUME + 1)
 
                 if projected_total > 0:
-                    progress["total_words"] = projected_total
+                    # projected_total 是"全量重算"（committed 章节文件字数求和）：
+                    # 只在增量结果不小于旧值时采用，避免旧 state 的 total_words
+                    # 已含本章节字数时造成回退/丢失（与 state_manager 的增量
+                    # 累加语义对齐——取两者较大值，杜绝双重计数与回退）。
+                    progress["total_words"] = max(projected_total, old_total)
                 else:
                     progress["total_words"] = old_total
 
@@ -365,25 +374,11 @@ class StateProjectionWriter:
 
     @staticmethod
     def _coerce_loop_content(payload: dict, event: dict) -> str:
-        """从 open_loop 事件提取伏笔 content（与 memory/writer._coerce_loop_content
-        同一规则：content → unanswered_question → loop_type+description → description
-        → loop_type → subject 兜底）。state 与 memory 两侧必须提取出相同的 content
-        字符串，否则 open_loop_closed 事件在两路投影中匹配不到同一条目，
-        会造成"活跃伏笔"残留。"""
-        for key in ("content", "unanswered_question"):
-            value = str(payload.get(key) or "").strip()
-            if value:
-                return value
-        description = str(payload.get("description") or "").strip()
-        loop_type = str(payload.get("loop_type") or "").strip()
-        if description and loop_type:
-            return f"{loop_type}：{description}"
-        if description:
-            return description
-        if loop_type:
-            return loop_type
-        subject = str(event.get("subject") or payload.get("_subject") or "").strip()
-        return subject
+        """从 open_loop 事件提取伏笔 content（统一走 foreshadowing_utils，
+        与 memory/writer 及 ssot_enforcer rebuild 三侧保持同一字符串，
+        否则 open_loop_closed 在两路投影中匹配不到同一条目）。"""
+        from .foreshadowing_utils import coerce_loop_content
+        return coerce_loop_content(payload, event)
 
     def _apply_strand_tracker(self, state: dict, chapter: int, commit_payload: dict) -> bool:
         strand = self._dominant_strand(commit_payload)
@@ -458,6 +453,10 @@ class StateProjectionWriter:
     def _project_total_words(self, chapter_status: dict) -> int:
         total = 0
         for raw_chapter, raw_status in chapter_status.items():
+            # 兼容两种形状：增量路径写 "chapter_committed"（str），
+            # 旧版 rebuild 曾写 {"status": ...}（dict）——统一归一为 str。
+            if isinstance(raw_status, dict):
+                raw_status = raw_status.get("status")
             if raw_status != "chapter_committed":
                 continue
             chapter = self._safe_int(raw_chapter)
