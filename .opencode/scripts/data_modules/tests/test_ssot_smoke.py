@@ -278,6 +278,83 @@ class TestSSOTEventLog:
         assert any(d.get("field") == "progress.chapter_status"
                    and "legacy dict 形状" in d.get("detail", "") for d in drifts), drifts
 
+    def test_rebuild_open_loop_top_level_uses_coerced_content(self, tmp_path):
+        """P1 回归：顶层 foreshadowing 与嵌套 plot_threads 必须用同一归一
+        content（否则只有 description/loop_type 无 content 时两条路径分叉）。"""
+        from data_modules.ssot_enforcer import publish_event, rebuild_state_json
+
+        publish_event(
+            tmp_path, "open_loop_created",
+            {"loop_type": "信息悬疑", "description": "芯片设计者身份"},
+            chapter=3,
+        )
+        state = rebuild_state_json(tmp_path)
+        top_level = state.get("foreshadowing", [])
+        nested = state.get("plot_threads", {}).get("foreshadowing", [])
+        assert top_level and top_level[0]["content"] == "信息悬疑：芯片设计者身份"
+        assert nested and nested[0]["content"] == "信息悬疑：芯片设计者身份"
+        assert top_level[0]["content"] == nested[0]["content"]
+
+    def test_rebuild_override_rule_events(self, tmp_path):
+        """P2 回归：override_rule_added/superseded 必须聚合进
+        state["override_rules"]（与路由表新加行配套）。"""
+        from data_modules.ssot_enforcer import publish_event, rebuild_state_json
+
+        publish_event(
+            tmp_path, "override_rule_added",
+            {"constraint_id": "c1", "old_rule": "old", "new_rule": "new",
+             "rationale": "r"},
+            chapter=5,
+        )
+        publish_event(
+            tmp_path, "override_rule_superseded",
+            {"constraint_id": "c1"},
+            chapter=8,
+        )
+        state = rebuild_state_json(tmp_path)
+        rules = state.get("override_rules", [])
+        assert len(rules) == 1
+        assert rules[0]["constraint_id"] == "c1"
+        assert rules[0]["status"] == "superseded"
+
+
+class TestEventProjectionRouter:
+    """回归审查（P2 #17/#18）：event_projection_router.TABLE 必须覆盖
+    rebuild_state_json 消费的所有事件类型，否则纯实体/override 事件
+    commit 的增量路径不触发 state 投影，只能靠 ssot rebuild 补。"""
+
+    def test_router_table_covers_rebuild_event_types(self):
+        from data_modules.event_projection_router import EventProjectionRouter
+        table = EventProjectionRouter.TABLE
+        # 每个 commit 可携带的事件类型都必须出现在路由表里
+        # （chapter_status_changed 是 commit 后单独 publish 的 meta 事件，
+        # 不经 required_writers，故不在此列表）
+        for etype in ("entity_created", "entity_updated",
+                      "override_rule_added", "override_rule_superseded",
+                      "open_loop_created", "open_loop_closed"):
+            assert etype in table, f"{etype} missing from router TABLE"
+            assert "state" in table[etype], f"{etype} must route to state"
+
+    def test_required_writers_includes_state_for_entity_and_override(self):
+        from data_modules.event_projection_router import EventProjectionRouter
+        r = EventProjectionRouter()
+        # 纯 entity commit
+        payload = {"meta": {"status": "accepted"},
+                   "extraction_result": {
+                       "accepted_events": [
+                           {"event_type": "entity_created",
+                            "payload": {"entity_id": "e1"}},
+                       ]}}
+        assert "state" in r.required_writers(payload)
+        # 纯 override commit
+        payload2 = {"meta": {"status": "accepted"},
+                   "extraction_result": {
+                       "accepted_events": [
+                           {"event_type": "override_rule_added",
+                            "payload": {"constraint_id": "c1"}},
+                       ]}}
+        assert "state" in r.required_writers(payload2)
+
 
 # 轻量 logging 捕获（避免引入 caplog fixture 依赖）
 import logging as _logging

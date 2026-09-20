@@ -139,9 +139,10 @@ def read_events(project_root: Path,
                 after_seq: int = 0) -> list[dict]:
     """Read events from the log, optionally filtered.
 
-    Corrupt / half-written event files are skipped but **logged** (and
-    counted via the ``skipped`` return-channel) instead of vanishing silently:
-    an operator rebuilding after a crash must see which events were dropped.
+    Corrupt / half-written event files are skipped but **logged** (via
+    ``logger.error`` per file + a summary ``logger.warning`` when any were
+    skipped) instead of vanishing silently: an operator rebuilding after a
+    crash must see which events were dropped.
     """
     log_dir = _event_log_dir(project_root)
     if not log_dir.is_dir():
@@ -371,8 +372,9 @@ def rebuild_state_json(project_root: Path,
                     rule["status"] = "superseded"
 
         elif etype == "open_loop_created":
+            content = _loop_content(payload)
             loop = {
-                "content": payload.get("content", ""),
+                "content": content,
                 "urgency": payload.get("urgency", 50),
                 "planted_chapter": evt["chapter"],
                 "status": "active",

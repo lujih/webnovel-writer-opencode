@@ -23,6 +23,10 @@ class EventProjectionRouter:
         # 补入路由行保证纯实体事件 commit 也触发 state 投影（否则只能靠 rebuild 补）
         "entity_created": ["state"],
         "entity_updated": ["state"],
+        # override_rule_added/superseded 写 override_rules（rebuild 消费），
+        # 增量路径也需触发 state 投影
+        "override_rule_added": ["state"],
+        "override_rule_superseded": ["state"],
     }
 
     def route(self, event: Dict) -> List[str]:
