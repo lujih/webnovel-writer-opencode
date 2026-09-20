@@ -157,8 +157,12 @@ export default function ContextHealthPage() {
     // history 只在 refreshToken 变化时刷新
     useEffect(() => {
         fetchContextHistory(20)
-            .then(data => setHistory(data))
-            .catch(() => {})
+            .then(data => setHistory(data && typeof data === 'object' ? data : { items: [] }))
+            .catch(e => {
+                // 空 catch 会静默吞掉历史加载失败——记录到 error 区让用户可感知
+                setHistory({ items: [] })
+                setError(prev => prev || `上下文历史加载失败：${e.message || '网络错误'}`)
+            })
     }, [refreshToken])
 
     // health 在 selectedChapter 或 refreshToken 变化时刷新

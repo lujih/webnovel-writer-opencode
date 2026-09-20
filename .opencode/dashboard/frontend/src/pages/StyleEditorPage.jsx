@@ -96,7 +96,7 @@ function PromptsTab() {
             </div>
             <p style={{ marginBottom: 12, color: 'var(--text-sub)', fontSize: 13 }}>
                 在 <code>设定集/prompts/</code> 下放置 <code>.md</code> 文件，系统写作时自动加载。
-                详见 <a href="https://github.com/lujih/webnovel-writer-opencode/blob/master/docs/guides/custom-style-prompts.md" target="_blank" style={{ color: 'var(--accent)' }}>自定义文风指南</a>。
+                详见 <a href="https://github.com/lujih/webnovel-writer-opencode/blob/master/docs/guides/custom-style-prompts.md" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent)' }}>自定义文风指南</a>。
             </p>
 
             {error && <p style={{ marginBottom: 8, color: 'var(--accent-red)', fontWeight: 600 }}>加载失败: {error}</p>}
@@ -307,9 +307,13 @@ function AntiPatternsTab() {
     const [newText, setNewText] = useState('')
     const [msg, setMsg] = useState(null)
     const [loading, setLoading] = useState(false)
+    const [loadError, setLoadError] = useState('')
 
     const reload = useCallback(() => {
-        fetchAntiPatterns().then(d => setPatterns(d.patterns || [])).catch(() => {})
+        setLoadError('')
+        fetchAntiPatterns()
+            .then(d => setPatterns(d && typeof d === 'object' ? (d.patterns || []) : []))
+            .catch(e => setLoadError(e.message || '加载禁止模式失败'))
     }, [])
 
     useEffect(() => { reload() }, [reload])
@@ -348,6 +352,11 @@ function AntiPatternsTab() {
                 <span className="card-title">禁止模式</span>
                 <span className="mini-label">审查阶段 reviewer 自动检查</span>
             </div>
+            {loadError && (
+                <p style={{ color: 'var(--accent-red)', fontWeight: 600, marginBottom: 8 }}>
+                    {loadError}（当前列表可能为空）
+                </p>
+            )}
             <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                 <input
                     type="text"

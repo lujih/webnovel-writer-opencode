@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Webnovel Writer for OpenCode — a long-form Chinese web novel AI writing system built on the OpenCode framework. Combats AI "forgetting" and "hallucination" in serialized fiction through layered RAG, story contracts, and structured quality review. v2.8 incorporates inkOS-inspired Observer→Reflector fact extraction, SSOT event sourcing, and markdown truth-file projections. Forked from lingfengQAQ/webnovel-writer and heavily refactored for OpenCode architecture.
+Webnovel Writer for OpenCode — a long-form Chinese web novel AI writing system built on the OpenCode framework. Combats AI "forgetting" and "hallucination" in serialized fiction through layered RAG, story contracts, and structured quality review. v2.8 introduced inkOS-inspired Observer→Reflector fact extraction, SSOT event sourcing, and markdown truth-file projections; v2.9.x added atomic_write_json with WinError 5 backoff, open_loop foreshadowing projections, and rebuild non-event-field preservation (current release v2.9.2). Forked from lingfengQAQ/webnovel-writer and heavily refactored for OpenCode architecture.
 
 ## Commands
 
@@ -64,7 +64,7 @@ python .opencode/scripts/webnovel.py publish         # publish to platform
 python .opencode/scripts/webnovel.py memory          # memory system management
 ```
 
-Full command list (36 commands): `where`, `chapter-path`, `preflight`, `use`, `index`, `state`, `rag`, `style`, `entity`, `context`, `memory`, `migrate`, `status`, `doctor`, `update-state`, `backup`, `archive`, `init`, `extract-context`, `story-system`, `story-events`, `chapter-commit`, `memory-contract`, `project-memory`, `review-pipeline`, `placeholder-scan`, `master-outline-sync`, `export`, `publish`, `knowledge`, `checkers`, `orchestrate`, `delete-chapters`, `entity-clean`, `ssot`, `workflow`, `override`.
+Full command list (36 top-level commands, 50 `add_parser` call sites counting subcommands like `knowledge query-entity-state`, `ssot verify`, `workflow checkpoint`, `override add`): `where`, `chapter-path`, `preflight`, `use`, `index`, `state`, `rag`, `style`, `entity`, `context`, `memory`, `migrate`, `status`, `doctor`, `update-state`, `backup`, `archive`, `init`, `extract-context`, `story-system`, `story-events`, `chapter-commit`, `memory-contract`, `project-memory`, `review-pipeline`, `placeholder-scan`, `master-outline-sync`, `export`, `publish`, `knowledge`, `checkers`, `orchestrate`, `delete-chapters`, `entity-clean`, `ssot`, `workflow`, `override`.
 
 Most subcommands forward to `data_modules/<module>.py` via argparse dispatch. Writing tools (`--project-root` aware) use the `PASSTHROUGH_TOOLS` set; the entry point auto-resolves the book project root (directory containing `.webnovel/state.json`).
 

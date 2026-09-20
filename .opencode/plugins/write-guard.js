@@ -73,20 +73,32 @@ export default async function ({ project }) {
       // 拦截 Bash 工具中的直接文件写入
       if (tool === 'bash') {
         const command = output.args?.command || ''
-        // 只检查包含重定向到受保护路径的命令
-        if (hasAllowedMarker(command)) return // 白名单放行
+        const lower = command.toLowerCase()
 
+        // 关键：先判定是否写入受保护路径，再判定是否 CLI 白名单。
+        // 旧实现先 hasAllowedMarker 就 return——形如
+        //   python webnovel.py status > .webnovel/state.json
+        // 的命令含 'webnovel.py' 标记会被直接放行，重定向却把受保护文件
+        // 覆盖掉。改为：含受保护路径 + 写操作意图时，无论是否有标记都拦截。
+        let writesProtected = false
         for (const suffix of PROTECTED_SUFFIXES) {
           const normalizedSuffix = suffix.replace(/\\/g, '/').toLowerCase()
-          // 检查是否包含受保护路径的写入操作
-          if (command.toLowerCase().includes(normalizedSuffix) &&
-              (command.includes('>') || command.includes('write') || command.includes('atomic_write'))) {
-            throw new Error(
-              `🚫 禁止通过 Bash 直接写入 ${suffix}。` +
-              `请使用 CLI 命令：python webnovel.py chapter-commit`
-            )
+          if (lower.includes(normalizedSuffix)) {
+            // 写操作意图：重定向(>/>>) 或 常见写命令
+            if (lower.includes('>') || /\b(write|tee|mv|cp|rm|del|erase|rename)\b/.test(lower)) {
+              writesProtected = true
+            }
+            break
           }
         }
+        if (writesProtected) {
+          throw new Error(
+            `🚫 禁止通过 Bash 直接写入受保护文件。` +
+            `请使用 CLI 命令：python webnovel.py chapter-commit`
+          )
+        }
+        // 仅放行明显走 CLI 白名单且不含受保护路径写入的命令
+        if (hasAllowedMarker(command)) return
       }
     }
   }

@@ -120,7 +120,9 @@ def _render_character_matrix(state: dict, project_root: Path) -> str:
         return "\n".join(lines)
 
     def name_for(eid):
-        return entities.get(eid, {}).get("name", eid)
+        # 防御：entities_v3 值可能是非 dict（legacy），get 链直接调用会崩
+        info = entities.get(eid)
+        return (info.get("name", eid) if isinstance(info, dict) else eid)
 
     lines.append("| 角色A | 关系 | 角色B | 最后出现章 |")
     lines.append("|-------|------|-------|-----------|")

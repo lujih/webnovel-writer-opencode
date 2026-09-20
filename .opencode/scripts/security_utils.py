@@ -446,10 +446,16 @@ def atomic_write_json(
 
         try:
             # Step 3: 备份原文件（如果存在且启用备份）
+            # 仅当 .bak 不存在或比目标文件更旧时才覆盖——保留"更早一版"
+            # 作为回滚通道：若上一次 atomic_write_json 已写入损坏内容，
+            # 本次备份不会把 .bak 也卷成损坏版（P0 数据可恢复性修复）。
             if backup and file_path.exists():
                 try:
                     import shutil
-                    shutil.copy2(file_path, backup_path)
+                    if not backup_path.exists() or (
+                        file_path.stat().st_mtime >= backup_path.stat().st_mtime
+                    ):
+                        shutil.copy2(file_path, backup_path)
                 except OSError:
                     pass  # 备份失败不阻止写入
 
@@ -478,8 +484,12 @@ def atomic_write_json(
         if temp_path is not None:
             try:
                 os.unlink(temp_path)
-            except OSError:
-                pass
+            except OSError as e:
+                # 杀软/索引器占用时 unlink 会失败——记录日志避免静默残留
+                # 累积污染 .webnovel/（P0 修复）
+                import logging
+                logging.getLogger(__name__).warning(
+                    "atomic_write_json: 临时文件清理失败 %s: %s", temp_path, e)
 
 
 def read_json_safe(

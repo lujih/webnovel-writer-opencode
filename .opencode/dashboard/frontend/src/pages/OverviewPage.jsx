@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { useDashboardContext } from '../App.jsx'
-import { fetchChapterTrend, fetchChapters, fetchStoryRuntimeHealth, fetchForeshadowingReminders } from '../api.js'
+import { fetchChapterTrend, fetchChapters, fetchStoryRuntimeHealth, fetchForeshadowingReminders, fetchJSON } from '../api.js'
 import Badge from '../components/Badge.jsx'
 import ChartWrapper from '../components/ChartWrapper.jsx'
 import DataTable from '../components/DataTable.jsx'
@@ -224,17 +224,22 @@ export default function OverviewPage() {
             fetchStoryRuntimeHealth(),
             fetchChapters(),
             fetchChapterTrend({ limit: WINDOW_SIZE, offset: 0 }),
-            fetch('/api/workflow/status').then(r => r.json()).catch(() => ({})),
-            fetch('/api/alerts').then(r => r.json()).catch(() => ({ alerts: [] })),
+            fetchJSON('/api/workflow/status').catch(() => ({})),
+            fetchJSON('/api/alerts').catch(() => ({ alerts: [] })),
             fetchForeshadowingReminders(5).catch(() => ({ reminders: [] })),
         ]).then(results => {
             if (cancelled) return
 
             setRuntimeHealth(results[0].status === 'fulfilled' ? results[0].value : null)
             setAllChapters(results[1].status === 'fulfilled' ? results[1].value : [])
-            setWorkflow(results[3].status === 'fulfilled' ? results[3].value : {})
-            setAlerts(results[4].status === 'fulfilled' ? (results[4].value.alerts || []) : [])
-            setReminders(results[5].status === 'fulfilled' ? (results[5].value.reminders || []) : [])
+            // null 解包防御：fulfilled 但响应体为 JSON null 时 .value 为 null，
+            // 直接 .alerts/.reminders 会抛同步异常（catch 不捕获同步 throw）
+            const wf = results[3].status === 'fulfilled' ? results[3].value : {}
+            setWorkflow(wf && typeof wf === 'object' ? wf : {})
+            const al = results[4].status === 'fulfilled' ? results[4].value : {}
+            setAlerts(al && typeof al === 'object' ? (al.alerts || []) : [])
+            const re = results[5].status === 'fulfilled' ? results[5].value : {}
+            setReminders(re && typeof re === 'object' ? (re.reminders || []) : [])
 
             const latest = results[2].status === 'fulfilled'
                 ? results[2].value
@@ -249,6 +254,9 @@ export default function OverviewPage() {
         }
     }, [refreshToken])
 
+    // 仅当 windowIndex > 0 时发起增量 fetch；windowIndex === 0 直接用
+    // 首载的 latestWindow（避免与 refreshToken 重叠时并发两次 offset:0
+    // fetch 造成旧响应 late-resolve 覆盖新数据的状态竞态）。
     useEffect(() => {
         if (windowIndex === 0) {
             setTrendWindow(latestWindow)
@@ -278,7 +286,16 @@ export default function OverviewPage() {
         return () => {
             cancelled = true
         }
-    }, [latestWindow, refreshToken, windowIndex])
+    }, [windowIndex, refreshToken])
+
+    // latestWindow 更新（refreshToken 刷新）且当前在第 0 页时同步窗口。
+    // 不在 latestWindow 变化时无条件 setWindowIndex(0)——用户翻到后面页时
+    // 刷新不应把页码拉回第 0 页（页码重置已由 [refreshToken] 效果负责）。
+    useEffect(() => {
+        if (windowIndex === 0) {
+            setTrendWindow(latestWindow)
+        }
+    }, [latestWindow, windowIndex])
 
     const info = projectInfo?.project_info || {}
     const progress = projectInfo?.progress || {}

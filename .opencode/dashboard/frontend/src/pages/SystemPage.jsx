@@ -9,6 +9,7 @@ import {
     fetchStoryRuntimeHealth,
     probeEnvStatus,
     runBatchAction,
+    apiPost,
 } from '../api.js'
 import { formatChapterLabel, formatDateTime, formatNumber } from '../lib/format.js'
 
@@ -320,11 +321,13 @@ export default function SystemPage() {
                                 setActionLoading(op.key)
                                 setActionResult(null)
                                 try {
-                                    const res = await fetch(`/api/actions/${op.key}`, { method: 'POST' })
-                                    const data = await res.json()
+                                    // 走 apiPost（含 res.ok 检查 + 统一错误体解析）：
+                                    // 裸 fetch 在 5xx 时 res.json() 抛错被 catch
+                                    // 吞为"网络错误"，真实状态码/错误详情丢失
+                                    const data = await apiPost(`/api/actions/${op.key}`, {})
                                     setActionResult({ key: op.key, label: op.label, ...data })
-                                } catch {
-                                    setActionResult({ key: op.key, label: op.label, code: -1, stderr: '网络错误' })
+                                } catch (e) {
+                                    setActionResult({ key: op.key, label: op.label, code: -1, stderr: e.message || '网络错误' })
                                 } finally {
                                     setActionLoading(null)
                                 }

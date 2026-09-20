@@ -627,9 +627,13 @@ class IndexManager(IndexChapterMixin, IndexEntityMixin, IndexDebtMixin, IndexRea
     @contextmanager
     def _get_conn(self):
         """获取数据库连接"""
-        conn = sqlite3.connect(str(self.config.index_db))
+        conn = sqlite3.connect(str(self.config.index_db), timeout=30)
         conn.row_factory = sqlite3.Row
         try:
+            # WAL 让读写不互斥（dashboard 读 + commit 写并发安全），
+            # busy_timeout=30s 覆盖长事务窗口
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA busy_timeout=30000")
             yield conn
         finally:
             conn.close()

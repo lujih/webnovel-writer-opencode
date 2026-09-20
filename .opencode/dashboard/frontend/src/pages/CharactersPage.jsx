@@ -276,7 +276,10 @@ export default function CharactersPage() {
             setEntities(entityRows)
             setRelationships(results[1].status === 'fulfilled' ? results[1].value : [])
             setRelationshipEvents(results[2].status === 'fulfilled' ? results[2].value : [])
-            setAnomalies(results[3].status === 'fulfilled' ? (results[3].value.anomalies || []) : [])
+            // null 解包防御：/api/consistency/anomalies 返回 JSON null 时
+            // results[3].value 为 null，直接 .anomalies 抛同步异常
+            const an = results[3].status === 'fulfilled' ? results[3].value : {}
+            setAnomalies(an && typeof an === 'object' ? (an.anomalies || []) : [])
 
             if (entityRows.length) {
                 setSelected(current => current || entityRows[0])
