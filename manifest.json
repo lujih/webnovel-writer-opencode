@@ -1,22 +1,17 @@
 {
-  "version": "v2.9.2-20260920.1538",
+  "version": "v2.9.2-20260920.1553",
   "tag": "v2.9.2",
-  "updated": "2026-09-20T15:38:28Z",
+  "updated": "2026-09-20T15:53:36Z",
   "changelog": [
     {
-      "hash": "a0d9aba",
+      "hash": "2ecee94",
       "type": "fix",
-      "message": "fix: \u5168\u91cf\u5ba1\u6838 P2/P3 \u4fee\u590d\uff08\u4e8b\u4ef6\u8def\u7531/\u5220\u9664\u4e00\u81f4\u6027/\u5377\u7ae0\u6570/\u539f\u5b50\u5199/\u6587\u6863\u5bf9\u9f50\uff09"
+      "message": "fix: \u56de\u5f52\u5ba1\u67e5 P1/P2 \u8865\u6f0f\uff08\u4f0f\u7b14\u9876\u5c42 content \u5f52\u4e00 + override \u8def\u7531 + \u6587\u6863\u5bf9\u9f50\uff09"
     },
     {
-      "hash": "4e59316",
-      "type": "fix",
-      "message": "fix: \u5168\u91cf\u5ba1\u6838 P0/P1 \u4fee\u590d\uff08SSOT \u5e76\u53d1\u5b89\u5168 + \u6295\u5f71\u4e00\u81f4\u6027 + \u4f0f\u7b14\u4e09\u4fa7\u5951\u7ea6\uff09"
-    },
-    {
-      "hash": "5ba46f7",
+      "hash": "6049af9",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260918.1508 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260920.1538 [skip ci]"
     }
   ],
   "files": {
@@ -1193,8 +1188,8 @@
       "size": 9739
     },
     ".opencode/scripts/data_modules/event_projection_router.py": {
-      "sha256": "ef37c961e5fd6d44c36c580374733a42fff35c8b6ed9f046cb2ca7a8d3558fb3",
-      "size": 1933
+      "sha256": "5b4adeb99c5e44e16922cad13a3054e71e625a820f5c06e1e8ce7150d611746b",
+      "size": 2153
     },
     ".opencode/scripts/data_modules/index_debt_mixin.py": {
       "sha256": "5bc6d6368b8a86d77a962851e432e69099e9687ab6ca276679637a8d5fdaabb5",
@@ -1333,8 +1328,8 @@
       "size": 21853
     },
     ".opencode/scripts/data_modules/ssot_enforcer.py": {
-      "sha256": "e3c3c26d0a4db8a16220e4d97120f12e8e0cd428cfbcc62bc0c1e120419104c2",
-      "size": 30855
+      "sha256": "a0aa8d2b21799c8dbb1da3a34a390f8df72ebcb1151e21a7b3deca814066ba7d",
+      "size": 30921
     },
     ".opencode/scripts/data_modules/amend_proposal_schema.py": {
       "sha256": "809c9d24c2863535c4e55f604c295dea23556fce7805f20e250b792cf67f1691",
@@ -1649,8 +1644,8 @@
       "size": 1797
     },
     ".opencode/scripts/data_modules/tests/test_ssot_smoke.py": {
-      "sha256": "60ecf5d3bc36529c3b557918c281f846cdd3a7b67a7e9bb830f7c59ac060274d",
-      "size": 13712
+      "sha256": "bfea3cb936c83515e12ad25cd9c0f056eab1e25a0a7bcd029a87c9ae465fa87b",
+      "size": 17483
     },
     ".opencode/scripts/data_modules/tests/test_memory_schema_compat.py": {
       "sha256": "0d40e167be3794f3e5599d6847a46662a27a515894e994855567f60a61649c86",
