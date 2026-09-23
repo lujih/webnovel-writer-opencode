@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20260923.1503",
+  "version": "v2.9.2-20260923.1528",
   "tag": "v2.9.2",
-  "updated": "2026-09-23T15:03:25Z",
+  "updated": "2026-09-23T15:28:36Z",
   "changelog": [
     {
-      "hash": "618a575",
-      "type": "fix",
-      "message": "fix: \u7b2c\u4e09\u8f6e\u5168\u91cf\u5ba1\u6838\u6838\u5fc3\u5199\u8def\u5f84 P1 \u4fee\u590d\uff08skill_runner \u7ae0\u8282\u6587\u4ef6\u5b50\u4e32\u8bef\u5339\u914d + \u56de\u5f52\u6d4b\u8bd5\uff09"
+      "hash": "ca216b7",
+      "type": "refactor",
+      "message": "refactor: \u6df1\u5ea6\u4f18\u5316\uff08state.json \u76f4\u8bfb\u5bb9\u9519\u7edf\u4e00 + \u5377\u7ae0\u6570\u5e38\u91cf\u5bf9\u9f50 + publisher \u5377\u76ee\u5f55\u5b9a\u4f4d\uff09"
     },
     {
-      "hash": "04514a1",
+      "hash": "064c22c",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260920.1635 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260923.1503 [skip ci]"
     }
   ],
   "files": {
@@ -460,8 +460,8 @@
       "size": 6105
     },
     ".opencode/scripts/extract_chapter_context.py": {
-      "sha256": "5d9e8481019afc4b9fbdce5f6ef8c339e6074565c4f886722dd58ad01f717397",
-      "size": 14813
+      "sha256": "e3cc8e162f3b59627fe373e8e0501935c5445fc1dc2c8253fb81f8ddbab5d2ad",
+      "size": 15062
     },
     ".opencode/scripts/reference_search.py": {
       "sha256": "1f67391a9a7437452f594342cdf383cee3e1ef018d8064a2a6f4cb20456f6548",
@@ -480,8 +480,8 @@
       "size": 2245
     },
     ".opencode/scripts/skill_runner.py": {
-      "sha256": "dbae72e496ca35d78b461d2e1eec2daa7ea95aaefbc97361d69b415408a64ea0",
-      "size": 12731
+      "sha256": "4161b3de64f1da900fa96f42c0a89bb597f05020dfbef1153668216021003e3e",
+      "size": 13199
     },
     ".opencode/scripts/project_locator.py": {
       "sha256": "8c13581b93bfc89b68b3da7e46a1db0683da35885721492345526ddb117917aa",
@@ -548,8 +548,8 @@
       "size": 4444
     },
     ".opencode/scripts/publisher/__init__.py": {
-      "sha256": "e6f47891af923c8699c959d9a07bd4a3db4ebe42235499844c6c8343c9d8f993",
-      "size": 27678
+      "sha256": "cf475a9a0c30bb792e300564cce982f8ccf8d292abd9f49bff6ffa4a60663436",
+      "size": 28375
     },
     ".opencode/scripts/publisher/base.py": {
       "sha256": "09ae17c5fe922273698e476cf89d128735c0633a40ceb7ebc928551cd984116a",
@@ -712,8 +712,8 @@
       "size": 9420
     },
     ".opencode/scripts/data_modules/prewrite_validator.py": {
-      "sha256": "d0df5b716b89718d4bd339708aaf9f470957b255d972a24215d1592120b26fa1",
-      "size": 3418
+      "sha256": "e1f0717aaf275e988c323a076ae25add5dee29d49eb2cbb09289574d1bf84127",
+      "size": 3856
     },
     ".opencode/scripts/data_modules/chapter_rename.py": {
       "sha256": "18130f096b098a9e34355ff0ed81c64eaf12de16a227e1cdfe4c355cecd97e30",
@@ -804,8 +804,8 @@
       "size": 22025
     },
     ".opencode/scripts/data_modules/story_runtime_health.py": {
-      "sha256": "118d480ffd0f89c53f2d0ea2d50dfa9e9afafe21ecab21cb1d29fab6b71e948a",
-      "size": 3036
+      "sha256": "9641315c29c32c7970cc0939550b08e3ec80731d8c62fd774387a2e4246ca93b",
+      "size": 3512
     },
     ".opencode/scripts/data_modules/project_phase.py": {
       "sha256": "af9abafd672553bc1d6d930d5dbeb705ee5917a89688f96ebcba395ba743da28",
