@@ -138,7 +138,18 @@ def cmd_verify_chapter_files(args: argparse.Namespace) -> int:
     errors = []
 
     text_dir = root / "正文"
-    chapter_files = list(text_dir.rglob(f"第*{ch}*章*.md"))
+    # P1 修复：旧实现 rglob(f"第*{ch}*章*.md") 的通配 `*` 会把 第11章 误匹配到 ch=1
+    # （子串 "1" 命中 "11"）、把 第021章 误匹配到 ch=2，多章数书籍下 false-positive。
+    # 改为：从文件名提取所有 "第N章" / "chapterN" / "chapter_N" 编号段，
+    # 与 ch 做整数相等比较——兼容 0 填充（第001章 == ch 1），排除 第11章 != ch 1。
+    import re as _re
+    chapter_files: list[Path] = []
+    if text_dir.is_dir():
+        for p in text_dir.rglob("*.md"):
+            for m in _re.finditer(r"第\s*(\d+)\s*章|chapter[_](\d+)", p.name, re.IGNORECASE):
+                if int(m.group(1) or m.group(2)) == ch:
+                    chapter_files.append(p)
+                    break
     if not chapter_files:
         errors.append(f"章节文件缺失: 第{ch}章")
     elif not chapter_files[0].stat().st_size:

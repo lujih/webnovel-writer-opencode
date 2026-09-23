@@ -158,6 +158,34 @@ def test_verify_chapter_files_missing_chapter(tmp_path):
     assert rc == 1
 
 
+def test_verify_chapter_files_no_substring_false_positive(tmp_path):
+    """P1 回归：第11章 不得被 ch=1 误匹配（旧通配 * 会把子串 "1" 命中 "11"）"""
+    _ensure_scripts_on_path()
+    from skill_runner import cmd_verify_chapter_files
+    import argparse
+
+    text_dir = tmp_path / "正文"
+    text_dir.mkdir()
+    # 只有第11章、第011章，没有第1章
+    (text_dir / "第011章-测试.md").write_text("x" * 10, encoding="utf-8")
+
+    # ch=1 不应匹配到第011章（011 == 11 != 1）
+    ns = argparse.Namespace(project_root=str(tmp_path), chapter=1)
+    assert cmd_verify_chapter_files(ns) == 1  # 第1章缺失
+
+    # ch=11 应匹配到第011章（0 填充 == 11）
+    commits = tmp_path / ".story-system" / "commits"
+    commits.mkdir(parents=True)
+    (commits / "chapter_011.commit.json").write_text(
+        json.dumps({"meta": {"chapter": 11}, "projection_status": {
+            "state": "done", "index": "done", "summary": "done",
+            "memory": "skipped", "vector": "skipped"}}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    ns11 = argparse.Namespace(project_root=str(tmp_path), chapter=11)
+    assert cmd_verify_chapter_files(ns11) == 0
+
+
 def test_pause_batch_running_to_paused(tmp_path):
     _ensure_scripts_on_path()
     from skill_runner import cmd_pause_batch
