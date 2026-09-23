@@ -118,15 +118,16 @@ async def _cmd_create_book(args: argparse.Namespace):
 
 def _build_abstract_from_project(project_root: Path) -> str:
     """从项目元数据自动生成简介（50+ 字）。"""
-    import json as _json
     state_path = project_root / ".webnovel" / "state.json"
     pi = {}
     if state_path.is_file():
+        # P2 修复：直读改走 read_json_safe（并发 os.replace 中途容错 + 失败降级 {}）
         try:
-            state = _json.loads(state_path.read_text(encoding="utf-8"))
-            pi = state.get("project_info", {})
-        except (_json.JSONDecodeError, OSError):
-            pass
+            from security_utils import read_json_safe
+        except ImportError:  # pragma: no cover
+            from scripts.security_utils import read_json_safe
+        state = read_json_safe(state_path, default={})
+        pi = state.get("project_info", {}) if isinstance(state, dict) else {}
     parts = []
     selling = pi.get("core_selling_points", "")
     if selling:
@@ -533,11 +534,15 @@ def _safe_input(prompt: str, default: str = "y") -> str:
 
 def _read_book_meta(project_root: Path):
     from publisher.base import BookMeta
-    import json
     state_file = project_root / ".webnovel" / "state.json"
     meta = BookMeta(title="", genre="", synopsis="", protagonist="")
     if state_file.is_file():
-        s = json.loads(state_file.read_text(encoding="utf-8"))
+        # P2 修复：直读改走 read_json_safe（并发 os.replace 中途容错 + 失败降级 {}）
+        try:
+            from security_utils import read_json_safe
+        except ImportError:  # pragma: no cover
+            from scripts.security_utils import read_json_safe
+        s = read_json_safe(state_file, default={})
         proj_info = s.get("project_info", {}) if isinstance(s, dict) else {}
         meta.title = proj_info.get("title", "") or project_root.name
         meta.genre = proj_info.get("genre", "")
@@ -607,8 +612,12 @@ def _find_chapter_file(project_root: Path, index: int) -> Path | None:
     def _match(f):
         return re.match(rf"第0*{index}章", f.name)
 
-    # 优先在当前卷目录查找
-    vol = (index - 1) // 20 + 1
+    # 优先在当前卷目录查找（与 chapter_paths.volume_num_for_chapter 默认 50 章/卷一致）
+    try:
+        from chapter_paths import volume_num_for_chapter
+    except ImportError:  # pragma: no cover
+        from scripts.chapter_paths import volume_num_for_chapter
+    vol = volume_num_for_chapter(index)
     vol_dir = text_dir / f"第{vol}卷"
     if vol_dir.is_dir():
         for f in sorted(vol_dir.iterdir()):

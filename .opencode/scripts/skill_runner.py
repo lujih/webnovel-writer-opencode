@@ -49,7 +49,17 @@ def cmd_story_system(args: argparse.Namespace) -> int:
         print(f"ERROR: CHAPTER_GOAL 疑似占位符未替换: {goal[:80]}", file=sys.stderr)
         return 1
 
-    s = json.loads((root / ".webnovel" / "state.json").read_text("utf-8"))
+    # P2 修复：直读 state.json 改走 read_json_safe（并发 os.replace 中途容错，
+    # 失败降级 {} 而不是抛 JSONDecodeError 崩掉整个 skill step）
+    state_path = root / ".webnovel" / "state.json"
+    if not state_path.is_file():
+        print("ERROR: state.json 不存在", file=sys.stderr)
+        return 1
+    try:
+        from security_utils import read_json_safe
+    except ImportError:  # pragma: no cover
+        from scripts.security_utils import read_json_safe
+    s = read_json_safe(state_path, default={})
     genre = s.get("project_info", {}).get("genre", "")
 
     old_argv = sys.argv

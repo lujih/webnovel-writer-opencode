@@ -20,8 +20,15 @@ class PrewriteValidator:
         plot_structure: Dict[str, Any],
         story_contract: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
-        state = json.loads(
-            (self.project_root / ".webnovel" / "state.json").read_text(encoding="utf-8")
+        # P2 修复：直读 state.json 在并发 os.replace（writer 原子写）中途可能
+        # 读到 0 字节 → JSONDecodeError 崩掉 context 装配。改走 read_json_safe，
+        # 失败降级 {} 让 prewrite 检查继续（缺字段自然不阻断）。
+        try:
+            from security_utils import read_json_safe
+        except ImportError:  # pragma: no cover
+            from scripts.security_utils import read_json_safe
+        state = read_json_safe(
+            self.project_root / ".webnovel" / "state.json", default={}
         )
         pending = state.get("disambiguation_pending") or []
         warnings = state.get("disambiguation_warnings") or []

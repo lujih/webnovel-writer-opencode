@@ -113,7 +113,12 @@ def extract_state_summary(project_root: Path) -> str:
     if not state_file.exists():
         return "⚠️ state.json 不存在"
 
-    state = json.loads(state_file.read_text(encoding="utf-8"))
+    # P2 修复：直读改走 read_json_safe（并发 os.replace 中途容错 + 失败降级 {}）
+    try:
+        from security_utils import read_json_safe
+    except ImportError:  # pragma: no cover
+        from scripts.security_utils import read_json_safe
+    state = read_json_safe(state_file, default={})
     summary_parts: List[str] = []
 
     if "progress" in state:

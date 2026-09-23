@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import annotations
 
-import json
 import re
 from pathlib import Path
 from typing import Any
@@ -51,10 +50,14 @@ def _resolve_chapter(project_root: Path, chapter: int | None) -> int:
     if not state_path.is_file():
         return latest_story_system_chapter
 
+    # P2 修复：直读 state.json 在并发 os.replace（writer 原子写）中途可能看到
+    # 0 字节 / 部分写入。统一走 read_json_safe（容错 + 失败降级 default），
+    # 与 state_manager / memory store 的读取约定一致。
     try:
-        state = json.loads(state_path.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return latest_story_system_chapter
+        from security_utils import read_json_safe
+    except ImportError:  # pragma: no cover
+        from scripts.security_utils import read_json_safe
+    state = read_json_safe(state_path, default={})
 
     try:
         state_chapter = max(0, int(((state.get("progress") or {}).get("current_chapter") or 0)))
@@ -77,7 +80,11 @@ def build_story_runtime_health(project_root: Path, chapter: int | None = None) -
 
     snapshot = load_runtime_sources(project_root, current_chapter)
     latest_commit = snapshot.latest_commit or {}
-    volume_num = max(1, (current_chapter - 1) // 20 + 1)
+    try:
+        from chapter_paths import volume_num_for_chapter
+    except ImportError:  # pragma: no cover
+        from scripts.chapter_paths import volume_num_for_chapter
+    volume_num = max(1, volume_num_for_chapter(current_chapter))
     status_text = (latest_commit.get("meta") or {}).get("status", "missing")
     result = {
         "chapter": current_chapter,
