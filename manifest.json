@@ -1,17 +1,22 @@
 {
-  "version": "v2.9.2-20260923.1528",
+  "version": "v2.9.2-20260926.1521",
   "tag": "v2.9.2",
-  "updated": "2026-09-23T15:28:36Z",
+  "updated": "2026-09-26T15:21:21Z",
   "changelog": [
     {
-      "hash": "ca216b7",
-      "type": "refactor",
-      "message": "refactor: \u6df1\u5ea6\u4f18\u5316\uff08state.json \u76f4\u8bfb\u5bb9\u9519\u7edf\u4e00 + \u5377\u7ae0\u6570\u5e38\u91cf\u5bf9\u9f50 + publisher \u5377\u76ee\u5f55\u5b9a\u4f4d\uff09"
+      "hash": "a1630bf",
+      "type": "docs",
+      "message": "docs: DeepSeek Harness \u9002\u914d\u8865\u5145\uff08dsh-adaptation \u6307\u5357 + CLAUDE.md \u8bf4\u660e + \u547d\u4ee4\u6e05\u5355\uff09"
     },
     {
-      "hash": "064c22c",
+      "hash": "2838381",
+      "type": "feat",
+      "message": "feat: \u9002\u914d DeepSeek Harness\uff08.dsh \u6280\u80fd/\u4ee3\u7406\u5c42 + dsh-sync CLI + \u6587\u6863\uff09"
+    },
+    {
+      "hash": "317b7e4",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260923.1503 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260923.1528 [skip ci]"
     }
   ],
   "files": {
@@ -648,8 +653,8 @@
       "size": 58629
     },
     ".opencode/scripts/data_modules/webnovel.py": {
-      "sha256": "b88d9b1e58afc55b0a8f5c7c66e7b9d3ef30e8245e9266b709cbc182de0519bd",
-      "size": 34714
+      "sha256": "6b02b5a9b7281ffbd27974cc164639d9728146a8b941206baf6dbd33a2e607fd",
+      "size": 35394
     },
     ".opencode/scripts/data_modules/schemas.py": {
       "sha256": "6c605d29e6fb569960c4858043592676c59854078cb7e3a104b486db2416d1b0",
@@ -694,6 +699,10 @@
     ".opencode/scripts/data_modules/ssot_enforcer.py": {
       "sha256": "a0aa8d2b21799c8dbb1da3a34a390f8df72ebcb1151e21a7b3deca814066ba7d",
       "size": 30921
+    },
+    ".opencode/scripts/data_modules/dsh_sync.py": {
+      "sha256": "b8afd3138b5b8fa415407d7a71620611afce498f809213936f23af6a24395dc1",
+      "size": 15165
     },
     ".opencode/scripts/data_modules/state_manager.py": {
       "sha256": "14b773cbabdb8c4f2b9cda92cc45c204529d4c234bb434318aff751e780d65bb",
