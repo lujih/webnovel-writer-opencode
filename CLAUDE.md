@@ -64,7 +64,7 @@ python .opencode/scripts/webnovel.py publish         # publish to platform
 python .opencode/scripts/webnovel.py memory          # memory system management
 ```
 
-Full command list (36 top-level commands, 50 `add_parser` call sites counting subcommands like `knowledge query-entity-state`, `ssot verify`, `workflow checkpoint`, `override add`): `where`, `chapter-path`, `preflight`, `use`, `index`, `state`, `rag`, `style`, `entity`, `context`, `memory`, `migrate`, `status`, `doctor`, `update-state`, `backup`, `archive`, `init`, `extract-context`, `story-system`, `story-events`, `chapter-commit`, `memory-contract`, `project-memory`, `review-pipeline`, `placeholder-scan`, `master-outline-sync`, `export`, `publish`, `knowledge`, `checkers`, `orchestrate`, `delete-chapters`, `entity-clean`, `ssot`, `workflow`, `override`.
+Full command list (37 top-level commands, 51 `add_parser` call sites counting subcommands like `knowledge query-entity-state`, `ssot verify`, `workflow checkpoint`, `override add`): `where`, `chapter-path`, `preflight`, `use`, `index`, `state`, `rag`, `style`, `entity`, `context`, `memory`, `migrate`, `status`, `doctor`, `update-state`, `backup`, `archive`, `init`, `extract-context`, `story-system`, `story-events`, `chapter-commit`, `memory-contract`, `project-memory`, `review-pipeline`, `placeholder-scan`, `master-outline-sync`, `export`, `publish`, `knowledge`, `checkers`, `orchestrate`, `delete-chapters`, `entity-clean`, `ssot`, `workflow`, `override`, `dsh-sync`。
 
 Most subcommands forward to `data_modules/<module>.py` via argparse dispatch. Writing tools (`--project-root` aware) use the `PASSTHROUGH_TOOLS` set; the entry point auto-resolves the book project root (directory containing `.webnovel/state.json`).
 
@@ -123,7 +123,13 @@ Code is organized as a pipeline — each layer feeds the next:
 
 ### OpenCode Integration
 
-16 skills and 6 agents defined in `.opencode/skills/` and `.opencode/agents/`.
+16 skills and 6 agents defined in `.opencode/skills/` and `.opencode/agents/`. **DSH 适配**：
+DeepSeek Harness（deepseek-ai/deepseek-harness）的 skill provider 不读 `.opencode/`；
+`.dsh/skills/` + `.dsh/agents/` 是派生镜像（17 个 SKILL.md 含桥接层 webnovel-writer
++ 6 个 agent），由 `python .opencode/scripts/webnovel.py dsh-sync` 单向生成（幂等，
+`--check` 做 CI 门禁）；工具映射（Agent→subagent / AskUserQuestion→ask_user_question /
+Task→job_*）与差异点（write-guard 钩子在 DSH 退化为流程纪律）详见
+`docs/guides/dsh-adaptation.md`。SSOT/原子写/伏笔契约等数据层不变式与 harness 无关。
 
 Skills: `webnovel-write`, `webnovel-write-batch`, `webnovel-delete`, `webnovel-rewrite`, `webnovel-heal`, `webnovel-review`, `webnovel-init`, `webnovel-plan`, `webnovel-query`, `webnovel-export`, `webnovel-publish`, `webnovel-dashboard`, `webnovel-learn`, `webnovel-doctor`, `webnovel-fanqie-write`, `webnovel-qimao-write`.
 
