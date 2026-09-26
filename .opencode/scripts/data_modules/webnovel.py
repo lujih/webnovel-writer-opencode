@@ -582,6 +582,12 @@ def main() -> None:
     ovr_ctx = p_ovr_sub.add_parser("context", help="生成上下文提示")
     ovr_ctx.add_argument("--chapter", type=int, required=True)
 
+    p_dsh_sync = sub.add_parser(
+        "dsh-sync",
+        help="镜像 .opencode 资产为 DeepSeek Harness 适配层（.dsh/skills + .dsh/agents）",
+    )
+    p_dsh_sync.add_argument("--check", action="store_true", help="只校验不写盘（幂等性检查）")
+
     # 兼容：允许 `--project-root` 出现在任意位置（减少 agents/skills 拼命令的出错率）
     from .cli_args import normalize_global_project_root
 
@@ -608,6 +614,17 @@ def main() -> None:
     # init 是创建项目，不应该依赖/注入已存在 project_root
     if tool == "init":
         raise SystemExit(_run_script("init_project.py", rest))
+
+    # dsh-sync 作用于仓库根（.opencode → .dsh），不需要书项目 root
+    if tool == "dsh-sync":
+        from .dsh_sync import main as _dsh_sync_main
+        saved_argv = sys.argv
+        sys.argv = ["dsh-sync"] + (["--check"] if getattr(args, "check", False) else [])
+        try:
+            rc = _dsh_sync_main()
+        finally:
+            sys.argv = saved_argv
+        raise SystemExit(rc)
 
     # 其余工具：统一解析 project_root 后前置给下游
     project_root = _resolve_root(args.project_root)
