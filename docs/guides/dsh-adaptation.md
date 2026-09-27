@@ -94,6 +94,34 @@ python -X utf8 .opencode/scripts/webnovel.py dsh-sync --check     # 幂等校验
   本仓库作为 skills 源；如需在 DSH 下写新书，在书项目侧再跑一次 `dsh-sync`
   或把 `.dsh/` 随仓库分发。
 
+## 书项目（无 `.git`）的 skill 发现
+
+DSH 的项目级 skill 根（`.dsh/skills` rank100、`.agents/skills` rank200）依赖
+`findProjectRoot` 向上走到含 `.git` 的目录；书项目（如 `E:\workspace\webnovel2\凡尘之舞`）
+通常**没有** `.git`，此时向上走到文件系统根、**不报错**，只是拿不到项目级根。
+但 skill 仍会被发现，因为 DSH 还有两个兜底根：
+
+| 兜底根 | 来源 | 说明 |
+|--------|------|------|
+| `~/.dsh/skills`（rank400） | `$DSH_HOME`（默认 `~/.dsh`） | 用户级，所有 DSH 会话共享 |
+| `~/.agents/skills`（rank500） | `$DSH_AGENTS_HOME`（默认 `~/.agents`） | 用户级共享 agent 配置 |
+
+因此书项目在 DSH 下可用 webnovel skill 的方式有两种（任选其一）：
+
+1. **书项目自带 `.dsh/`**：在书项目根放置一份 `.dsh/skills/`（可从本仓库拷贝或在书项目
+   跑 `dsh-sync` 后把 `.dsh/` 带过去）。DSH 的 `findProjectRoot` 在书项目 cwd 下拿不到
+   项目级根，但 skill provider 还会扫描 `~/.dsh` / `~/.agents`——把 webnovel skill 放进
+   用户级根即可全局可用。
+2. **用户级安装**（推荐全局复用）：把本仓库的 `.dsh/skills/*` 链接/复制到
+   `~/.dsh/skills/`（或 `~/.agents/skills/`）。这样无论 cwd 指向哪个书项目，
+   DSH 都能发现全部 17 个 webnovel skill，无需每个书项目各放一份。
+
+> 注意：`customSkillDirs`（cordis.yml 配置，rank300）是第三选项——宿主可通过
+> `dsh-skill-filesystem` 的 `Config.customSkillDirs` 把任意目录挂进来。
+
+`findProjectRoot` 找不到 `.git` 时走回 `cwd`（`parent === current` 兜底），不会抛错；
+缺失的只是「项目级 rank」，skill 本身仍由用户级 / 自定义根提供。
+
 ## 维护
 
 改 `.opencode/` 下任何 skill/agent 后，重跑一次

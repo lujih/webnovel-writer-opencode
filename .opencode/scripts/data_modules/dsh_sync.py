@@ -93,26 +93,6 @@ def _ensure_name(frontmatter: str, expected: str) -> str:
     return frontmatter
 
 
-def adapt_skill(src: Path, dst: Path) -> int:
-    text = src.read_text(encoding="utf-8")
-    fm, body = _split_frontmatter(text)
-    fm = _ensure_name(fm, src.parent.name)
-    adapted = fm + _BOOTSTRAP + _TOOL_MAP + body
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(adapted, encoding="utf-8")
-    return 0
-
-
-def adapt_agent(src: Path, dst: Path) -> int:
-    text = src.read_text(encoding="utf-8")
-    fm, body = _split_frontmatter(text)
-    fm = _ensure_name(fm, src.stem)
-    adapted = fm + _BOOTSTRAP + _TOOL_MAP + body
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    dst.write_text(adapted, encoding="utf-8")
-    return 0
-
-
 # 桥接 skill：把 OpenCode 的 16 个子 skill + 6 个 agent 聚合为一个 DSH 入口，
 # 供 DSH 模型"先加载 webnovel-writer、再按需路由到子 skill"。
 _BRIDGE_NAME = "webnovel-writer"
@@ -120,7 +100,7 @@ _BRIDGE_NAME = "webnovel-writer"
 _BRIDGE_FRONTMATTER = """\
 ---
 name: webnovel-writer
-description: Webnovel Writer for OpenCode/DSH — long-form Chinese web novel pipeline. 16 skills, 6 agents, unified CLI at .opencode/scripts/webnovel.py (36 top-level commands), SSOT event sourcing, dashboard. Use when the user asks to init/write/commit/review/rewrite/delete/export/publish novel chapters, run doctor/status/backup, browse the dashboard, or learn project style.
+description: Webnovel Writer for OpenCode/DSH — long-form Chinese web novel pipeline. 16 skills, 6 agents, unified CLI at .opencode/scripts/webnovel.py (37 top-level commands), SSOT event sourcing, dashboard. Use when the user asks to init/write/commit/review/rewrite/delete/export/publish novel chapters, run doctor/status/backup, browse the dashboard, or learn project style.
 whenToUse: In a book project root containing .webnovel/state.json (or a workspace resolved by the CLI 5-level root resolution), when any novel-writing workflow step (chapter write, batch, review, commit, deletion, rewrite/heal, outline plan, query, export, publish, dashboard, style learn, doctor) is requested.
 ---
 """
@@ -201,7 +181,7 @@ DSH 的 `subagent` 工具可委派；下表给出 agent 名→定义路径与职
 入口自动解析书项目根（含 `.webnovel/state.json` 的目录，5 级优先级：
 CLI > 环境变量 > 指针文件 > CWD 上溯 > 用户注册表）。
 
-完整命令参考仓库根 `docs/guides/commands.md`（36 顶级 / 50 含子命令）。
+完整命令参考仓库根 `docs/guides/commands.md`（37 顶级 / 51 含子命令）。
 
 ## DSH 适配说明（与 OpenCode 的差异）
 
@@ -241,7 +221,6 @@ def main() -> int:
     changed = 0
     for d in skill_dirs:
         dst = DSH_ROOT / "skills" / d.name / "SKILL.md"
-        content = (dst.parent.mkdir(parents=True, exist_ok=True), dst)
         text_new = (d / "SKILL.md").read_text(encoding="utf-8")
         fm, body = _split_frontmatter(text_new)
         fm = _ensure_name(fm, d.name)

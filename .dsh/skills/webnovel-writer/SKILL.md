@@ -1,6 +1,6 @@
 ---
 name: webnovel-writer
-description: Webnovel Writer for OpenCode/DSH — long-form Chinese web novel pipeline. 16 skills, 6 agents, unified CLI at .opencode/scripts/webnovel.py (36 top-level commands), SSOT event sourcing, dashboard. Use when the user asks to init/write/commit/review/rewrite/delete/export/publish novel chapters, run doctor/status/backup, browse the dashboard, or learn project style.
+description: Webnovel Writer for OpenCode/DSH — long-form Chinese web novel pipeline. 16 skills, 6 agents, unified CLI at .opencode/scripts/webnovel.py (37 top-level commands), SSOT event sourcing, dashboard. Use when the user asks to init/write/commit/review/rewrite/delete/export/publish novel chapters, run doctor/status/backup, browse the dashboard, or learn project style.
 whenToUse: In a book project root containing .webnovel/state.json (or a workspace resolved by the CLI 5-level root resolution), when any novel-writing workflow step (chapter write, batch, review, commit, deletion, rewrite/heal, outline plan, query, export, publish, dashboard, style learn, doctor) is requested.
 ---
 # Webnovel Writer (DSH 桥接层)
@@ -78,7 +78,7 @@ DSH 的 `subagent` 工具可委派；下表给出 agent 名→定义路径与职
 入口自动解析书项目根（含 `.webnovel/state.json` 的目录，5 级优先级：
 CLI > 环境变量 > 指针文件 > CWD 上溯 > 用户注册表）。
 
-完整命令参考仓库根 `docs/guides/commands.md`（36 顶级 / 50 含子命令）。
+完整命令参考仓库根 `docs/guides/commands.md`（37 顶级 / 51 含子命令）。
 
 ## DSH 适配说明（与 OpenCode 的差异）
 
