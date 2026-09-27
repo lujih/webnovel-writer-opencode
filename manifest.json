@@ -1,22 +1,17 @@
 {
-  "version": "v2.9.2-20260926.1521",
+  "version": "v2.9.2-20260927.1445",
   "tag": "v2.9.2",
-  "updated": "2026-09-26T15:21:21Z",
+  "updated": "2026-09-27T14:45:29Z",
   "changelog": [
     {
-      "hash": "a1630bf",
-      "type": "docs",
-      "message": "docs: DeepSeek Harness \u9002\u914d\u8865\u5145\uff08dsh-adaptation \u6307\u5357 + CLAUDE.md \u8bf4\u660e + \u547d\u4ee4\u6e05\u5355\uff09"
+      "hash": "76f37d3",
+      "type": "simplify",
+      "message": "simplify: DSH \u9002\u914d\u5c42\u5b8c\u6574\u6027\u5ba1\u67e5\u4e0e\u4fee\u590d"
     },
     {
-      "hash": "2838381",
-      "type": "feat",
-      "message": "feat: \u9002\u914d DeepSeek Harness\uff08.dsh \u6280\u80fd/\u4ee3\u7406\u5c42 + dsh-sync CLI + \u6587\u6863\uff09"
-    },
-    {
-      "hash": "317b7e4",
+      "hash": "b5510d8",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260923.1528 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260926.1521 [skip ci]"
     }
   ],
   "files": {
@@ -701,8 +696,8 @@
       "size": 30921
     },
     ".opencode/scripts/data_modules/dsh_sync.py": {
-      "sha256": "b8afd3138b5b8fa415407d7a71620611afce498f809213936f23af6a24395dc1",
-      "size": 15165
+      "sha256": "52347559236f6ab90c9bb11e8d39a9435e1a33a9b7f9ba5401424d37dbe96444",
+      "size": 14437
     },
     ".opencode/scripts/data_modules/state_manager.py": {
       "sha256": "14b773cbabdb8c4f2b9cda92cc45c204529d4c234bb434318aff751e780d65bb",
