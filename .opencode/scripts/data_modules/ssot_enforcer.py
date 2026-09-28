@@ -226,9 +226,19 @@ def rebuild_state_json(project_root: Path,
 
         elif etype == "chapter_deleted":
             progress = state.setdefault("progress", {})
+            cs = progress.setdefault("chapter_status", {})
+            seqs = progress.get("chapter_status_seq", {})
             for c in payload.get("chapters", []):
-                progress.setdefault("chapter_status", {}).pop(str(c), None)
-                progress.get("chapter_status_seq", {}).pop(str(c), None)
+                cs.pop(str(c), None)
+                seqs.pop(str(c), None)
+            # 删掉的若是当前章，current_chapter 会继续指向一个已不存在的章节。
+            # chapter_status_changed 只在提交时推进 current_chapter、从不回退，
+            # 因此删除后必须重算，否则状态面板会显示一个已被删掉的章号。
+            remaining = [
+                int(k) for k, v in cs.items()
+                if str(v).replace("chapter_", "") == "committed"
+            ]
+            progress["current_chapter"] = max(remaining) if remaining else 0
 
         elif etype == "entity_created":
             eid = payload.get("entity_id", subject)
@@ -258,10 +268,15 @@ def rebuild_state_json(project_root: Path,
                     "first_seen_chapter": evt["chapter"],
                 })
                 ent.setdefault("current_state", {})[field] = new_val
-                # Sync to protagonist_state if applicable
+                # Sync to protagonist_state if applicable.
+                # 注：回放从 _empty_state() 起步，protagonist_state 恒为 {}，
+                # 故此分支目前不可达（protagonist_state 实际由
+                # StateProjectionWriter 维护，rebuild 时按 _DICT_MERGE_FIELDS
+                # 原样保留）。保留它是为了形状正确：一旦将来 _empty_state()
+                # 预填了 name/entity_id，扁平键写法会立刻污染 state.json。
                 ps = state.get("protagonist_state", {})
                 if ps.get("entity_id") == eid or ps.get("name") == ent.get("name"):
-                    state.setdefault("protagonist_state", {})[field] = new_val
+                    _set_dotted(state.setdefault("protagonist_state", {}), field, new_val)
 
         elif etype == "power_breakthrough":
             eid = payload.get("entity_id", subject)
@@ -460,6 +475,29 @@ def _to_int(value) -> int:
         return int(value or 0)
     except (TypeError, ValueError):
         return 0
+
+
+def _set_dotted(target: dict, path: str, value) -> None:
+    """按点号路径写入嵌套字典：'power.realm' -> target['power']['realm']。
+
+    必须与 ``StateProjectionWriter._set_path`` 保持同一形状：写路径吃的是点号
+    字段名，而读取方（context_manager / renderer / structural_checker）一律按
+    嵌套字典取。若回放写成扁平键 ``{"power.realm": x}``，嵌套读取方全部落空。
+    """
+    if not isinstance(target, dict) or not path:
+        return
+    if "." not in path:
+        target[path] = value
+        return
+    parts = path.split(".")
+    cursor = target
+    for part in parts[:-1]:
+        nxt = cursor.get(part)
+        if not isinstance(nxt, dict):
+            nxt = {}
+            cursor[part] = nxt
+        cursor = nxt
+    cursor[parts[-1]] = value
 
 
 def _empty_state() -> dict:

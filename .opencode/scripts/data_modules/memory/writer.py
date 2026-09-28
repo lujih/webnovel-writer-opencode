@@ -230,6 +230,8 @@ class MemoryWriter:
                     "planted_chapter": row.get("planted_chapter"),
                     "expected_payoff": row.get("expected_payoff"),
                     "status": row.get("status"),
+                    # open_loop_closed 走同一条通路，用它记回收章节
+                    "resolved_chapter": row.get("resolved_chapter"),
                 },
                 source_chapter=int(chapter),
                 evidence=[f"memory_facts:open_loop:{chapter}"],
@@ -310,6 +312,22 @@ class MemoryWriter:
                                 payload.get("expected_payoff")
                                 or payload.get("loop_deadline")
                             ),
+                        }
+                    )
+            elif event_type == "open_loop_closed":
+                content = self._coerce_loop_content(payload, event)
+                if content:
+                    # 此前只处理 open_loop_created，导致已回收的伏笔在 scratchpad
+                    # 里永远停在 status=active：compactor 只清理 resolved/closed，
+                    # 而 memory_contract_adapter.load_context 每章又把「紧急伏笔」
+                    # 前 3 条注入写手上下文——等于反复要求写手去收一条早就收了的线。
+                    # open_loop 的去重 key 是 (subject,)，下游 upsert 会替换旧行。
+                    memory_facts["open_loops"].append(
+                        {
+                            "content": content,
+                            "status": "resolved",
+                            "urgency": 0,
+                            "resolved_chapter": payload.get("resolved_chapter") or chapter,
                         }
                     )
             elif event_type in {"promise_created", "promise_paid_off"}:

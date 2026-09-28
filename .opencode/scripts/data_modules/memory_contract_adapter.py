@@ -15,6 +15,7 @@ from .chapter_commit_service import ChapterCommitService
 from .commit_artifacts import extraction_list
 from .config import DataModulesConfig, get_config
 from .urgency_utils import coerce_urgency
+from .memory.compactor import _is_resolved_open_loop
 from .memory_contract import (
     CommitResult,
     ContextPack,
@@ -314,16 +315,20 @@ class MemoryContractAdapter:
         try:
             store = self._memory_store()
             items = store.query(category="open_loop", status=status)
+            # MemoryItem.status 是条目生命周期（active/outdated），伏笔本身
+            # 是否已回收记在 payload["status"]。只按生命周期过滤会把已回收的
+            # 伏笔继续当作「紧急伏笔」注入写手上下文。
             return [
                 OpenLoop(
                     id=item.id,
                     content=item.value,
-                    status=item.status,
+                    status=item.payload.get("status") or item.status,
                     planted_chapter=item.source_chapter,
                     expected_payoff=item.payload.get("expected_payoff", ""),
                     urgency=coerce_urgency(item.payload.get("urgency")),
                 )
                 for item in items
+                if not _is_resolved_open_loop(item)
             ]
         except (OSError, ValueError, KeyError) as e:
             logger.warning("get_open_loops failed: %s", e)

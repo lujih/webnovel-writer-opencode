@@ -35,6 +35,22 @@ def _find_chapter_files(project_root: Path, chapter_nums: list[int]) -> dict[int
     return found
 
 
+def _latest_committed(chapter_status: dict) -> int:
+    """剩余章节中最大的已提交章号；没有则返回 0。
+
+    chapter_status 的值有带前缀（chapter_committed）与不带（committed）两种
+    历史形状，这里都认。
+    """
+    nums = []
+    for key, value in (chapter_status or {}).items():
+        if str(value).replace("chapter_", "") == "committed":
+            try:
+                nums.append(int(key))
+            except (TypeError, ValueError):
+                continue
+    return max(nums) if nums else 0
+
+
 def _clean_state_json(project_root: Path, chapters: list[int], dry_run: bool) -> list[str]:
     state_path = project_root / ".webnovel" / "state.json"
 
@@ -52,7 +68,11 @@ def _clean_state_json(project_root: Path, chapters: list[int], dry_run: bool) ->
         del chapter_status[key]
 
     if removed:
-        state.setdefault("progress", {})["chapter_status"] = chapter_status
+        progress = state.setdefault("progress", {})
+        progress["chapter_status"] = chapter_status
+        # 删掉的若是当前章，current_chapter 会继续指向一个已不存在的章节
+        # （状态面板会显示「第 N 章」而正文里没有）。重算为剩余已提交章的最大值。
+        progress["current_chapter"] = _latest_committed(chapter_status)
         try:
             from security_utils import atomic_write_json
             atomic_write_json(state_path, state, use_lock=True, backup=True)
