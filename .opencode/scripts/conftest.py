@@ -76,9 +76,56 @@ def _install_safe_sqlite() -> None:
     sqlite3.connect = _safe_sqlite_connect
 
 
+def _install_isolated_project_locator_home() -> None:
+    """把 project_locator 的全局注册表重定向到临时目录。
+
+    写测试时若不隔离：init_project.py 的 write_current_project_pointer() 会向上
+    找到仓库自身的 .opencode/，把 .opencode/.webnovel-current-project 指针和用户
+    真实的 ~/.opencode|~/.claude/webnovel-writer/workspaces.json 一起改写成测试
+    生成的临时书项目——测试跑完即摧毁开发者的真实项目绑定，而写命令随后会按这个
+    绑定写进错误的书。tmp_path 又被本文件强制落在仓库内的 .tmp/pytest/，因此这条
+    路径必然命中仓库自身而不是一个无关的父目录。
+    """
+    home = _tmp_root() / "opencode-home"
+    home.mkdir(parents=True, exist_ok=True)
+    os.environ["WEBNOVEL_OPENCODE_HOME"] = str(home)
+
+
+_POINTER_SNAPSHOT: dict = {}
+
+
+def _snapshot_workspace_pointer() -> None:
+    """备份仓库的 .opencode/.webnovel-current-project 指针。
+
+    WEBNOVEL_OPENCODE_HOME 只隔离全局注册表；工作区指针文件是由
+    _find_workspace_root 从临时书项目路径向上找到仓库 .opencode/ 后直接写入的。
+    测试期间的 init 必须不影响开发者真实绑定，故在会话开始时快照、会话结束时还原。
+    """
+    for pointer in _repo_root().glob(".opencode/.webnovel-current-project"):
+        try:
+            _POINTER_SNAPSHOT[pointer] = pointer.read_text(encoding="utf-8")
+        except OSError:
+            pass
+
+
+def _restore_workspace_pointer() -> None:
+    for pointer, content in _POINTER_SNAPSHOT.items():
+        try:
+            pointer.write_text(content, encoding="utf-8")
+        except OSError:
+            pass
+    _POINTER_SNAPSHOT.clear()
+
+
 def pytest_configure(config: pytest.Config) -> None:
     _install_safe_tempfile()
+    _install_isolated_project_locator_home()
+    _snapshot_workspace_pointer()
     _install_safe_sqlite()
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    _restore_workspace_pointer()
 
 
 @pytest.fixture
@@ -94,4 +141,6 @@ def tmp_path(request: pytest.FixtureRequest) -> Path:
 
 
 _install_safe_tempfile()
+_install_isolated_project_locator_home()
+_snapshot_workspace_pointer()
 _install_safe_sqlite()
