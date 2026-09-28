@@ -372,6 +372,19 @@ def _replace_with_retry(
             delay = min(delay * 2, max_delay)
 
 
+def _atomic_relax_allowed() -> bool:
+    """WEBNOVEL_TEST_RELAX_ATOMIC_REPLACE 是否生效。
+
+    该降级把 os.replace 换成就地截断写，会关闭 CLAUDE.md 承诺的原子写不变式。
+    它只服务于 pytest 沙箱（conftest.py 会设置该变量），而书项目的 .env 也会被
+    config._load_dotenv() 注入 os.environ —— 因此必须同时要求 pytest 进程标志，
+    否则项目侧一行 .env 就能静默降级所有 JSON 投影写入。
+    """
+    if os.environ.get("WEBNOVEL_TEST_RELAX_ATOMIC_REPLACE") != "1":
+        return False
+    return "PYTEST_CURRENT_TEST" in os.environ or "PYTEST_VERSION" in os.environ
+
+
 def atomic_write_json(
     file_path: Union[str, Path],
     data: Dict[str, Any],
@@ -464,9 +477,11 @@ def atomic_write_json(
                 _replace_with_retry(temp_path, file_path)
                 temp_path = None  # 标记已成功，不需要清理
             except PermissionError:
-                if os.environ.get("WEBNOVEL_TEST_RELAX_ATOMIC_REPLACE") != "1":
+                if not _atomic_relax_allowed():
                     raise
                 # 测试沙箱可能允许写入但拒绝替换/删除既有文件；生产环境不启用该降级。
+                # 该开关只对 pytest 进程生效：书项目 .env 会被 config._load_dotenv()
+                # 写进 os.environ，若无此闸门，项目侧一行配置即可静默关闭原子写。
                 with open(file_path, "w", encoding="utf-8") as f:
                     f.write(json_content)
                     f.flush()

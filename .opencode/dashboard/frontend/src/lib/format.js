@@ -1,3 +1,13 @@
+// ECharts 的函数式 tooltip formatter 返回值直接进 innerHTML，不做转义
+// （只有字符串模板形式才走 encodeHTML）。小说正文经抽取后会进入实体名、
+// 关系描述与伏笔文本，因此拼进 tooltip 的动态值必须先转义。
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+
+export function escapeHtml(value) {
+    if (value === null || value === undefined) return ''
+    return String(value).replace(/[&<>"']/g, ch => HTML_ESCAPES[ch])
+}
+
 export function formatNumber(value) {
     const number = Number(value || 0)
     if (!Number.isFinite(number)) return '—'

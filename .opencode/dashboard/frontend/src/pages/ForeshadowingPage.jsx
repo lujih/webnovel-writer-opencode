@@ -5,7 +5,7 @@ import ChartWrapper from '../components/ChartWrapper.jsx'
 import DataTable from '../components/DataTable.jsx'
 import { FORESHADOWING_COLORS } from '../lib/charts.js'
 import { buildForeshadowingRecords, summarizeForeshadowing } from '../lib/foreshadowing.js'
-import { formatChapterLabel, formatShortNumber } from '../lib/format.js'
+import { formatChapterLabel, formatShortNumber, escapeHtml } from '../lib/format.js'
 
 const LEVEL_ORDER = {
     overdue: 4,
@@ -53,7 +53,9 @@ function buildGanttOption(rows, currentChapter) {
                 const rowIndex = Array.isArray(params.value) ? params.value[0] : params.dataIndex
                 const row = rows[rowIndex]
                 if (!row) return '伏笔'
-                return `${row.content}<br/>${row.statusText} · ${formatChapterLabel(row.plantedChapter)} → ${formatChapterLabel(row.targetChapter || row.resolvedChapter)}`
+                // row.content 来自 state.json 伏笔文本（源自小说正文），必须转义：
+                // 函数式 formatter 的返回值不会被 ECharts 转义
+                return `${escapeHtml(row.content)}<br/>${escapeHtml(row.statusText)} · ${formatChapterLabel(row.plantedChapter)} → ${formatChapterLabel(row.targetChapter || row.resolvedChapter)}`
             },
         },
         grid: { left: 160, right: 28, top: 12, bottom: 44 },

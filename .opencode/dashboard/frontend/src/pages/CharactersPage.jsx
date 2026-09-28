@@ -11,7 +11,7 @@ import {
 import Badge from '../components/Badge.jsx'
 import ChartWrapper from '../components/ChartWrapper.jsx'
 import DataTable from '../components/DataTable.jsx'
-import { formatChapterLabel, formatJSONText } from '../lib/format.js'
+import { formatChapterLabel, formatJSONText, escapeHtml } from '../lib/format.js'
 import { getLatestChapter } from '../lib/story.js'
 
 const TYPE_COLORS = {
@@ -124,10 +124,11 @@ function buildGraphOption(data) {
     return {
         tooltip: {
             formatter: params => {
+                // 动态值必须转义：函数式 formatter 的返回值不会被 ECharts 转义
                 if (params.dataType === 'edge') {
-                    return params.data?.name || '关系'
+                    return escapeHtml(params.data?.name || '关系')
                 }
-                return `${params.data?.name || '实体'}<br/>${params.data?.type || '未知类型'}`
+                return `${escapeHtml(params.data?.name || '实体')}<br/>${escapeHtml(params.data?.type || '未知类型')}`
             },
         },
         legend: {

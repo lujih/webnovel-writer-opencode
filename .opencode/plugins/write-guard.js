@@ -10,6 +10,8 @@
  * - .webnovel/vectors.db
  * - .webnovel/memory_scratchpad.json
  * - .story-system/commits/
+ * - .story-system/events/   （SSOT append-only 事件日志——伪造即改写历史）
+ * - .story-system/MASTER_SETTING.json （合同源文件，改写即绕过 story_system_engine）
  *
  * 禁用方式：设置环境变量 WEBNOVEL_DISABLE_WRITE_GUARD=1
  */
@@ -20,6 +22,8 @@ const PROTECTED_SUFFIXES = [
   '.webnovel/vectors.db',
   '.webnovel/memory_scratchpad.json',
   '.story-system/commits/',
+  '.story-system/events/',
+  '.story-system/master_setting.json',
 ]
 
 const ALLOWED_MARKERS = [
