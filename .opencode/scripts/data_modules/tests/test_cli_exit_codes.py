@@ -42,7 +42,14 @@ def test_reset_clears_flag():
 
 
 def test_run_data_module_propagates_systemexit_code(tmp_path, monkeypatch):
-    """模块主动 SystemExit(3) 时必须原样传出。"""
+    """载荷缺失/非法时必须非零退出，且不得以 traceback 收场。
+
+    注意 tmp_path 建在仓库内的 .tmp/ 下，从它向上搜索会命中仓库工作区的
+    `.opencode/.webnovel-current-project` 指针，从而**意外**解析出一个真实书
+    项目。因此这里必须自备 state.json，让解析确定地停在本目录。
+    """
+    (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)
+    (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
     rc = _run_data_module("state_manager", ["--project-root", str(tmp_path),
                                             "process-chapter", "--chapter", "1",
                                             "--data", "@missing.json"])

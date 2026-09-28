@@ -1449,7 +1449,17 @@ def main():
         emit_success(payload, message="entities")
 
     elif args.command == "process-chapter":
-        data = load_json_arg(args.data)
+        try:
+            data = load_json_arg(args.data)
+        except (ValueError, OSError) as exc:
+            # 载荷路径不存在/非法此前直接抛 FileNotFoundError，以 traceback 收场
+            emit_error(
+                "INVALID_DATA_ARG",
+                f"无法读取 --data: {exc}",
+                suggestion="--data 接受 JSON 字符串、@文件路径 或 @- (stdin)",
+                chapter=args.chapter,
+            )
+            return
         validated = None
         last_exc = None
         for _ in range(3):

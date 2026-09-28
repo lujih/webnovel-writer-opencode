@@ -49,13 +49,15 @@ def _resolve_root(explicit_project_root: Optional[str]) -> Path:
     raw = explicit_project_root
     if raw:
         return resolve_project_root(raw)
-    # 优先从脚本自身位置搜索（解决 CWD != 项目目录时的路径问题），
-    # 失败再从 CWD 搜索。
-    scripts_ws = _scripts_dir().parent  # .opencode/ → workspace root
+    # 先按人的 CWD 解析：人站在哪本书的目录里就操作哪本书。
+    # 旧实现反过来——先从脚本自身所在工作区找，于是「脚本 checkout 目录」
+    # 里的陈旧指针会压过真实 CWD，写路径命令作用到错误的书。
+    # 脚本位置只在 CWD 定位不到时兜底（例如从任意目录调 skill）。
     try:
-        return resolve_project_root(cwd=scripts_ws)
-    except FileNotFoundError:
         return resolve_project_root()
+    except FileNotFoundError:
+        scripts_ws = _scripts_dir().parent  # .opencode/ → workspace root
+        return resolve_project_root(cwd=scripts_ws)
 
 
 def _strip_project_root_args(argv: list[str]) -> list[str]:

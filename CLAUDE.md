@@ -23,7 +23,7 @@ python -m pytest .opencode/scripts/data_modules/tests/test_config.py -q -p no:co
 python -m pytest .opencode/scripts/data_modules/tests/test_config.py::test_load_env -q -p no:cov -o "addopts="
 ```
 
-Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety；它还会把 `WEBNOVEL_OPENCODE_HOME` 指向临时目录并在会话结束时还原工作区指针，**测试不会改写开发者的项目绑定**。**856 passed / 0 failed，零排除**（第4轮审查后：`test_publisher.py` 的陈旧 `from publisher import REGISTRY` 与陈旧 `get_upload_log_dir` 零参 lambda 已随产品签名更新修复，publisher 子系统重新获得覆盖；`test_rag_adapter.py` 的 17 例也已纳入）。
+Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety；它还会把 `WEBNOVEL_OPENCODE_HOME` 指向临时目录并在会话结束时还原工作区指针，**测试不会改写开发者的项目绑定**。**884 passed / 0 failed，零排除**（第4轮审查后：`test_publisher.py` 的陈旧 `from publisher import REGISTRY` 与陈旧 `get_upload_log_dir` 零参 lambda 已随产品签名更新修复，publisher 子系统重新获得覆盖；`test_rag_adapter.py` 的 17 例也已纳入）。
 
 ### CLI
 
@@ -116,7 +116,7 @@ Code is organized as a pipeline — each layer feeds the next:
 
 **Runtime Artifacts** (v2.8) — `context_manager.build_context()` persists `.webnovel/runtime/chapter-NNN.context.json` (full context pack) and `.trace.json` (section inclusion/exclusion decisions) for post-hoc debugging.
 
-**Dashboard** — FastAPI backend (GET 查询 + 文风约束编辑 PUT/POST/DELETE + 批量操作) + React 19 frontend with ECharts visualization. Backend: `.opencode/dashboard/app.py`. Frontend: `.opencode/dashboard/frontend/`. 9 个页面：总览、上下文健康、角色图鉴（含时间线）、审查分析、节奏雷达、伏笔追踪、文档浏览、文风约束（6 Tab）、系统状态（含批量操作）。支持亮色/暗色主题切换。文风约束编辑器（`/style`）支持 6 层约束的可视化编辑：自定义提示词、全局文风、禁止模式、写作技法、章级合同、审查维度。批量操作使用 `asyncio.create_subprocess_exec` 避免阻塞。关键 Section 列表可通过 `.webnovel/dashboard_config.json` 自定义。All SQL queries use parameterized `?` placeholders. CORS restricted to localhost. 项目根目录解析支持 5 级优先级（CLI > 环境变量 > 脚本位置搜索 > CWD 向上搜索 > 指针文件/注册表）。
+**Dashboard** — FastAPI backend (GET 查询 + 文风约束编辑 PUT/POST/DELETE + 批量操作) + React 19 frontend with ECharts visualization. Backend: `.opencode/dashboard/app.py`. Frontend: `.opencode/dashboard/frontend/`. 9 个页面：总览、上下文健康、角色图鉴（含时间线）、审查分析、节奏雷达、伏笔追踪、文档浏览、文风约束（6 Tab）、系统状态（含批量操作）。支持亮色/暗色主题切换。文风约束编辑器（`/style`）支持 6 层约束的可视化编辑：自定义提示词、全局文风、禁止模式、写作技法、章级合同、审查维度。批量操作使用 `asyncio.create_subprocess_exec` 避免阻塞。关键 Section 列表可通过 `.webnovel/dashboard_config.json` 自定义。All SQL queries use parameterized `?` placeholders. CORS restricted to localhost. 项目根目录解析优先级（`project_locator.resolve_project_root` / `webnovel.py::_resolve_root`）：**显式 `--project-root` > `WEBNOVEL_PROJECT_ROOT` > CWD 自身及父目录向上搜索 > CWD 下恰好一本书 > 工作区指针文件 > 用户级注册表**；入口层再兜底「脚本 checkout 所在工作区」。**CWD 必须排在指针与注册表之前**——人站在书 A 的目录里、指针却指向书 B 时，写路径命令会真的改写 B 的 state.json（静默数据损坏）。子目录只在**恰好一本**时才被采纳，多本一律不猜（按字典序挑一本同样是写错书）。搜索不越过 git 根。
 
 ### OpenCode Integration
 

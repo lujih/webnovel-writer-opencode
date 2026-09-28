@@ -251,17 +251,19 @@ def update_global_registry_current_project(
 
 
 def _candidate_roots(cwd: Path, *, stop_at: Optional[Path] = None) -> Iterable[Path]:
+    """cwd 自身与各级父目录下的候选。
+
+    刻意**不**扫描子目录：在多书工作区里那等于按字典序替用户挑一本书，
+    属于静默写错书。子目录只有在「恰好一本」时才由
+    `_resolve_unique_child_project_root` 采纳。
+    """
     yield cwd
     for name in DEFAULT_PROJECT_DIR_NAMES:
         yield cwd / name
-
-    # Scan immediate children for nested project directories
-    try:
-        for child in sorted(cwd.iterdir()):
-            if child.is_dir() and _is_project_root(child):
-                yield child
-    except OSError:
-        pass
+    # cwd 本身就是 stop_at（git root）时不得再往上找——否则会命中 git 仓库
+    # 之外、无关的祖先项目。cwd.parents 不含 cwd，所以要在这里单独判。
+    if stop_at is not None and stop_at == cwd:
+        return
 
     for parent in cwd.parents:
         yield parent
@@ -431,12 +433,24 @@ def resolve_project_root(explicit_project_root: Optional[str] = None, *, cwd: Op
     base = (cwd or Path.cwd()).resolve()
     git_root = _find_git_root(base)
 
-    # Workspace pointer fallback (for layouts where `.opencode` (or legacy `.claude`) is in workspace root and projects are subdirs).
+    # 1) CWD 自身或父目录就是书项目 —— 人站在书里就操作这本书，这是最强的
+    #    意图信号。必须排在指针/注册表**之前**：工作区里的指针可能陈旧，
+    #    而人明明站在书 A 目录里，却把写路径命令作用到书 B 是静默的数据损坏。
+    for candidate in _candidate_roots(base, stop_at=git_root):
+        if _is_project_root(candidate):
+            return candidate.resolve()
+
+    # 2) CWD 下**恰好一本**书（多本不猜，交给指针或 --project-root 消歧）
+    child_root = _resolve_unique_child_project_root(base)
+    if child_root is not None:
+        return child_root
+
+    # 3) 工作区指针（`.opencode/.webnovel-current-project` 或 legacy `.claude/`）
     pointer_root = _resolve_project_root_from_pointer(base, stop_at=git_root)
     if pointer_root is not None:
         return pointer_root
 
-    # 用户级 registry fallback（仅在"有上下文提示"时启用，避免误命中）
+    # 4) 用户级 registry（仅在"有上下文提示"时启用，避免误命中）
     # - 若 OPENCODE_PROJECT_DIR 或 CLAUDE_PROJECT_DIR 存在：认为提供了工作区上下文
     # - 否则仅在 base 位于某个已记录 workspace 内时启用（前缀匹配）
     allow_last_used = bool(os.environ.get(ENV_OPENCODE_PROJECT_DIR) or os.environ.get(ENV_CLAUDE_PROJECT_DIR))
@@ -447,10 +461,6 @@ def resolve_project_root(explicit_project_root: Optional[str] = None, *, cwd: Op
     )
     if reg_root is not None:
         return reg_root
-
-    for candidate in _candidate_roots(base, stop_at=git_root):
-        if _is_project_root(candidate):
-            return candidate.resolve()
 
     raise FileNotFoundError(
         "Unable to locate webnovel project root. Expected `.webnovel/state.json` under the current directory, "
