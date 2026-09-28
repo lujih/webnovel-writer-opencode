@@ -61,17 +61,24 @@ def print_success(data: Any = None, message: str = "ok", warnings: Optional[list
 
 
 _error_emitted = False
+_last_error: Optional[Dict[str, Any]] = None
 
 
 def reset_error_state() -> None:
     """清空「本次调用是否报过错」标志。调用方在执行模块前调用。"""
-    global _error_emitted
+    global _error_emitted, _last_error
     _error_emitted = False
+    _last_error = None
 
 
 def has_error() -> bool:
     """本次执行期间是否调用过 print_error / emit_error。"""
     return _error_emitted
+
+
+def get_last_error() -> Optional[Dict[str, Any]]:
+    """最近一次报出的错误内容（仅供诊断/测试；生产代码用 has_error() 即可）。"""
+    return _last_error
 
 
 def print_error(
@@ -80,6 +87,8 @@ def print_error(
     suggestion: Optional[str] = None,
     details: Optional[Dict[str, Any]] = None,
 ) -> None:
-    global _error_emitted
+    global _error_emitted, _last_error
     _error_emitted = True
+    _last_error = {"code": code, "message": message,
+                   "suggestion": suggestion, "details": details}
     print_json(build_error(code=code, message=message, suggestion=suggestion, details=details))

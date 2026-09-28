@@ -162,7 +162,10 @@ __pycache__/
                     encoding='utf-8',
                     timeout=60
                 )
-                return True, result.stdout
+                # check=False 只是不抛异常，并不代表命令成功：必须自己看 returncode，
+                # 否则 git 失败也会返回 (True, ...)，调用点的失败分支全是死代码
+                ok = result.returncode == 0
+                return ok, result.stdout if ok else (result.stderr or result.stdout)
 
             except subprocess.CalledProcessError as e:
                 stderr = e.stderr or ""
@@ -192,22 +195,58 @@ __pycache__/
                     continue
                 return False, str(e)
 
+    # Git 不可用时的降级快照要覆盖的目录。story/ 是 markdown 投影（可由
+    # state.json 重新渲染），不纳入。
+    DEGRADED_BACKUP_DIRS = ("正文", "大纲", "设定集")
+    DEGRADED_BACKUP_KEEP = 10
+
     def _local_backup(self, chapter_num: int) -> bool:
-        """本地备份（Git 不可用时的降级方案）"""
+        """本地备份（Git 不可用时的降级方案）。
+
+        必须覆盖正文：Git 不可用恰恰是最需要备份的场合，只存 state.json
+        等于把小说本身丢在外面——正文才是丢了就再也回不来的东西。
+        """
         backup_dir = self.project_root / ".webnovel" / "backups"
         backup_dir.mkdir(parents=True, exist_ok=True)
 
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_name = f"ch{chapter_num:04d}_{timestamp}"
+        # 微秒级时间戳：同一章连续降级备份不会互相覆盖
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        # snapshot_ 前缀把降级快照与历史遗留的 ch* 目录隔开，便于安全清理
+        backup_name = f"snapshot_ch{chapter_num:04d}_{timestamp}"
         backup_path = backup_dir / backup_name
 
         try:
-            # 备份 state.json
-            state_file = self.project_root / ".webnovel" / "state.json"
-            if state_file.exists():
-                backup_path.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(state_file, backup_path / "state.json")
+            backup_path.mkdir(parents=True, exist_ok=True)
+            copied = []
 
+            for folder_name in self.DEGRADED_BACKUP_DIRS:
+                source_dir = self.project_root / folder_name
+                if source_dir.is_dir():
+                    shutil.copytree(source_dir, backup_path / folder_name,
+                                    dirs_exist_ok=True)
+                    copied.append(folder_name)
+
+            state_file = self.project_root / ".webnovel" / "state.json"
+            if state_file.is_file():
+                target_state_dir = backup_path / ".webnovel"
+                target_state_dir.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(state_file, target_state_dir / "state.json")
+                copied.append(".webnovel/state.json")
+
+            if not copied:
+                print(f"❌ 降级备份未覆盖任何内容: {self.project_root}")
+                shutil.rmtree(backup_path, ignore_errors=True)
+                return False
+
+            # 只保留最近 N 份，避免降级备份把磁盘吃满
+            snapshots = sorted(
+                (p for p in backup_dir.glob("snapshot_ch*") if p.is_dir()),
+                key=lambda p: p.name,
+            )
+            for old_snapshot in snapshots[:-self.DEGRADED_BACKUP_KEEP]:
+                shutil.rmtree(old_snapshot, ignore_errors=True)
+
+            print(f"📦 已备份: {', '.join(copied)}")
             print(f"✅ 本地备份完成: {backup_path}")
             return True
         except OSError as e:
@@ -267,64 +306,99 @@ __pycache__/
 
         success, output = self._run_git_command(["tag", tag_name])
         if not success:
-            print(f"⚠️  创建 tag 失败（非致命）: {output}")
-        else:
-            print(f"✅ Git tag 已创建: {tag_name}")
+            # tag 是回滚的唯一入口；打不出来就不能算备份成功，
+            # 否则用户会以为有备份点，真出事时 rollback 才失败
+            print(f"❌ 创建 tag 失败，备份未生效: {output}")
+            return False
+        print(f"✅ Git tag 已创建: {tag_name}")
 
         return True
 
     def rollback(self, chapter_num: int) -> bool:
         """
-        回滚到指定章节（Git checkout）
+        前滚式恢复到指定章节（在当前分支创建恢复提交）
 
-        ⚠️ 警告：这会丢弃所有未提交的变更！
+        不再用 `git checkout <tag>`：那会把仓库丢进 detached HEAD，用户随后
+        的任何提交都可能丢失且难以察觉。改为 `checkout <tag> -- .` 只还原
+        工作区文件、保持 HEAD 附着在原分支，再补一次前向恢复提交。
+        历史不会被改写，「回滚」本身也可被再次回滚。
         """
 
         tag_name = f"ch{chapter_num:04d}"
 
         print(f"🔄 正在回滚到第 {chapter_num} 章...")
-        print(f"⚠️  警告：这将丢弃所有未提交的变更！")
+        print("💾 将在当前分支创建一个恢复提交，历史不会丢失")
 
-        # 检查是否有未提交的变更
-        success, status_output = self._run_git_command(["status", "--porcelain"])
-
-        if status_output.strip():
-            print("\n⚠️  检测到未提交的变更：")
-            print(status_output)
-
-            # 创建备份提交
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_branch = f"backup_before_rollback_{timestamp}"
-
-            print(f"\n💾 正在创建备份分支: {backup_branch}")
-
-            success, _ = self._run_git_command(["checkout", "-b", backup_branch])
-            if not success:
-                print("❌ 创建备份分支失败")
-                return False
-
-            success, _ = self._run_git_command(["add", "."])
-            success, _ = self._run_git_command(
-                ["commit", "-m", f"Backup before rollback to chapter {chapter_num}"]
-            )
-
-            print(f"✅ 备份分支已创建: {backup_branch}")
-
-            # 切换回 master
-            success, _ = self._run_git_command(["checkout", "master"])
-
-        # 执行回滚
-        success, output = self._run_git_command(["checkout", tag_name])
-
+        # 备份点必须存在，否则后面的 checkout 会还原出一堆「deleted」文件
+        success, _ = self._run_git_command(["rev-parse", "--verify", tag_name], check=False)
         if not success:
-            print(f"❌ 回滚失败: {output}")
-            print(f"💡 提示：确保 tag '{tag_name}' 存在（运行 --list 查看所有备份）")
+            print(f"❌ 备份点 {tag_name} 不存在")
+            print(f"💡 提示：运行 --list 查看所有备份")
             return False
 
-        print(f"✅ 已回滚到第 {chapter_num} 章！")
+        # detached HEAD 上无法创建恢复提交，必须先确认在分支上
+        success, branch = self._run_git_command(["symbolic-ref", "--short", "HEAD"], check=False)
+        if not success or not branch.strip():
+            print(f"❌ 当前不在分支上（detached HEAD），无法创建恢复提交: {branch}")
+            print(f"💡 提示：请先 git checkout <分支名> 再回滚")
+            return False
+
+        # 只还原工作区，HEAD 仍停在当前分支
+        success, output = self._run_git_command(["checkout", tag_name, "--", "."], check=False)
+        if not success:
+            print(f"❌ 回滚失败: {output}")
+            return False
+
+        # `checkout <tag> -- .` 只会把 tag 里**存在**的路径写回工作区，
+        # 不会删除 tag 之后新增的文件。于是「回滚到第 60 章」会留着 61-65 章
+        # 的正文——对小说项目而言这等于没回滚。显式移除这些文件。
+        # -c core.quotePath=false：否则中文路径会被转义成八进制字符串，
+        # 再传给 git rm 时匹配不到任何文件
+        success, tag_files = self._run_git_command(
+            ["-c", "core.quotePath=false", "ls-tree", "-r", "--name-only", tag_name],
+            check=False,
+        )
+        if not success:
+            print(f"❌ 无法读取备份点文件清单: {tag_files}")
+            return False
+
+        success, current_files = self._run_git_command(
+            ["-c", "core.quotePath=false", "ls-files"], check=False
+        )
+        if not success:
+            print(f"❌ 无法读取当前文件清单: {current_files}")
+            return False
+
+        added_later = sorted(
+            set(line.strip() for line in (current_files or "").splitlines() if line.strip())
+            - set(line.strip() for line in (tag_files or "").splitlines() if line.strip())
+        )
+        if added_later:
+            success, output = self._run_git_command(
+                ["rm", "-r", "-f", "--"] + added_later, check=False
+            )
+            if not success:
+                print(f"❌ 清理备份点之后新增的文件失败: {output}")
+                return False
+            print(f"🧹 已移除备份点之后新增的 {len(added_later)} 个文件")
+
+        success, output = self._run_git_command(["add", "-A"], check=False)
+        if not success:
+            print(f"❌ 回滚失败（无法暂存）: {output}")
+            return False
+
+        success, output = self._run_git_command(
+            ["commit", "-m", f"rollback: 恢复到 {tag_name} 备份点"],
+            check=False,
+        )
+        if not success and "nothing to commit" not in (output or "").lower():
+            print(f"❌ 回滚提交失败: {output}")
+            return False
+
+        print(f"✅ 已在 {branch.strip()} 分支恢复到第 {chapter_num} 章！")
         print(f"\n💡 提示:")
-        print(f"  - 所有文件（state.json + 正文/*.md）已同步回滚")
-        print(f"  - 如需恢复，运行: git checkout master")
+        print(f"  - 所有文件（state.json + 正文/*.md）已同步恢复")
+        print(f"  - 历史提交保留，可用 git log 查看恢复记录")
 
         return True
 
@@ -476,7 +550,9 @@ def main():
             sys.exit(1)
 
     elif args.rollback:
-        manager.rollback(args.rollback)
+        if not manager.rollback(args.rollback):
+            print("❌ 回滚失败", file=sys.stderr)
+            sys.exit(1)
 
     elif args.diff:
         manager.diff(args.diff[0], args.diff[1])
@@ -485,7 +561,9 @@ def main():
         if not args.branch_name:
             print("❌ 创建分支需要 --branch-name 参数")
             sys.exit(1)
-        manager.create_branch(args.create_branch, args.branch_name)
+        if not manager.create_branch(args.create_branch, args.branch_name):
+            print("❌ 创建分支失败", file=sys.stderr)
+            sys.exit(1)
 
     elif args.list:
         manager.list_backups()

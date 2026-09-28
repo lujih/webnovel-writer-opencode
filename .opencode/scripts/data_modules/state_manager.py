@@ -1470,7 +1470,21 @@ def main():
             return
 
         warnings = manager.process_chapter_result(args.chapter, validated.model_dump(by_alias=True))
-        manager.save_state()
+        save_result = manager.save_state() or {}
+
+        # save_state 已把 sqlite 侧的 pending 恢复成快照（不会丢数据），但
+        # state.json 已写盘、SQLite 侧未跟上——此时报「章节已处理」是撒谎：
+        # dashboard/RAG 读的是 SQLite，会看到缺这一章。上游 3af192d 同样
+        # 要求这里非零退出。
+        if not save_result.get("sqlite_sync_ok", True):
+            emit_error(
+                "SQLITE_SYNC_FAILED",
+                f"第 {args.chapter} 章已写入 state.json，但 SQLite 同步失败",
+                suggestion="运行 projections retry 重放投影，或检查 index.db 是否被占用",
+                chapter=args.chapter,
+            )
+            return
+
         emit_success({"chapter": args.chapter, "warnings": warnings}, message="chapter_processed", chapter=args.chapter)
 
     elif args.command == "get-chapter-status":
