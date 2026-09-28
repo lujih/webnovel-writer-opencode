@@ -1,22 +1,32 @@
 {
-  "version": "v2.9.2-20260928.1512",
+  "version": "v2.9.2-20260928.1536",
   "tag": "v2.9.2",
-  "updated": "2026-09-28T15:12:19Z",
+  "updated": "2026-09-28T15:36:38Z",
   "changelog": [
     {
-      "hash": "3d82d08",
-      "type": "fix",
-      "message": "fix: \u6d4b\u8bd5\u5957\u4ef6\u6c61\u67d3\u5de5\u4f5c\u533a\u6307\u9488\u4e0e\u7528\u6237\u5168\u5c40\u6ce8\u518c\u8868\uff08\u8dd1\u4e00\u6b21\u6d4b\u8bd5\u5373\u6467\u6bc1\u771f\u5b9e\u9879\u76ee\u7ed1\u5b9a\uff09"
+      "hash": "f131ca0",
+      "type": "docs",
+      "message": "docs: \u66f4\u6b63 CLAUDE.md \u7684 8 \u5904\u6587\u6863\u6f02\u79fb\uff08\u9010\u6761\u5bf9\u7167\u6e90\u7801\u6838\u5b9e\uff09"
     },
     {
-      "hash": "7040d1f",
+      "hash": "f77f76d",
       "type": "fix",
-      "message": "fix: \u7b2c4\u8f6e\u5168\u91cf\u5ba1\u6838\u7b2c\u4e00\u6279\uff08dashboard \u8d77\u4e0d\u6765 / \u5b58\u50a8\u578b XSS / \u5199\u5b88\u536b\u6f0f\u4fdd\u62a4 / \u539f\u5b50\u5199\u964d\u7ea7\u95f8\u95e8\uff09"
+      "message": "fix: \u5199\u8def\u5f84\u5931\u8d25\u65f6\u62a5\u6210\u529f\u2014\u2014_run_data_module \u4e00\u5f8b\u8fd4\u56de 0"
     },
     {
-      "hash": "597fe30",
+      "hash": "7c039a1",
+      "type": "fix",
+      "message": "fix: \u5ba1\u67e5\u8f7d\u8377\u5f62\u72b6\u5f02\u5e38\u65f6 fail-closed\uff0c\u4e0d\u518d\u628a\u88ab\u5426\u7ae0\u8282\u4ee5\u6ee1\u5206\u901a\u8fc7\u5199\u8fdb SSOT"
+    },
+    {
+      "hash": "09df191",
+      "type": "fix",
+      "message": "fix: ssot rebuild \u64e6\u9664 progress \u5b50\u5b57\u6bb5 / plot_threads.active_threads\uff0c\u5e76\u7ffb\u8f6c relationships \u7c7b\u578b"
+    },
+    {
+      "hash": "96c43f3",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260927.1445 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260928.1512 [skip ci]"
     }
   ],
   "files": {
@@ -653,8 +663,8 @@
       "size": 58629
     },
     ".opencode/scripts/data_modules/webnovel.py": {
-      "sha256": "6b02b5a9b7281ffbd27974cc164639d9728146a8b941206baf6dbd33a2e607fd",
-      "size": 35394
+      "sha256": "19ebfe9d1ab66c7d8eaee0427c743d3b24560522175b2257db6639d58cee23af",
+      "size": 36226
     },
     ".opencode/scripts/data_modules/schemas.py": {
       "sha256": "6c605d29e6fb569960c4858043592676c59854078cb7e3a104b486db2416d1b0",
@@ -697,8 +707,8 @@
       "size": 38565
     },
     ".opencode/scripts/data_modules/ssot_enforcer.py": {
-      "sha256": "a0aa8d2b21799c8dbb1da3a34a390f8df72ebcb1151e21a7b3deca814066ba7d",
-      "size": 30921
+      "sha256": "c7abd5c59c1371267b3b3ab689600528377b8ecd3563ec9071c05fbe75b4943f",
+      "size": 35527
     },
     ".opencode/scripts/data_modules/dsh_sync.py": {
       "sha256": "52347559236f6ab90c9bb11e8d39a9435e1a33a9b7f9ba5401424d37dbe96444",
@@ -865,8 +875,8 @@
       "size": 3991
     },
     ".opencode/scripts/data_modules/review_schema.py": {
-      "sha256": "eab4f7ad03478c237087202b7eb56a6e0dd5265529637ead50f2ff396ec7a637",
-      "size": 7703
+      "sha256": "35bd962f9807ad87e8575a955442ae78da93a40c24a673b81316cb3caa9a3114",
+      "size": 9815
     },
     ".opencode/scripts/data_modules/amend_proposal_schema.py": {
       "sha256": "809c9d24c2863535c4e55f604c295dea23556fce7805f20e250b792cf67f1691",
@@ -885,8 +895,8 @@
       "size": 1268
     },
     ".opencode/scripts/data_modules/cli_output.py": {
-      "sha256": "238604cf1076ea11cad3cf58cf01ce3d92684f538a2814fcbcd62ff1d1f7448b",
-      "size": 1703
+      "sha256": "f264ca6ff69e9a10f8557b3857d4f806a192b5cf76328e421065f79fa854d0a7",
+      "size": 2088
     },
     ".opencode/scripts/data_modules/runtime_contract_builder.py": {
       "sha256": "9fd4054c6829d8a48ec7991867b3e3f3dd0c78d12119c19a902b850a5c96c863",
@@ -1048,6 +1058,10 @@
       "sha256": "72de732cc754d25e19808296992a43fde57b17fd1d6b845e2400769857412678",
       "size": 1955
     },
+    ".opencode/scripts/data_modules/tests/test_ssot_rebuild_field_retention.py": {
+      "sha256": "5ffb3e3982b3d589e956947efb3b0740ec366b88367a47ce5c5384dcc8d11f57",
+      "size": 5528
+    },
     ".opencode/scripts/data_modules/tests/test_reasoning_engine.py": {
       "sha256": "ee43dd3a5315e76e62df0571c5fb8a5725b8454896add20acb6a40fda55574df",
       "size": 7400
@@ -1067,6 +1081,10 @@
     ".opencode/scripts/data_modules/tests/test_projection_schema_compat.py": {
       "sha256": "aff5882d1ed07e0fb249f41131753243f1228cefbc3365acaf4804b5acea93ee",
       "size": 22284
+    },
+    ".opencode/scripts/data_modules/tests/test_cli_exit_codes.py": {
+      "sha256": "a8000a0b0b0910750360d59619cd3fdc3e9781e621cb8a56d9ca218d8e851881",
+      "size": 3780
     },
     ".opencode/scripts/data_modules/tests/test_rag_adapter.py": {
       "sha256": "d44d7c1a1744e5f870ff9a447f8b4c952dc94d4b4a8192fc8e3c0b175d7f24c5",
@@ -1127,6 +1145,10 @@
     ".opencode/scripts/data_modules/tests/test_csv_config.py": {
       "sha256": "3eb8cb979ff9f8702bcfe049157ba0570778cbb5325e03be3e541cd6a3ac17c9",
       "size": 2707
+    },
+    ".opencode/scripts/data_modules/tests/test_review_gate_fail_closed.py": {
+      "sha256": "4bbf928cad1a1c7369d48b061024d8aef448d014f6c19b3b4a10c65208389afd",
+      "size": 4342
     },
     ".opencode/scripts/data_modules/tests/test_event_log_store.py": {
       "sha256": "63f6691366be3fbf0c050ce4a3939969e4b46361a50b0672251d4245dcc2f389",
