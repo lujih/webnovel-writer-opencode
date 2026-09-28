@@ -169,10 +169,45 @@ class ReviewResult:
         }
 
 
+def _shape_issue(chapter: int, detail: str) -> ReviewResult:
+    """审查载荷形状异常时的 fail-closed 结果。
+
+    形状异常意味着「无法判断这一章有没有问题」，而不是「没有问题」。旧实现把
+    非 dict 元素静默 continue 掉，于是 issues 为空 ⇒ has_blocking=False、
+    overall_score=100.0 ⇒ 被审查否掉的章节以满分通过身份写进 SSOT 事件日志，
+    且两个闸门（review_pipeline.build_review_artifacts 与
+    chapter_commit_service.build_commit）都只读这一个对象，无从发现。
+
+    这里合成一条 critical + blocking 的问题，把判定交回人工/修复循环。
+    """
+    return ReviewResult(
+        chapter=chapter,
+        issues=[ReviewIssue(
+            severity="critical",
+            category="review_output_malformed",
+            description=f"审查结果形状异常，无法判定本章是否存在问题：{detail}。已按阻断处理，请人工复核。",
+            blocking=True,
+        )],
+        summary="审查结果不可解析，已阻断提交。",
+    )
+
+
 def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
+    if not isinstance(raw, dict):
+        return _shape_issue(chapter, f"顶层载荷为 {type(raw).__name__}，预期为对象")
+
+    raw_issues = raw.get("issues", [])
+    if raw_issues is None:
+        raw_issues = []
+    if not isinstance(raw_issues, list):
+        # 对象/字符串被迭代会产出键或字符，逐元素 isinstance(dict) 全部落空
+        return _shape_issue(chapter, f"issues 为 {type(raw_issues).__name__}，预期为数组")
+
     issues = []
-    for item in raw.get("issues", []):
+    malformed = 0
+    for item in raw_issues:
         if not isinstance(item, dict):
+            malformed += 1
             continue
         issues.append(ReviewIssue(
             severity=str(item.get("severity", "medium")),
@@ -182,6 +217,16 @@ def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
             evidence=str(item.get("evidence", "")),
             fix_hint=str(item.get("fix_hint", "")),
             blocking=item.get("blocking"),
+        ))
+    if malformed:
+        # 保留已解析出的有效问题（不丢信息），并补一条 critical 阻断项：
+        # 无法确认被丢弃的部分里是否藏着更严重的问题。
+        issues.append(ReviewIssue(
+            severity="critical",
+            category="review_output_malformed",
+            description=(f"issues 数组中有 {malformed} 个元素不是对象，其内容未被解析。"
+                        "已按阻断处理，请人工复核。"),
+            blocking=True,
         ))
     return ReviewResult(
         chapter=chapter,
