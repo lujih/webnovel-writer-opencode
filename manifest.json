@@ -1,17 +1,22 @@
 {
-  "version": "v2.9.2-20260927.1445",
+  "version": "v2.9.2-20260928.1512",
   "tag": "v2.9.2",
-  "updated": "2026-09-27T14:45:29Z",
+  "updated": "2026-09-28T15:12:19Z",
   "changelog": [
     {
-      "hash": "76f37d3",
-      "type": "simplify",
-      "message": "simplify: DSH \u9002\u914d\u5c42\u5b8c\u6574\u6027\u5ba1\u67e5\u4e0e\u4fee\u590d"
+      "hash": "3d82d08",
+      "type": "fix",
+      "message": "fix: \u6d4b\u8bd5\u5957\u4ef6\u6c61\u67d3\u5de5\u4f5c\u533a\u6307\u9488\u4e0e\u7528\u6237\u5168\u5c40\u6ce8\u518c\u8868\uff08\u8dd1\u4e00\u6b21\u6d4b\u8bd5\u5373\u6467\u6bc1\u771f\u5b9e\u9879\u76ee\u7ed1\u5b9a\uff09"
     },
     {
-      "hash": "b5510d8",
+      "hash": "7040d1f",
+      "type": "fix",
+      "message": "fix: \u7b2c4\u8f6e\u5168\u91cf\u5ba1\u6838\u7b2c\u4e00\u6279\uff08dashboard \u8d77\u4e0d\u6765 / \u5b58\u50a8\u578b XSS / \u5199\u5b88\u536b\u6f0f\u4fdd\u62a4 / \u539f\u5b50\u5199\u964d\u7ea7\u95f8\u95e8\uff09"
+    },
+    {
+      "hash": "597fe30",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260926.1521 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260927.1445 [skip ci]"
     }
   ],
   "files": {
@@ -44,8 +49,8 @@
       "size": 73
     },
     ".opencode/dashboard/app.py": {
-      "sha256": "204af58bd0241a4d043793ed1bd0f09fe371e3651913b74b682cd2c2e84cc7c6",
-      "size": 73647
+      "sha256": "cb44af557bc3fbae914b464a406ce6671fdbc27bc829a273d63c20068dedc983",
+      "size": 73652
     },
     ".opencode/dashboard/watcher.py": {
       "sha256": "996a429848580e105ed77aa03b5fdd5591dd3fc91e64536e92100b6c38c8e3d4",
@@ -120,8 +125,8 @@
       "size": 4880
     },
     ".opencode/dashboard/frontend/src/lib/format.js": {
-      "sha256": "7eccb32099cef695f1950a341417cca58c6ba6fb1e0f243f2a3d18b83c090de3",
-      "size": 2305
+      "sha256": "6704acd44316bb67c061a3998fdba81ccee39b9c2621ed6ca64fed0a6e6a3aed",
+      "size": 2837
     },
     ".opencode/dashboard/frontend/src/lib/story.js": {
       "sha256": "d243de176193e258c2910df16db78135cdfc7342badff64cb66ed8e8e1c1ea61",
@@ -144,8 +149,8 @@
       "size": 11328
     },
     ".opencode/dashboard/frontend/src/pages/CharactersPage.jsx": {
-      "sha256": "979964e1b04f6071dbc1b8182ac03a9112e020b98c7e0185e782f868bada1453",
-      "size": 28313
+      "sha256": "e425439d8d1b25f7184b7ac3b7092bd0be326798dbbc8e473f05f9ea87716ad5",
+      "size": 28461
     },
     ".opencode/dashboard/frontend/src/pages/FilesPage.jsx": {
       "sha256": "62a448e05540013c14d260a62603f5366e030801a0a08b74cb44fce229a19a70",
@@ -164,8 +169,8 @@
       "size": 14946
     },
     ".opencode/dashboard/frontend/src/pages/ForeshadowingPage.jsx": {
-      "sha256": "a27a16cb8c2096b4dd072a4351b0c396149b69ae6aec55cd089d5fdb8a3d9a40",
-      "size": 10875
+      "sha256": "7d3c4c0acf701204f9f4eda45ff04d2f8654070e120c0e0fae51c738afcf3314",
+      "size": 11091
     },
     ".opencode/dashboard/frontend/src/pages/SystemPage.jsx": {
       "sha256": "2d18f773bf9614e70333c2065a116bd7e6a9058c416f495526c727614f5d8f03",
@@ -376,8 +381,8 @@
       "size": 6335
     },
     ".opencode/plugins/write-guard.js": {
-      "sha256": "6bd0510944bd08cbf2debd4c49b49428ee5be0ed2487c13b6e50861ad6c4f51c",
-      "size": 3537
+      "sha256": "6c888e18ada4c0b390224f9bbdcc789f68324ea80fd64e02985d904320c4c3c9",
+      "size": 3794
     },
     ".opencode/agents/data-agent.md": {
       "sha256": "8d168e9c1bcaff697b3b36d46a8079e52b4d04780b8046986bfe19fe29dfb0bb",
@@ -436,8 +441,8 @@
       "size": 2659
     },
     ".opencode/scripts/conftest.py": {
-      "sha256": "37dbe2929ade6dd912fe30394355920baa243d95ba19c8434a263cfad5cbc5d2",
-      "size": 2735
+      "sha256": "17a190ef533be4e20fd05ebd7de321550778a3f74256daef85825c1408e6a9f7",
+      "size": 4732
     },
     ".opencode/scripts/gen_manifest.py": {
       "sha256": "4349584531b9b6124017dd3e05e880de61f7ec8c84d42f94a93ca926f259da96",
@@ -488,8 +493,8 @@
       "size": 17821
     },
     ".opencode/scripts/security_utils.py": {
-      "sha256": "916644f33ce28ccd3cf0eadc2d8c9f397f1c0f668d6870ef9d105772683f4872",
-      "size": 20109
+      "sha256": "1cf18089457de24b2eb0c0255613840187f4b66bd70b49b634807a63949b3bfe",
+      "size": 20943
     },
     ".opencode/scripts/runtime_compat.py": {
       "sha256": "50e7132f825c31a17c705d257713a12e6e89c13d2421c544f227569811e9cdfa",
