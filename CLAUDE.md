@@ -11,17 +11,10 @@ Webnovel Writer for OpenCode — a long-form Chinese web novel AI writing system
 ### Testing
 
 ```bash
-# Full test suite (from repo root) — pytest.ini requires -p no:cov -o "addopts="
+# 完整套件（.github/workflows/test.yml 就是这么跑的，无任何 --ignore）
+# 必须带 -o "addopts="：pytest.ini 的 addopts 含 -p no:asyncio，会禁掉
+# pytest-asyncio，导致 test_rag_adapter.py 的 11 个 async 用例收集失败。
 python -m pytest .opencode/scripts/data_modules/tests -q -p no:cov -o "addopts="
-
-# CI 门禁用的命令（.github/workflows/test.yml 就是这么跑的）
-# 只排除 test_publisher.py：它因陈旧 import（from publisher import REGISTRY，
-# 产品已改为 _registry/get_adapter）与陈旧 lambda 签名（get_upload_log_dir 新增
-# project_name 形参）而收集失败，属独立待修项。test_rag_adapter.py 不需要排除
-# ——它 17/17 全过，真正的原因是 pytest.ini 的 -p no:asyncio 会禁掉
-# pytest-asyncio，故命令行必须带 -o "addopts="。
-python -m pytest .opencode/scripts/data_modules/tests -q -p no:cov -o "addopts=" \
-  --ignore=.opencode/scripts/data_modules/tests/test_publisher.py
 
 # Single test file
 python -m pytest .opencode/scripts/data_modules/tests/test_config.py -q -p no:cov -o "addopts="
@@ -30,7 +23,7 @@ python -m pytest .opencode/scripts/data_modules/tests/test_config.py -q -p no:co
 python -m pytest .opencode/scripts/data_modules/tests/test_config.py::test_load_env -q -p no:cov -o "addopts="
 ```
 
-Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety. **0 pre-existing failures as of 2026-09-17**（test fixtures 补齐 + verify_consistency drift 对齐后基线全绿；`ssot verify` 的 `progress.chapter_status` / `foreshadowing` 计数检查已对齐 rebuild P0 合并语义——只报缺口与少报，state 超集与顶层孤儿闭合不误报）。
+Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety；它还会把 `WEBNOVEL_OPENCODE_HOME` 指向临时目录并在会话结束时还原工作区指针，**测试不会改写开发者的项目绑定**。**856 passed / 0 failed，零排除**（第4轮审查后：`test_publisher.py` 的陈旧 `from publisher import REGISTRY` 与陈旧 `get_upload_log_dir` 零参 lambda 已随产品签名更新修复，publisher 子系统重新获得覆盖；`test_rag_adapter.py` 的 17 例也已纳入）。
 
 ### CLI
 

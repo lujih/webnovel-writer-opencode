@@ -44,7 +44,8 @@ class TestUploadLog:
 
         import publisher.config as mod
         original = get_upload_log_dir
-        mod.get_upload_log_dir = lambda: log_dir
+        # 产品签名已扩为 get_upload_log_dir(project_name="")
+        mod.get_upload_log_dir = lambda project_name="": log_dir / project_name
         try:
             save_upload_log("fanqie", book_id, {1, 2, 3})
             loaded = load_upload_log("fanqie", book_id)
@@ -58,7 +59,7 @@ class TestUploadLog:
 
         import publisher.config as mod
         original = mod.get_upload_log_dir
-        mod.get_upload_log_dir = lambda: log_dir
+        mod.get_upload_log_dir = lambda project_name="": log_dir / project_name
         try:
             loaded = load_upload_log("nonexistent", "no_book")
             assert loaded == set()
@@ -71,7 +72,7 @@ class TestUploadLog:
 
         import publisher.config as mod
         original = mod.get_upload_log_dir
-        mod.get_upload_log_dir = lambda: log_dir
+        mod.get_upload_log_dir = lambda project_name="": log_dir / project_name
         try:
             save_upload_log("fanqie", "b1", {1, 2})
             save_upload_log("fanqie", "b1", {1, 2, 3, 4})
@@ -251,13 +252,19 @@ class TestFanqieAdapter:
             assert callable(method)
 
 
-from publisher import REGISTRY
-
-
 class TestRegistry:
     def test_fanqie_registered(self):
-        assert "fanqie" in REGISTRY
-        assert REGISTRY["fanqie"] is FanqieAdapter
+        # 注册表已私有化（publisher/adapters/_registry），只经 get_adapter 暴露；
+        # get_adapter 返回的是实例而非类
+        from publisher.adapters import get_adapter
+
+        assert isinstance(get_adapter("fanqie"), FanqieAdapter)
+
+    def test_unknown_platform_raises_valueerror(self):
+        from publisher.adapters import get_adapter
+
+        with pytest.raises(ValueError):
+            get_adapter("nonexistent")
 
 
 class TestCLIArgs:

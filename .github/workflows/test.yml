@@ -29,11 +29,11 @@ jobs:
 
       # pytest.ini 的 addopts 含 -p no:asyncio，会禁掉 pytest-asyncio 并让
       # test_rag_adapter.py 的 11 个 async 用例收集失败，故必须 -o "addopts="。
+      # 无任何 --ignore：整个套件必须全绿（含 publisher 子系统）。
       - name: Run test suite
         run: |
           python -X utf8 -m pytest .opencode/scripts/data_modules/tests \
-            -q -p no:cov -o "addopts=" \
-            --ignore=.opencode/scripts/data_modules/tests/test_publisher.py
+            -q -p no:cov -o "addopts="
 
       # .dsh/ 镜像是生成物：dsh-sync 幂等，--check 在镜像过期时返回 1。
       - name: Verify .dsh mirrors are in sync
