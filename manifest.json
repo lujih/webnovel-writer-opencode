@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20260928.1625",
+  "version": "v2.9.2-20260928.1635",
   "tag": "v2.9.2",
-  "updated": "2026-09-28T16:25:48Z",
+  "updated": "2026-09-28T16:35:28Z",
   "changelog": [
     {
-      "hash": "f8f795d",
+      "hash": "464471e",
       "type": "fix",
-      "message": "fix: \u9879\u76ee\u6839\u89e3\u6790\u4ee5 CWD \u4e3a\u5148\u2014\u2014\u4eba\u7ad9\u5728\u54ea\u672c\u4e66\u5c31\u64cd\u4f5c\u54ea\u672c\u4e66"
+      "message": "fix: \u5220\u7ae0\u540e current_chapter \u4e0d\u518d\u6307\u5411\u5df2\u5220\u7ae0\u8282\uff1b\u5df2\u56de\u6536\u4f0f\u7b14\u4e0d\u518d\u53cd\u590d\u6ce8\u5165\u5199\u624b\u4e0a\u4e0b\u6587"
     },
     {
-      "hash": "9a20cb0",
+      "hash": "c4f4c30",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260928.1617 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260928.1625 [skip ci]"
     }
   ],
   "files": {
@@ -624,8 +624,8 @@
       "size": 2259
     },
     ".opencode/scripts/data_modules/memory_contract_adapter.py": {
-      "sha256": "f8c5657e7ac588437c326c2e140dec63417b60b09a79f3ee2b6d89c78b77981a",
-      "size": 13876
+      "sha256": "ffcefad95dbd4d42227e020c9d032626bb8a93a0d229405782c09537d4b49610",
+      "size": 14275
     },
     ".opencode/scripts/data_modules/state_projection_writer.py": {
       "sha256": "35ed025191932ee7e79c99838021b9ad7932255152e6cf106ca3cda3c7c3a668",
@@ -692,8 +692,8 @@
       "size": 38565
     },
     ".opencode/scripts/data_modules/ssot_enforcer.py": {
-      "sha256": "e5693adddacee6041f2d95e8e37b4525a7b4b12cb04615faf7c170ad5d19ca8a",
-      "size": 36114
+      "sha256": "9600b4b2adc2d3d50c392ac49ef7e2d2d4ba692bfd09a09a46adcb9ae847fa79",
+      "size": 37958
     },
     ".opencode/scripts/data_modules/dsh_sync.py": {
       "sha256": "52347559236f6ab90c9bb11e8d39a9435e1a33a9b7f9ba5401424d37dbe96444",
@@ -772,8 +772,8 @@
       "size": 1701
     },
     ".opencode/scripts/data_modules/chapter_delete_service.py": {
-      "sha256": "62d95d72d9eaaa7b3096f499859dcec8429a2fc34fa94b291b595b783ba0c4d1",
-      "size": 5585
+      "sha256": "62e91fd0cbdc757f957fdee607e7a732ecefafdf7052f576845dcd35b4deb5eb",
+      "size": 6446
     },
     ".opencode/scripts/data_modules/state_validator.py": {
       "sha256": "d35642f8bfa93afe6b31d660857117f3dc11bad5458ce0f2879d3f698517a7ba",
@@ -904,8 +904,8 @@
       "size": 4676
     },
     ".opencode/scripts/data_modules/memory/writer.py": {
-      "sha256": "24643c3635916e323de4a144a689a9c7774733790ed9798137ace9b20d0a1ab0",
-      "size": 15538
+      "sha256": "babd3b46c339b0b867d81f2ca5d5465f4afad1e8fc07a6b288be1beb589559cc",
+      "size": 16693
     },
     ".opencode/scripts/data_modules/memory/orchestrator.py": {
       "sha256": "844eac25052ee2438fbc5ff14913acc74e67cd9e0e0e4a7dce70b5b3ade33c26",
@@ -1159,6 +1159,10 @@
       "sha256": "6bee5c959ba1950b5a963082777a6968c166cb785df76d3300e4da2ead9d12b3",
       "size": 2553
     },
+    ".opencode/scripts/data_modules/tests/test_chapter_delete_current_chapter.py": {
+      "sha256": "95b9126dbdbea0359b174b4d9c037ba02c5b43eee28c4d568e8a45c585954daf",
+      "size": 5012
+    },
     ".opencode/scripts/data_modules/tests/test_story_contract_schema.py": {
       "sha256": "05029a9a4fd6622458c2b703cd82acc345f1cac41b238de39831e65799c0b6c2",
       "size": 2524
@@ -1211,9 +1215,17 @@
       "sha256": "92c9b0aa3a3116394f8be8d49ad5688500102a1097d0d66c0009cff3e3617cb4",
       "size": 27611
     },
+    ".opencode/scripts/data_modules/tests/test_protagonist_state_rebuild.py": {
+      "sha256": "3550e2be432e5459c81a9e27565064880444514bcc557831189727d9876d7787",
+      "size": 4831
+    },
     ".opencode/scripts/data_modules/tests/test_style_sampler_cli.py": {
       "sha256": "ddaf9ca395eb05032c23652e084d6e8070d24b1ffbdee04a8c2312ab01332e73",
       "size": 2652
+    },
+    ".opencode/scripts/data_modules/tests/test_memory_open_loop_closed.py": {
+      "sha256": "b8db524c874fc3c215a52e240dd170b377bb2fb3731b524e49b6d3414915cf1a",
+      "size": 4985
     },
     ".opencode/scripts/data_modules/tests/test_update_state_add_review_cli.py": {
       "sha256": "aefc1cf9c46f67cac4b63a552cb8ef5104bfb875e04ae450e1513f34edb60faa",
