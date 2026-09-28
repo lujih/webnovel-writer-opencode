@@ -1,0 +1,43 @@
+name: Test
+
+# 独立于 manifest 门禁：manifest 走 contents:write 且只在 .opencode/** 变更时触发，
+# 测试必须在 PR 与所有相关路径上跑，且用最小权限（只需读）。
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            .opencode/scripts/requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -r .opencode/scripts/requirements-dev.txt
+
+      # pytest.ini 的 addopts 含 -p no:asyncio，会禁掉 pytest-asyncio 并让
+      # test_rag_adapter.py 的 11 个 async 用例收集失败，故必须 -o "addopts="。
+      - name: Run test suite
+        run: |
+          python -X utf8 -m pytest .opencode/scripts/data_modules/tests \
+            -q -p no:cov -o "addopts=" \
+            --ignore=.opencode/scripts/data_modules/tests/test_publisher.py
+
+      # .dsh/ 镜像是生成物：dsh-sync 幂等，--check 在镜像过期时返回 1。
+      - name: Verify .dsh mirrors are in sync
+        run: python -X utf8 .opencode/scripts/webnovel.py dsh-sync --check
+
+      - name: Byte-compile all scripts
+        run: python -m compileall -q .opencode/scripts

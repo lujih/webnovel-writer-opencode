@@ -18,6 +18,7 @@ Consistency check:
 
 from __future__ import annotations
 
+import copy
 import json
 import logging
 import os
@@ -485,6 +486,89 @@ _NON_EVENT_FIELDS = (
 # 事件日志可能向其中追加 character_state_changed 子字段；
 # 需做子字段级补全（k not in new_dict）而非整字段跳过。
 _DICT_MERGE_FIELDS = ("protagonist_state",)
+# progress / plot_threads 被 _empty_state 或回放创建，因此「key 缺失才回填」
+# 的条件恒为假，非事件子字段会被整体覆盖。二者改走专用合并（见下）。
+_SPECIAL_MERGE_FIELDS = ("progress", "plot_threads", "relationships")
+# progress 里由事件日志权威决定、不接受旧值回填的子字段。
+_PROGRESS_EVENT_FIELDS = ("current_chapter", "last_updated")
+
+
+def _merge_progress(old_v: object, new_v: object) -> dict:
+    """progress 逐子字段合并。
+
+    ``current_chapter`` / ``last_updated`` 以事件日志为准（既有 65 章的旧值不得
+    覆盖事件日志推进的结果）；``chapter_status`` 逐章合并——事件推进过的章以事件
+    为准，仅有增量写手记过、事件尚未涉及的章保留；其余子字段（total_words /
+    current_volume / volumes_*）没有任何事件类型承载，必须整体回填，否则一次
+    ``ssot rebuild`` 即把累计字数与卷进度清零。
+    """
+    merged = dict(old_v) if isinstance(old_v, dict) else {}
+    if not isinstance(new_v, dict):
+        return merged
+    for k, v in new_v.items():
+        if k in _PROGRESS_EVENT_FIELDS:
+            merged[k] = v
+        elif k == "chapter_status":
+            status = dict(merged.get(k) or {}) if isinstance(merged.get(k), dict) else {}
+            status.update(v if isinstance(v, dict) else {})
+            merged[k] = status
+        else:
+            merged[k] = v
+    return merged
+
+
+def _merge_plot_threads(old_v: object, new_v: object) -> dict:
+    """plot_threads 子字段级合并。
+
+    ``foreshadowing`` 完全由 open_loop_* 事件驱动，以回放结果为准；
+    ``active_threads`` 没有事件类型承载，须从既有 state.json 回填——这正是
+    「白名单不可扩展」的反例：只要该键在回放中被创建过，整字段回填就永不触发。
+    """
+    merged = dict(new_v) if isinstance(new_v, dict) else {}
+    if not isinstance(old_v, dict):
+        return merged
+    for k, v in old_v.items():
+        if k not in merged:
+            merged[k] = v
+    return merged
+
+
+def _merge_relationships(old_v: object, new_v: object) -> object:
+    """把回放产出的边并入既有 relationships，**不改变其形状**。
+
+    真实项目的 relationships 是按角色名分组的 dict（allies/enemies/neutral，
+    由 update_state.py 写入），而回放按事件产出边列表。让列表直接覆盖 dict 会
+    造成三连损坏：角色关系图整体丢失、status_reporter 的 relationships.get()
+    抛 AttributeError、且下一次 save_state 会把该列表挪进 structured_relationships
+    再 pop 掉（重建的边也一并消失）。
+
+    事件里的 relationship_type 是自由文本，无法可靠归类进 allies/enemies/neutral，
+    因此这里保留既有 dict 形状，把回放出的边挂到涉及的两个角色下的 relations
+    列表（按 from/to/type 去重，rebuild 可重复执行）。既有形状为 list 时保持 list。
+    """
+    if not (isinstance(old_v, dict) and isinstance(new_v, list)):
+        return new_v
+    merged = copy.deepcopy(old_v)
+    for edge in new_v:
+        if not isinstance(edge, dict):
+            continue
+        key = (edge.get("from"), edge.get("to"), edge.get("type"))
+        for side in (edge.get("from"), edge.get("to")):
+            if not side:
+                continue
+            bucket = merged.get(side)
+            if not isinstance(bucket, dict):
+                bucket = {}
+                merged[side] = bucket
+            rows = bucket.get("relations")
+            if not isinstance(rows, list):
+                rows = []
+                bucket["relations"] = rows
+            if not any(isinstance(r, dict)
+                       and (r.get("from"), r.get("to"), r.get("type")) == key
+                       for r in rows):
+                rows.append(copy.deepcopy(edge))
+    return merged
 
 
 def _merge_non_event_fields(old_state: dict, new_state: dict) -> dict:
@@ -497,6 +581,10 @@ def _merge_non_event_fields(old_state: dict, new_state: dict) -> dict:
     ``_DICT_MERGE_FIELDS`` 中的字段（如 protagonist_state）：dict 时做
     子字段级补全——事件日志推进的子字段保留重建值，缺失子字段回填
     既有值；非 dict 类型仅整字段补缺。
+
+    ``_SPECIAL_MERGE_FIELDS``（progress / plot_threads / relationships）走各自的
+    合并策略：这些字段会被 _empty_state 或回放创建，"key 缺失才回填" 恒为假，
+    若不显式处理，其非事件子字段会在每次 rebuild 时被静默擦除。
     """
     if not isinstance(old_state, dict) or not isinstance(new_state, dict):
         return new_state
@@ -514,6 +602,16 @@ def _merge_non_event_fields(old_state: dict, new_state: dict) -> dict:
             for sub_k, sub_v in old_v.items():
                 if sub_k not in new_v:
                     new_v[sub_k] = sub_v
+    special = {
+        "progress": _merge_progress,
+        "plot_threads": _merge_plot_threads,
+        "relationships": _merge_relationships,
+    }
+    for k, merger in special.items():
+        if k in old_state and k in merged:
+            merged[k] = merger(old_state.get(k), merged.get(k))
+        elif k not in merged and k in old_state:
+            merged[k] = old_state[k]
     return merged
 
 
