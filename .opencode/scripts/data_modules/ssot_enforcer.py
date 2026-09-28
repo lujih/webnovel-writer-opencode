@@ -756,8 +756,16 @@ def verify_consistency(project_root: Path) -> list[dict]:
 
     # Compare collection counts for fields rebuild_state_json now produces
     for field in ("relationships", "world_rules", "reader_promises", "artifacts", "override_rules"):
-        actual_count = len(actual_state.get(field) or [])
-        expected_count = len(expected.get(field) or [])
+        actual_val = actual_state.get(field)
+        expected_val = expected.get(field)
+        # 形状不同则计数不可比：真实项目的 relationships 是按角色/关系名分组的
+        # dict（update_state.py 写入），而回放按事件产出边 list。拿 dict 的键数
+        # 去比 list 的行数是在比「角色数」和「边数」两个不同的量，会让健康项目
+        # 恒定误报 drift 并把操作者引向 ssot rebuild——而那正是破坏数据的那一步。
+        if isinstance(actual_val, dict) != isinstance(expected_val, dict):
+            continue
+        actual_count = len(actual_val or [])
+        expected_count = len(expected_val or [])
         if actual_count != expected_count:
             drifts.append({
                 "severity": "warning",
