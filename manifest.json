@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20260928.1551",
+  "version": "v2.9.2-20260928.1554",
   "tag": "v2.9.2",
-  "updated": "2026-09-28T15:51:25Z",
+  "updated": "2026-09-28T15:54:37Z",
   "changelog": [
     {
-      "hash": "507fdae",
-      "type": "fix",
-      "message": "fix: verify_consistency \u8de8\u5f62\u72b6\u6bd4\u8f83\u8ba1\u6570\uff0c\u5065\u5eb7\u9879\u76ee\u6052\u5b9a\u8bef\u62a5 drift"
+      "hash": "072e425",
+      "type": "test",
+      "message": "test: \u4fee\u590d test_publisher.py \u7684\u9648\u65e7\u65ad\u8a00\uff0cCI \u53bb\u6389\u6700\u540e\u4e00\u4e2a --ignore"
     },
     {
-      "hash": "6eddde8",
+      "hash": "9ba817f",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260928.1536 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260928.1551 [skip ci]"
     }
   ],
   "files": {
@@ -1124,8 +1124,8 @@
       "size": 14591
     },
     ".opencode/scripts/data_modules/tests/test_publisher.py": {
-      "sha256": "005700879d011e66a7e6f3c2856f96279713c6a8d1a040ee9ed38e1b777302db",
-      "size": 8756
+      "sha256": "24d26deb49b5faaa7a39fad04cdb9bb40aaedac76decf24e7ae21efe526a085e",
+      "size": 9247
     },
     ".opencode/scripts/data_modules/tests/test_override_ledger_service.py": {
       "sha256": "209b8d0831e8b05a51a36437f92563ce3f4cf4a92f5ede882f48034a6e528d2b",
