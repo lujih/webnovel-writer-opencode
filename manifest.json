@@ -1,32 +1,17 @@
 {
-  "version": "v2.9.2-20260928.1536",
+  "version": "v2.9.2-20260928.1551",
   "tag": "v2.9.2",
-  "updated": "2026-09-28T15:36:38Z",
+  "updated": "2026-09-28T15:51:25Z",
   "changelog": [
     {
-      "hash": "f131ca0",
-      "type": "docs",
-      "message": "docs: \u66f4\u6b63 CLAUDE.md \u7684 8 \u5904\u6587\u6863\u6f02\u79fb\uff08\u9010\u6761\u5bf9\u7167\u6e90\u7801\u6838\u5b9e\uff09"
-    },
-    {
-      "hash": "f77f76d",
+      "hash": "507fdae",
       "type": "fix",
-      "message": "fix: \u5199\u8def\u5f84\u5931\u8d25\u65f6\u62a5\u6210\u529f\u2014\u2014_run_data_module \u4e00\u5f8b\u8fd4\u56de 0"
+      "message": "fix: verify_consistency \u8de8\u5f62\u72b6\u6bd4\u8f83\u8ba1\u6570\uff0c\u5065\u5eb7\u9879\u76ee\u6052\u5b9a\u8bef\u62a5 drift"
     },
     {
-      "hash": "7c039a1",
-      "type": "fix",
-      "message": "fix: \u5ba1\u67e5\u8f7d\u8377\u5f62\u72b6\u5f02\u5e38\u65f6 fail-closed\uff0c\u4e0d\u518d\u628a\u88ab\u5426\u7ae0\u8282\u4ee5\u6ee1\u5206\u901a\u8fc7\u5199\u8fdb SSOT"
-    },
-    {
-      "hash": "09df191",
-      "type": "fix",
-      "message": "fix: ssot rebuild \u64e6\u9664 progress \u5b50\u5b57\u6bb5 / plot_threads.active_threads\uff0c\u5e76\u7ffb\u8f6c relationships \u7c7b\u578b"
-    },
-    {
-      "hash": "96c43f3",
+      "hash": "6eddde8",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260928.1512 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260928.1536 [skip ci]"
     }
   ],
   "files": {
@@ -707,8 +692,8 @@
       "size": 38565
     },
     ".opencode/scripts/data_modules/ssot_enforcer.py": {
-      "sha256": "c7abd5c59c1371267b3b3ab689600528377b8ecd3563ec9071c05fbe75b4943f",
-      "size": 35527
+      "sha256": "e5693adddacee6041f2d95e8e37b4525a7b4b12cb04615faf7c170ad5d19ca8a",
+      "size": 36114
     },
     ".opencode/scripts/data_modules/dsh_sync.py": {
       "sha256": "52347559236f6ab90c9bb11e8d39a9435e1a33a9b7f9ba5401424d37dbe96444",
@@ -1069,6 +1054,10 @@
     ".opencode/scripts/data_modules/tests/test_skill_runner.py": {
       "sha256": "41f52dadeecd6687642ef2d700fba1b119402443f9c03e883478f73dde5ed479",
       "size": 6975
+    },
+    ".opencode/scripts/data_modules/tests/test_ssot_verify_shape_aware.py": {
+      "sha256": "43ca58cffd79d51d586c49d456d45deb0d6f27de99dbecf11cb1cc766dbb8e46",
+      "size": 4677
     },
     ".opencode/scripts/data_modules/tests/test_observer_settler.py": {
       "sha256": "c6a173d348f78704883aecdb94132deee7261b861aa9b8f9ee1c03186c928446",
