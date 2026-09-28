@@ -117,8 +117,12 @@ def _run_data_module(module: str, argv: list[str]) -> int:
     """
     Import `data_modules.<module>` and call its main(), while isolating sys.argv.
     """
+    try:
+        from .cli_output import has_error, reset_error_state
+    except ImportError:  # __main__ / sys.path 直跑
+        from cli_output import has_error, reset_error_state
     from runtime_compat import enable_windows_utf8_stdio
-    enable_windows_utf8_stdio()
+    enable_windows_utf8_stdio(skip_in_pytest=True)
     mod = importlib.import_module(f"data_modules.{module}")
     main = getattr(mod, "main", None)
     if not callable(main):
@@ -127,11 +131,22 @@ def _run_data_module(module: str, argv: list[str]) -> int:
     old_argv = sys.argv
     try:
         sys.argv = [f"data_modules.{module}"] + argv
+        reset_error_state()
         try:
             main()
-            return 0
         except SystemExit as e:
-            return int(e.code or 0)
+            code = e.code
+            if code is None:
+                return 1 if has_error() else 0
+            try:
+                return int(code)
+            except (TypeError, ValueError):
+                # sys.exit("消息") 形式：非零退出，避免以 traceback 收场
+                return 1
+        # 模块普遍用 emit_error()/print_error() 打印后 return，从不 SystemExit，
+        # 旧实现一律返回 0：载荷非法、写入被跳过、构建失败全部「成功」退出，
+        # skill 的 && 链继续推进，把未写入的章节当作已提交。这里据实返回非零。
+        return 1 if has_error() else 0
     finally:
         sys.argv = old_argv
 

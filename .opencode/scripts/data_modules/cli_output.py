@@ -60,10 +60,26 @@ def print_success(data: Any = None, message: str = "ok", warnings: Optional[list
     print_json(build_success(data=data, message=message, warnings=warnings))
 
 
+_error_emitted = False
+
+
+def reset_error_state() -> None:
+    """清空「本次调用是否报过错」标志。调用方在执行模块前调用。"""
+    global _error_emitted
+    _error_emitted = False
+
+
+def has_error() -> bool:
+    """本次执行期间是否调用过 print_error / emit_error。"""
+    return _error_emitted
+
+
 def print_error(
     code: str,
     message: str,
     suggestion: Optional[str] = None,
     details: Optional[Dict[str, Any]] = None,
 ) -> None:
+    global _error_emitted
+    _error_emitted = True
     print_json(build_error(code=code, message=message, suggestion=suggestion, details=details))
