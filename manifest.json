@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20260929.1455",
+  "version": "v2.9.2-20260929.1507",
   "tag": "v2.9.2",
-  "updated": "2026-09-29T14:55:33Z",
+  "updated": "2026-09-29T15:07:27Z",
   "changelog": [
     {
-      "hash": "ae46968",
+      "hash": "f60cf7f",
       "type": "fix",
-      "message": "fix: \u4f0f\u7b14\u503a\u5efa\u9500\u952e\u4e0d\u4e00\u81f4\u3001\u7a7a\u952e\u9500\u5168\u90e8\u503a\u3001\u5b64\u7acb\u65f6\u95f4\u7ebf\u9759\u9ed8\u5220\u9664\u3001WORKFLOW \u8fdb\u5ea6\u70b9\u6052\u7070"
+      "message": "fix: \u4f0f\u7b14\u503a\u5efa\u503a\u5e42\u7b49\u2014\u2014\u7ae0\u8282\u91cd\u590d\u63d0\u4ea4\u4e0d\u5f97\u8ba9\u503a\u52a1\u6210\u500d\u81a8\u80c0"
     },
     {
-      "hash": "26e2eab",
+      "hash": "09805e1",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260929.1443 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260929.1455 [skip ci]"
     }
   ],
   "files": {
@@ -868,8 +868,8 @@
       "size": 318
     },
     ".opencode/scripts/data_modules/index_debt_mixin.py": {
-      "sha256": "6ade7958a747de3e24ec19e71a74fec7a959261a4b6683ebb9521b0d43d06008",
-      "size": 21240
+      "sha256": "11cbcafd1f50910cb05eb504db155ec769639ddfa4bfcabdcbec4249007b5bbd",
+      "size": 22251
     },
     ".opencode/scripts/data_modules/orchestrate.py": {
       "sha256": "adfc5890517c436f60c3c039c0447cc6fedb6311fa99b90c6a444c13cdc1b4bf",
@@ -1190,6 +1190,10 @@
     ".opencode/scripts/data_modules/tests/test_dashboard_watcher.py": {
       "sha256": "cb660be13a2332a74886ef334062081c83c84af62eec0ef18cdde4ebff1764b1",
       "size": 764
+    },
+    ".opencode/scripts/data_modules/tests/test_foreshadowing_debt_idempotency.py": {
+      "sha256": "c55626167e7d81b34e79acad1766bd70761709492ee101f9770c0d646ae12dd1",
+      "size": 4216
     },
     ".opencode/scripts/data_modules/tests/test_context_override_hints.py": {
       "sha256": "1b14f333fab23755ac497b49d5c595292d9fe8ee51ad831fdd99e7c56298ad1b",
