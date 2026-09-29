@@ -59,9 +59,16 @@ export default function App() {
             .catch(() => setProjectInfo(null))
     }, [])
 
+    // refreshToken 由**每一个** SSE 事件递增：写一章会触碰几十个文件，
+    // 于是短时间内并发发起大量 fetchProjectInfo()。不丢弃过期响应时，先发的
+    // 慢请求可能在后发的快请求之后落地，把页头字���/章数刷成旧值。
     useEffect(() => {
-        loadProjectInfo()
-    }, [loadProjectInfo, refreshToken])
+        let cancelled = false
+        fetchProjectInfo()
+            .then(data => { if (!cancelled) setProjectInfo(data) })
+            .catch(() => { if (!cancelled) setProjectInfo(null) })
+        return () => { cancelled = true }
+    }, [refreshToken])
 
     useEffect(() => {
         const unsubscribe = subscribeSSE(

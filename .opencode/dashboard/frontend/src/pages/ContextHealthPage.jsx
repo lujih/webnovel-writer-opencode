@@ -156,30 +156,40 @@ export default function ContextHealthPage() {
 
     // history 只在 refreshToken 变化时刷新
     useEffect(() => {
+        let cancelled = false
         fetchContextHistory(20)
-            .then(data => setHistory(data && typeof data === 'object' ? data : { items: [] }))
+            .then(data => { if (!cancelled) setHistory(data && typeof data === 'object' ? data : { items: [] }) })
             .catch(e => {
                 // 空 catch 会静默吞掉历史加载失败——记录到 error 区让用户可感知
+                if (cancelled) return
                 setHistory({ items: [] })
                 setError(prev => prev || `上下文历史加载失败：${e.message || '网络错误'}`)
             })
+        return () => { cancelled = true }
     }, [refreshToken])
 
     // health 在 selectedChapter 或 refreshToken 变化时刷新
+    // 依赖里含 refreshToken（SSE 每事件递增）与用户可点的 selectedChapter，
+    // 两者都能快速连发；不丢弃过期响应时，第 5 章的慢响应会覆盖第 6 章的
+    // 结果——界面上会出现「标题写着第 6 章、内容却是第 5 章」。
     useEffect(() => {
-        if (selectedChapter <= 0) return
+        if (selectedChapter <= 0) return undefined
         setLoading(true)
         setError(null)
+        let cancelled = false
         fetchContextHealth(selectedChapter)
             .then(data => {
+                if (cancelled) return
                 setHealth(data)
                 if (!data) setError('暂无上下文数据')
             })
             .catch(() => {
+                if (cancelled) return
                 setHealth(null)
                 setError('暂无上下文数据')
             })
-            .finally(() => setLoading(false))
+            .finally(() => { if (!cancelled) setLoading(false) })
+        return () => { cancelled = true }
     }, [selectedChapter, refreshToken])
 
     const weightsOption = useMemo(() => buildWeightsOption(health?.weights_used), [health])

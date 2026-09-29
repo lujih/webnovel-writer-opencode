@@ -93,8 +93,29 @@ class FileWatcher:
     def _on_change(self, path: str, kind: str):
         """在 watchdog 线程中调用，向主事件循环投递通知。"""
         msg = json.dumps({"file": Path(path).name, "kind": kind, "ts": time.time()})
-        if self._loop and not self._loop.is_closed():
-            self._loop.call_soon_threadsafe(self._dispatch, msg)
+        self.publish(msg)
+
+    def publish(self, msg: str) -> None:
+        """线程安全投递：保证 _dispatch 一定在事件循环线程上执行。
+
+        FastAPI 会把 **sync def** 的端点放进线程池执行，而
+        ``asyncio.Queue.put_nowait`` 会去动属于事件循环的 waiter future，
+        跨线程调用不安全（可能破坏等待者队列、抛跨循环错误或静默丢消息）。
+        因此无论调用方在哪个线程，都经 call_soon_threadsafe 回到循环里执行。
+        """
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            # 尚未记录事件循环（应用启动早期）：沿用直投，保持既有行为
+            self._dispatch(msg)
+            return
+        try:
+            current = asyncio.get_running_loop()
+        except RuntimeError:
+            current = None
+        if current is loop:
+            self._dispatch(msg)
+        else:
+            loop.call_soon_threadsafe(self._dispatch, msg)
 
     def _dispatch(self, msg: str):
         for q in self._subscribers:

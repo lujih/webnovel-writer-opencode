@@ -18,7 +18,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse
+from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .path_guard import safe_resolve
@@ -29,6 +29,13 @@ from .watcher import FileWatcher
 # ---------------------------------------------------------------------------
 _project_root: Path | None = None
 _watcher = FileWatcher()
+
+# 允许访问本面板的源。写操作（CSRF 守卫）与 CORS 共用同一份，
+# 避免两处名单漂移后凭空放行或误伤。
+_LOCAL_ORIGINS = frozenset({
+    "http://127.0.0.1:8765", "http://localhost:8765",
+    "http://127.0.0.1:5173", "http://localhost:5173",
+})
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
 STATIC_DIR = Path(__file__).parent / "frontend" / "dist"
@@ -268,7 +275,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
                     try:
                         from data_modules.workflow_checkpoint import all_chapters_progress
                         wf = all_chapters_progress(_get_project_root())
-                        _watcher._dispatch(json.dumps({"type": "workflow-status", "data": wf, "ts": time.time()}))
+                        _watcher.publish(json.dumps({"type": "workflow-status", "data": wf, "ts": time.time()}))
                     except Exception:
                         pass
                 except asyncio.CancelledError:
@@ -289,10 +296,32 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://127.0.0.1:8765", "http://localhost:8765", "http://127.0.0.1:5173", "http://localhost:5173"],
+        allow_origins=list(_LOCAL_ORIGINS),
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def _csrf_guard(request, call_next):
+        """写操作校验 Origin —— CORS 管不到 CSRF。
+
+        CORS 只约束**读取**响应：跨站的 <form> POST、以及 content-type 为
+        text/plain 的简单 fetch 不触发预检，服务端会照常执行副作用，只是把
+        响应挡在浏览器外。任何网页都能因此对 127.0.0.1:8765 发起
+        /api/actions/ssot-rebuild（重写 state.json）或
+        /api/actions/batch（批量写章节）。
+
+        浏览器对跨站写请求必定携带 Origin，因此「带了 Origin 就必须在自己的
+        源里」即可挡住浏览器发起的 CSRF。缺少 Origin（curl / 脚本）时放行：
+        能发起本地请求的进程本就有完整文件系统权限，此处防的不是它。
+        """
+        if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+            origin = request.headers.get("origin")
+            if origin and origin not in _LOCAL_ORIGINS:
+                return JSONResponse(
+                    {"detail": f"拒绝跨站写请求: {origin}"}, status_code=403
+                )
+        return await call_next(request)
 
     # ===========================================================
     # API：项目元信息
@@ -1025,7 +1054,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
         # 触发 SSE 通知
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "file-saved", "path": path, "ts": time.time(),
             }))
         except Exception:
@@ -1321,7 +1350,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
         # 触发 SSE 通知
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "style-updated", "layer": "master-setting", "ts": time.time(),
             }))
         except Exception:
@@ -1367,7 +1396,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
             _atomic_write_json(path, existing)
 
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "style-updated", "layer": "anti-patterns", "ts": time.time(),
             }))
         except Exception:
@@ -1396,7 +1425,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
             _atomic_write_json(path, new_list)
 
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "style-updated", "layer": "anti-patterns", "ts": time.time(),
             }))
         except Exception:
@@ -1532,7 +1561,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
         path.write_text(content + "\n", encoding="utf-8")
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "style-updated", "layer": "prompts", "ts": time.time(),
             }))
         except Exception:
@@ -1561,7 +1590,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
         path.write_text(content + "\n", encoding="utf-8")
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "style-updated", "layer": "prompts", "ts": time.time(),
             }))
         except Exception:
@@ -1586,7 +1615,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
         path.unlink()
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "style-updated", "layer": "prompts", "ts": time.time(),
             }))
         except Exception:
@@ -1651,7 +1680,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
         # Push SSE event to notify frontend
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "action-done", "action": action,
                 "code": result.returncode, "ts": time.time(),
             }))
@@ -1725,7 +1754,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
         result_code = proc.returncode or 0
 
         try:
-            _watcher._dispatch(json.dumps({
+            _watcher.publish(json.dumps({
                 "type": "batch-done", "action": action,
                 "code": result_code, "ts": time.time(),
             }))
