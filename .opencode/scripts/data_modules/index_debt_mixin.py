@@ -511,8 +511,29 @@ class IndexDebtMixin:
 
         与 create_debt(debt: ChaseDebtMeta) 不同，此方法接受标量参数，
         主要用于从 _sync_foreshadowing 等应用层代码中快速创建债务。
+
+        对同一 note 的**活跃**债务幂等：state/memory 投影侧的 open_loop_created
+        本就按 content 去重，债务侧此前却每见一次事件就插一条，于是章节被重复
+        提交时债务成倍膨胀（真书项目实测：26 条 created 事件对应 141 条债，
+        49 种 note 各重复一次）。此处按同一 content 至多一条活跃债收敛。
+
+        已 resolved 的旧债不阻止重新建债——伏笔可以再次埋下。
         """
+        note_text = note or subject
         with self._get_conn() as conn:
+            if note_text:
+                probe = conn.cursor()
+                probe.execute(
+                    """SELECT d.id FROM chase_debt d
+                       JOIN debt_events e ON e.debt_id = d.id
+                       WHERE d.debt_type = ? AND d.status = 'active'
+                         AND e.note = ? LIMIT 1""",
+                    (debt_type, note_text),
+                )
+                existing = probe.fetchone()
+                if existing is not None:
+                    return int(existing[0]) or 0
+
             cursor = conn.cursor()
             cursor.execute(
                 """INSERT INTO chase_debt
@@ -524,7 +545,6 @@ class IndexDebtMixin:
             # resolve_debt_by_subject 靠 debt_events.note 做匹配，note 为空就留下
             # 一条永远销不掉的债。subject 形参此前被完全忽略，等于签名承诺了
             # 一个不存在的保证——note 空时用 subject 兜底。
-            note_text = note or subject
             if note_text:
                 cursor.execute(
                     """INSERT INTO debt_events
