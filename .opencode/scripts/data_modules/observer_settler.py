@@ -328,7 +328,14 @@ def settle(raw_facts_path: Path, project_root: Path, chapter: int) -> dict:
         payload = evt.get("payload", {})
         subject = evt.get("subject", "")
         if event_type in ("character_state_changed", "power_breakthrough"):
-            field = payload.get("field") or payload.get("field_path") or "realm"
+            # 缺 field 时的兜底必须**按事件类型区分**：power_breakthrough 缺省
+            # 就是 realm 没错，但 character_state_changed 兜底成 realm 会把一段
+            # 自由文本（如 new_state="重伤"）写进 current_state["realm"]——
+            # 用散文污染结构化字段，下游按枚举值比较 realm 的地方会直接失效。
+            if event_type == "power_breakthrough":
+                field = payload.get("field") or payload.get("field_path") or "realm"
+            else:
+                field = payload.get("field") or payload.get("field_path") or "state"
             old_val = payload.get("old") or payload.get("old_value") or payload.get("previous_state")
             new_val = payload.get("new") or payload.get("new_value") or payload.get("new_state") or payload.get("new_realm")
             if subject and field and new_val is not None:

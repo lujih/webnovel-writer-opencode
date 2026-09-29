@@ -200,6 +200,10 @@ function RecentSummaryCard({ item }) {
     )
 }
 
+// 写作流程的阶段顺序，与 workflow_checkpoint 的 STAGES 保持一致。
+// /api/workflow/status 只回「当前阶段」，进度点由它在序列中的位置派生。
+const WORKFLOW_STAGES = ['PLANNING', 'DRAFTING', 'REVIEWING', 'REVISING', 'COMMITTED']
+
 export default function OverviewPage() {
     const { projectInfo, refreshToken } = useDashboardContext()
     const [runtimeHealth, setRuntimeHealth] = useState(null)
@@ -464,9 +468,17 @@ export default function OverviewPage() {
                             <div key={ch} style={{ width: '100%' }}>
                                 <div style={{ fontWeight: 600, marginBottom: 8 }}>第 {ch} 章</div>
                                 <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                    {['PLANNING', 'DRAFTING', 'REVIEWING', 'REVISING', 'COMMITTED'].map(stage => {
-                                        const done = stages[stage] !== undefined
-                                        const current = stages._current_stage === stage
+                                    {WORKFLOW_STAGES.map(stage => {
+                                        // /api/workflow/status 返回的是
+                                        // {stage, complete, steps}——按「当前阶段」聚合的
+                                        // 摘要，不是按阶段名做键的映射。此处曾读
+                                        // stages[stage] / stages._current_stage，
+                                        // 两个键都不存在，于是五个圆点永远是灰的、
+                                        // 当前阶段永远不高亮。改为由 stage 派生。
+                                        const currentIdx = WORKFLOW_STAGES.indexOf(stages.stage)
+                                        const idx = WORKFLOW_STAGES.indexOf(stage)
+                                        const done = currentIdx >= 0 && idx <= currentIdx
+                                        const current = currentIdx >= 0 && idx === currentIdx
                                         return (
                                             <Fragment key={stage}>
                                                 <div style={{
@@ -483,7 +495,7 @@ export default function OverviewPage() {
                                     })}
                                 </div>
                                 <div style={{ display: 'flex', gap: 4, marginTop: 4, fontSize: 10, color: '#888' }}>
-                                    {['PLANNING', 'DRAFTING', 'REVIEWING', 'REVISING', 'COMMITTED'].map(stage => (
+                                    {WORKFLOW_STAGES.map(stage => (
                                         <span key={stage} style={{ flex: 1, textAlign: 'center' }}>{stage === 'COMMITTED' ? 'DONE' : stage.slice(0, 4)}</span>
                                     ))}
                                 </div>

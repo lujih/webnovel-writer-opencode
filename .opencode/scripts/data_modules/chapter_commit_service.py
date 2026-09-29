@@ -152,7 +152,14 @@ class ChapterCommitService:
                     subject=subject,
                 )
             elif etype in ("open_loop_closed", "promise_paid_off"):
-                idx.resolve_debt_by_subject(subject=subject, chapter=chapter)
+                # 必须用与建债侧**完全相同**的键（coerce_loop_content 的结果）。
+                # 此前建债按 content 记 note、销债按 subject 搜，两边对不上：
+                # 伏笔债永远销不掉，active 计数虚高。
+                # 键为空时直接跳过——resolve_debt_by_subject 用的是
+                # LIKE %x%，空键会匹配并销掉**全部**活跃债务。
+                debt_key = content or subject
+                if debt_key:
+                    idx.resolve_debt_by_subject(subject=debt_key, chapter=chapter)
 
     def apply_projections(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         status = str((payload.get("meta") or {}).get("status") or "")

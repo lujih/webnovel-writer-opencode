@@ -77,7 +77,15 @@ def enforce_capacity(data: ScratchpadData, max_items: int = 500) -> ScratchpadDa
                     break
             if not replaced:
                 data.story_facts.append(summary_item)
-        data.timeline = fresh
+            data.timeline = fresh
+        elif len(old) == 1:
+            # 只有一条旧事件时不摘要也不丢弃：摘要会把一条具体事实压成
+            # "早期关键事件" 这类泛化文本，丢掉它的内容；而留着只多一行。
+            # 此前 data.timeline = fresh 在 if len(old) > 1 之外无条件执行，
+            # 这一条旧事件被静默删除，无摘要、无痕迹。
+            pass
+        else:
+            data.timeline = fresh
 
     # 4) 若仍超限，全局截断
     if data.count_items() > max_items:

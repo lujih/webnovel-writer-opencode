@@ -521,20 +521,31 @@ class IndexDebtMixin:
                 (debt_type, source_chapter, due_chapter),
             )
             debt_id = cursor.lastrowid
-            if note:
+            # resolve_debt_by_subject 靠 debt_events.note 做匹配，note 为空就留下
+            # 一条永远销不掉的债。subject 形参此前被完全忽略，等于签名承诺了
+            # 一个不存在的保证——note 空时用 subject 兜底。
+            note_text = note or subject
+            if note_text:
                 cursor.execute(
                     """INSERT INTO debt_events
                        (debt_id, event_type, amount, chapter, note)
                        VALUES (?, 'created', 1.0, ?, ?)""",
-                    (debt_id, source_chapter, note),
+                    (debt_id, source_chapter, note_text),
                 )
             conn.commit()
             return debt_id or 0
 
     def resolve_debt_by_subject(self, subject: str, chapter: int = 0) -> bool:
-        """通过 note 匹配解决活跃债务。"""
+        """通过 note 匹配解决活跃债务。
+
+        注意：匹配是 ``LIKE %subject%``，空/空白 subject 会匹配到**全部**
+        活跃债务并把它们一并销掉，故直接拒绝空键。
+        """
+        safe_subject = str(subject or "").strip()
+        if not safe_subject:
+            return False
         # 转义 LIKE 通配符，防止 subject 中的 % 或 _ 导致误匹配
-        safe_subject = subject.replace("%", r"\%").replace("_", r"\_")
+        escaped = safe_subject.replace("%", r"\%").replace("_", r"\_")
         with self._get_conn() as conn:
             cursor = conn.cursor()
             cursor.execute(
@@ -544,7 +555,7 @@ class IndexDebtMixin:
                    (SELECT d.id FROM chase_debt d
                     JOIN debt_events e ON e.debt_id = d.id
                     WHERE e.note LIKE ? ESCAPE '\\')""",
-                (f"%{safe_subject}%",),
+                (f"%{escaped}%",),
             )
             resolved = cursor.rowcount > 0
             conn.commit()
