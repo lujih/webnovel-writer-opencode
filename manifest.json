@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20260928.1635",
+  "version": "v2.9.2-20260929.1443",
   "tag": "v2.9.2",
-  "updated": "2026-09-28T16:35:28Z",
+  "updated": "2026-09-29T14:43:45Z",
   "changelog": [
     {
-      "hash": "464471e",
+      "hash": "d49d125",
       "type": "fix",
-      "message": "fix: \u5220\u7ae0\u540e current_chapter \u4e0d\u518d\u6307\u5411\u5df2\u5220\u7ae0\u8282\uff1b\u5df2\u56de\u6536\u4f0f\u7b14\u4e0d\u518d\u53cd\u590d\u6ce8\u5165\u5199\u624b\u4e0a\u4e0b\u6587"
+      "message": "fix: SSE \u8de8\u7ebf\u7a0b\u6295\u9012\u3001dashboard \u5199\u64cd\u4f5c CSRF\u3001\u524d\u7aef\u4e24\u5904\u8bf7\u6c42\u7ade\u6001"
     },
     {
-      "hash": "c4f4c30",
+      "hash": "d5b0351",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260928.1625 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260928.1635 [skip ci]"
     }
   ],
   "files": {
@@ -44,12 +44,12 @@
       "size": 73
     },
     ".opencode/dashboard/app.py": {
-      "sha256": "cb44af557bc3fbae914b464a406ce6671fdbc27bc829a273d63c20068dedc983",
-      "size": 73652
+      "sha256": "98fb771ae12f6ac13f9cc30f9692eb3a97394c404437024a1e45460947f3dcad",
+      "size": 75037
     },
     ".opencode/dashboard/watcher.py": {
-      "sha256": "996a429848580e105ed77aa03b5fdd5591dd3fc91e64536e92100b6c38c8e3d4",
-      "size": 4843
+      "sha256": "7e9bdc8cf1211035ed9a40568e7aef6d5178b1453d4c04fdecab358530520926",
+      "size": 5732
     },
     ".opencode/dashboard/__init__.py": {
       "sha256": "da93d7fff9f1679ab23ee25d09a428892798a0be9d15fd5a51072f15fbeac1c8",
@@ -88,8 +88,8 @@
       "size": 3217
     },
     ".opencode/dashboard/frontend/src/App.jsx": {
-      "sha256": "d938e4c99e231972a14a9c0399e83ad8edbf0a3a2fa7fe7f58ef8090e43f5d0c",
-      "size": 4548
+      "sha256": "73a713d7b295a4c20aa7d00a0b3eabe22fc9ebe40814f165eae862e9f3353f02",
+      "size": 5036
     },
     ".opencode/dashboard/frontend/src/icons.jsx": {
       "sha256": "d6d26715870b66e11cd0a6deff2a71453f6e02cf0ed60fdff497a446d6658431",
@@ -160,8 +160,8 @@
       "size": 40207
     },
     ".opencode/dashboard/frontend/src/pages/ContextHealthPage.jsx": {
-      "sha256": "72180c00c4f08d8cab585ecc5ca49761663e42b3b3f2169775ffe1c035c503d7",
-      "size": 14946
+      "sha256": "5801b8bfc63e9cb642fdac94b24235462aca48beae53655cca667dedfc41e717",
+      "size": 15545
     },
     ".opencode/dashboard/frontend/src/pages/ForeshadowingPage.jsx": {
       "sha256": "7d3c4c0acf701204f9f4eda45ff04d2f8654070e120c0e0fae51c738afcf3314",
@@ -1087,6 +1087,10 @@
       "sha256": "f5617e433bd974d67a84d6831449fa24694309893428146c3ff2af899f8b96a1",
       "size": 4230
     },
+    ".opencode/scripts/data_modules/tests/test_dashboard_csrf.py": {
+      "sha256": "cd1380b40049086c8333913ff49b4ba4733181dd6a34288e86f1b705acef6278",
+      "size": 4218
+    },
     ".opencode/scripts/data_modules/tests/test_rag_adapter.py": {
       "sha256": "d44d7c1a1744e5f870ff9a447f8b4c952dc94d4b4a8192fc8e3c0b175d7f24c5",
       "size": 17217
@@ -1194,6 +1198,10 @@
     ".opencode/scripts/data_modules/tests/test_story_event_schema.py": {
       "sha256": "c1b3598e01bc0122f2444822b3adc9d444dd46ad1b2c2f814f9c446fcbc3fa6c",
       "size": 847
+    },
+    ".opencode/scripts/data_modules/tests/test_dashboard_sse_threading.py": {
+      "sha256": "4c73dea4ffa93d697f7be260be87419444e18083eab88f85d2e0bd24bcdb15ce",
+      "size": 4871
     },
     ".opencode/scripts/data_modules/tests/test_prewrite_validator.py": {
       "sha256": "a711be7dd5097c1ee3836c43c95d857e6db983370708004079c8cb9d46397785",
