@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20260929.1507",
+  "version": "v2.9.2-20260930.1424",
   "tag": "v2.9.2",
-  "updated": "2026-09-29T15:07:27Z",
+  "updated": "2026-09-30T14:24:35Z",
   "changelog": [
     {
-      "hash": "f60cf7f",
-      "type": "fix",
-      "message": "fix: \u4f0f\u7b14\u503a\u5efa\u503a\u5e42\u7b49\u2014\u2014\u7ae0\u8282\u91cd\u590d\u63d0\u4ea4\u4e0d\u5f97\u8ba9\u503a\u52a1\u6210\u500d\u81a8\u80c0"
+      "hash": "001e52f",
+      "type": "feat",
+      "message": "feat: \u4f0f\u7b14\u503a\u53bb\u91cd\u4fee\u590d\u547d\u4ee4\uff08\u9ed8\u8ba4 dry-run\uff09"
     },
     {
-      "hash": "09805e1",
+      "hash": "48b7e53",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260929.1455 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260929.1507 [skip ci]"
     }
   ],
   "files": {
@@ -708,8 +708,8 @@
       "size": 6003
     },
     ".opencode/scripts/data_modules/index_manager.py": {
-      "sha256": "2a19bc51d3f8a741a0976ae52807cbdeda78525850de5235e773a1b734de27c7",
-      "size": 56306
+      "sha256": "33ede89ce5c1f1dca75a57e4c89041761536b7596dc74d27af0e5106355ff30a",
+      "size": 57185
     },
     ".opencode/scripts/data_modules/state_projection_renderer.py": {
       "sha256": "354ff27b9a1a12929036b10f2577eb1e51c42f5b3c15145534fdea335ef50f9b",
@@ -758,6 +758,10 @@
     ".opencode/scripts/data_modules/config.py": {
       "sha256": "03f0f5858f1b1820f814250832c9953188fd91de7d6065e3be90d064b13375a2",
       "size": 13157
+    },
+    ".opencode/scripts/data_modules/debt_repair.py": {
+      "sha256": "94d9f22e60dc006e525bf8261c855139fb6cf8e372e54b9c05fab3a5279c048a",
+      "size": 6724
     },
     ".opencode/scripts/data_modules/context_weights.py": {
       "sha256": "7e30fa78a590028ef472c88e44f6108ad0af917a52d71994ee7bb62d2848d706",
@@ -1066,6 +1070,10 @@
     ".opencode/scripts/data_modules/tests/test_skill_runner.py": {
       "sha256": "41f52dadeecd6687642ef2d700fba1b119402443f9c03e883478f73dde5ed479",
       "size": 6975
+    },
+    ".opencode/scripts/data_modules/tests/test_debt_repair.py": {
+      "sha256": "2bfcce856341662f7d8fe2281479b8a0a2c126c57e5cb33e53273a51d033adc7",
+      "size": 7585
     },
     ".opencode/scripts/data_modules/tests/test_ssot_verify_shape_aware.py": {
       "sha256": "43ca58cffd79d51d586c49d456d45deb0d6f27de99dbecf11cb1cc766dbb8e46",
