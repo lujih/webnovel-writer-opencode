@@ -950,6 +950,16 @@ def main():
     create_debt_parser = subparsers.add_parser("create-debt")
     create_debt_parser.add_argument("--data", required=True, help="JSON 格式的债务数据")
 
+    # 伏笔债去重修复（默认演练，不写库）
+    repair_debt_parser = subparsers.add_parser(
+        "repair-foreshadowing-debts",
+        help="清理重复建债产生的伏笔债（默认 dry-run，加 --apply 才写库）",
+    )
+    repair_debt_parser.add_argument(
+        "--apply", action="store_true",
+        help="真正执行删除；缺省只打印计划",
+    )
+
     # 标记Override已偿还
     fulfill_override_parser = subparsers.add_parser("fulfill-override")
     fulfill_override_parser.add_argument("--contract-id", type=int, required=True)
@@ -1379,6 +1389,16 @@ def main():
         )
         debt_id = manager.create_debt(debt)
         emit_success({"id": debt_id, "debt_type": debt.debt_type}, message="debt_created")
+
+    elif args.command == "repair-foreshadowing-debts":
+        from .debt_repair import format_report, repair
+        try:
+            plan = repair(manager.config.project_root, apply=bool(getattr(args, "apply", False)))
+        except FileNotFoundError as exc:
+            emit_error("INDEX_DB_MISSING", str(exc))
+            return
+        print(format_report(plan, applied=bool(getattr(args, "apply", False))))
+        emit_success(plan.to_dict(), message="foreshadowing_debt_repair")
 
     elif args.command == "fulfill-override":
         success = manager.fulfill_override(args.contract_id)

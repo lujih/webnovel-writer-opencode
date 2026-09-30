@@ -59,6 +59,9 @@ python .opencode/scripts/data_modules/chapter_rename.py --project-root <PATH> --
 python .opencode/scripts/webnovel.py export          # export novel
 python .opencode/scripts/webnovel.py publish         # publish to platform
 python .opencode/scripts/webnovel.py memory          # memory system management
+
+# 数据修复（破坏性操作，默认 dry-run，加 --apply 才写库）
+python .opencode/scripts/webnovel.py index repair-foreshadowing-debts          # 清理重复伏笔债
 ```
 
 Full command list (**38** top-level commands, 51 `add_parser` call sites counting subcommands like `knowledge query-entity-state`, `ssot verify`, `workflow checkpoint`, `override add`): `where`, `chapter-path`, `preflight`, `use`, `index`, `state`, `rag`, `style`, `entity`, `context`, `memory`, `migrate`, `status`, `doctor`, `update-state`, `backup`, `archive`, `init`, `extract-context`, `story-system`, `story-events`, `chapter-commit`, `memory-contract`, `project-memory`, `review-pipeline`, `placeholder-scan`, `master-outline-sync`, `export`, `publish`, `knowledge`, `checkers`, `orchestrate`, `delete-chapters`, `entity-clean`, `ssot`, `workflow`, `override`, `dsh-sync`。
