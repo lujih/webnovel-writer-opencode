@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20260930.1424",
+  "version": "v2.9.2-20261001.1530",
   "tag": "v2.9.2",
-  "updated": "2026-09-30T14:24:35Z",
+  "updated": "2026-10-01T15:30:55Z",
   "changelog": [
     {
-      "hash": "001e52f",
-      "type": "feat",
-      "message": "feat: \u4f0f\u7b14\u503a\u53bb\u91cd\u4fee\u590d\u547d\u4ee4\uff08\u9ed8\u8ba4 dry-run\uff09"
+      "hash": "ef77ee7",
+      "type": "fix",
+      "message": "fix: OpenCode v2 \u9002\u914d\u2014\u2014\u8865 AGENTS.md\u3001write-guard \u6539\u53cc\u5165\u53e3"
     },
     {
-      "hash": "48b7e53",
+      "hash": "9e0ce78",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260929.1507 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20260930.1424 [skip ci]"
     }
   ],
   "files": {
@@ -376,8 +376,8 @@
       "size": 6335
     },
     ".opencode/plugins/write-guard.js": {
-      "sha256": "6c888e18ada4c0b390224f9bbdcc789f68324ea80fd64e02985d904320c4c3c9",
-      "size": 3794
+      "sha256": "803a8587d3c94200787a1bdff90c3f01e27341919fe2bfb70c71527790275a46",
+      "size": 5501
     },
     ".opencode/agents/data-agent.md": {
       "sha256": "8d168e9c1bcaff697b3b36d46a8079e52b4d04780b8046986bfe19fe29dfb0bb",
@@ -696,8 +696,8 @@
       "size": 37958
     },
     ".opencode/scripts/data_modules/dsh_sync.py": {
-      "sha256": "52347559236f6ab90c9bb11e8d39a9435e1a33a9b7f9ba5401424d37dbe96444",
-      "size": 14437
+      "sha256": "9ee5aa1ca2206405fe0c252cd85e7996c4c2928c24c9c1a5261994d19e1b13f0",
+      "size": 15520
     },
     ".opencode/scripts/data_modules/state_manager.py": {
       "sha256": "5a0aae3c7850eb9bce3f50c6a3bb4aac690bc22fb2726fbc7ee8b732a1f78a09",
@@ -950,6 +950,10 @@
     ".opencode/scripts/data_modules/tests/test_security_utils_atomic.py": {
       "sha256": "7b9bcda3da3bc75469c5e557c1679d934741915fd38a3bdb2910d772cbe931e4",
       "size": 3775
+    },
+    ".opencode/scripts/data_modules/tests/test_write_guard_plugin.py": {
+      "sha256": "c036c9b078b0dcf0c90d76a476eb241a699f4d7adb050fd628327a4f3aae3574",
+      "size": 6141
     },
     ".opencode/scripts/data_modules/tests/test_projection_writers.py": {
       "sha256": "e618e8a3e7652f64a0e342c726a4721d9bcdc3403da6296d5283df9b174333cd",
