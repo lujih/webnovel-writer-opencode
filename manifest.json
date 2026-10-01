@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261001.1549",
+  "version": "v2.9.2-20261001.1608",
   "tag": "v2.9.2",
-  "updated": "2026-10-01T15:49:40Z",
+  "updated": "2026-10-01T16:08:41Z",
   "changelog": [
     {
-      "hash": "6a715ae",
-      "type": "refactor",
-      "message": "refactor: 6 \u4e2a agent \u8fc1\u79fb\u5230 OpenCode V2 \u539f\u751f permissions"
+      "hash": "3d37bfc",
+      "type": "feat",
+      "message": "feat: OpenCode v2 \u6df1\u5ea6\u9002\u914d\u2014\u2014opencode.json\u3001\u53ea\u8bfb\u659c\u6760\u547d\u4ee4\u3001SSOT \u4e09\u5c42\u9632\u62a4"
     },
     {
-      "hash": "15a4b3a",
+      "hash": "268a340",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261001.1530 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261001.1549 [skip ci]"
     }
   ],
   "files": {
@@ -22,6 +22,10 @@
     ".opencode/.gitignore": {
       "sha256": "e1ea563c7f69c5502b623b7563a99fffe542694331b6bae3806c9c8e603afa7f",
       "size": 386
+    },
+    ".opencode/opencode.json": {
+      "sha256": "00ca5869f40ac94647e8ddc44fe624d3ecd6f01f1fde0aa3eead546a6c7def40",
+      "size": 4211
     },
     ".opencode/package.json": {
       "sha256": "894b4b85c472d84f0fc7c8c880592cfd365280bc440cf852d6aa54b491f5874f",
@@ -380,16 +384,16 @@
       "size": 5501
     },
     ".opencode/agents/data-agent.md": {
-      "sha256": "169b4217222bfddcbd1d9927047ed1d0c01b475c76476adb59a879e22acd8aa2",
-      "size": 8441
+      "sha256": "ada0d5f6abb39d95d5596be8b88e8c5b1e08619e38d5b45f22d5ebc17bb758bc",
+      "size": 9095
     },
     ".opencode/agents/observer-agent.md": {
-      "sha256": "1c62c343e56c7bf125fea21662ddc60d6e6b53911b6cb542a1d5d35ed3ff9941",
-      "size": 3344
+      "sha256": "7046b0300477d7b86c5c407ca9e1a1fae06c3825b382429bdeac8aca590574b6",
+      "size": 3998
     },
     ".opencode/agents/chapter-writer-agent.md": {
-      "sha256": "12e832c10aec0e9565574dcbc4f17eb16130d33b5984b200caf553805546af6c",
-      "size": 6156
+      "sha256": "f1fede5091f7eef3f8a67620a6ddb635ffea58ad63db73820a0496efd7b29551",
+      "size": 6810
     },
     ".opencode/agents/deconstruction-agent.md": {
       "sha256": "6c1228351682c2e245c541be06e162a950075a4e1a6c853580f91d61f0940759",
@@ -400,8 +404,8 @@
       "size": 9310
     },
     ".opencode/agents/reviewer.md": {
-      "sha256": "03074491d8b45fa4ffc8145be26fc308a52ddc753dac4a6ee51fb982a15c5264",
-      "size": 5268
+      "sha256": "812ea6aedceed62c9b3402ffd7f93dbd6386fb71c0c5bd38043970b8e41f4133",
+      "size": 5922
     },
     ".opencode/agents/references/context-agent-example.md": {
       "sha256": "5b8da19bca68db90cf89c0d3c43d1e365bcf144c85d316ab8e0dfc7d4d109622",
@@ -752,8 +756,8 @@
       "size": 21853
     },
     ".opencode/scripts/data_modules/migrate_agents_v2_permissions.py": {
-      "sha256": "6ac2e3a4c9399157ee40621bb01f5c61fd62471925147eb5b9437f91691b385a",
-      "size": 4865
+      "sha256": "bc1eeb0c7be2ef7ca57a647d8acce589751abee6ab282f32928a16cf2c314f77",
+      "size": 8488
     },
     ".opencode/scripts/data_modules/chapter_commit_service.py": {
       "sha256": "20c705614abd6cc14f44249515cd7181554c22cda6181c5dcbfd4e1c229ee9b8",
@@ -1099,6 +1103,10 @@
       "sha256": "aff5882d1ed07e0fb249f41131753243f1228cefbc3365acaf4804b5acea93ee",
       "size": 22284
     },
+    ".opencode/scripts/data_modules/tests/test_opencode_v2_config.py": {
+      "sha256": "165d593c79301ed59a5645f055e6d28f246419b307e7fc8b9728cfc843d55b4a",
+      "size": 8027
+    },
     ".opencode/scripts/data_modules/tests/test_cli_exit_codes.py": {
       "sha256": "f5617e433bd974d67a84d6831449fa24694309893428146c3ff2af899f8b96a1",
       "size": 4230
@@ -1320,8 +1328,8 @@
       "size": 4941
     },
     ".opencode/scripts/data_modules/tests/test_agent_v2_permissions.py": {
-      "sha256": "b99863954f47c682ae1dfccf1e05e274e883c70b80301f39d4e5752bc831310d",
-      "size": 5673
+      "sha256": "57d2a9263abdb174bfc444112a7b19c79deff633f8c972a1fe5fc7e3c886c0e4",
+      "size": 9039
     },
     ".opencode/scripts/data_modules/tests/test_memory_store.py": {
       "sha256": "dc85907932875531862c337e9280e35b548b377a65e27342ae6260b5f120c40b",
@@ -1366,6 +1374,26 @@
     ".opencode/evals/files/test-project/\u6b63\u6587/\u7b2c0004\u7ae0-\u8fe6\u5357\u5b66\u9662\u7684\u8003\u9a8c.md": {
       "sha256": "99f34bb3c10f1e92baaf6c3091104f76665dd51f2387b2781ec18b612cdc2516",
       "size": 2447
+    },
+    ".opencode/commands/wn-chapter-status.md": {
+      "sha256": "78cf54562fbe30dd7ad8bc01a54354cc92871c13593e078575add5b27462c456",
+      "size": 435
+    },
+    ".opencode/commands/wn-status.md": {
+      "sha256": "d21e6ff4ad2bb1ffd36aa5a12666e2613cc630ca195befce63cd1ff394d4fcdd",
+      "size": 489
+    },
+    ".opencode/commands/wn-where.md": {
+      "sha256": "4b4921c2e0373fbfb1eec705f97dc38614a36d0a7ac727c82ad395ff03303279",
+      "size": 417
+    },
+    ".opencode/commands/wn-doctor.md": {
+      "sha256": "6635bb7487e97ee215a349352dedc68b72dac31871ab8ecb6e8a30895e1139f0",
+      "size": 554
+    },
+    ".opencode/commands/wn-ssot-verify.md": {
+      "sha256": "a949c45e202c74266ff10009389bdfd9b61e0c3d73d073fdd18d49876346db6a",
+      "size": 626
     },
     ".opencode/references/genre-profiles.md": {
       "sha256": "2b5c256e3556d9af12f00715f2170208e717cf59ab19928c58c408509dafb9fa",
