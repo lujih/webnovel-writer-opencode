@@ -57,6 +57,25 @@ ALWAYS_ALLOW = ("glob", "grep")
 _ORDER = ["read", "glob", "grep", "shell", "edit", "skill", "subagent",
           "question", "webfetch", "websearch"]
 
+# SSOT 受保护文件。与 .opencode/plugins/write-guard.js 的 PROTECTED_SUFFIXES
+# 同一份清单，但作用机制不同、且更靠前：
+#   - write-guard 是 tool.execute.before 钩子，模型仍**看得见** edit 工具，
+#     只是运行时被 throw 拒绝；
+#   - V2 文档对 permissions 的 deny 明确说会把工具"从模型可见集整体移除"，
+#     模型根本拿不到 edit/write/patch。
+# 两者并存：配置层挡"意图"，插件层挡"绕过配置直接调工具"。
+#
+# 路径按"整条规范化路径"匹配，通配 * 可跨 /，故 * 前缀覆盖任意项目根
+# （书项目在 E:\workspace\webnovel2 下，不在仓库内）。
+PROTECTED_SUFFIXES = (
+    ".webnovel/state.json",
+    ".webnovel/index.db",
+    ".webnovel/vectors.db",
+    ".webnovel/memory_scratchpad.json",
+    ".story-system/events/",
+    ".story-system/master_setting.json",
+)
+
 
 def parse_tools(frontmatter: str) -> list[str]:
     m = re.search(r"^tools:\s*$(.*?)(?=^\S|\Z)", frontmatter, re.M | re.S)
@@ -87,7 +106,60 @@ def render_permissions(tools: list[str]) -> str:
     ]
     for action in actions:
         lines += [f"  - action: {action}", "    resource: \"*\"", "    effect: allow"]
+    if "edit" in actions:
+        # 排在 allow 之后：规则顺序即优先级，最后命中的生效，所以这些 deny
+        # 必须压过上面那条 edit 的 allow。
+        lines.append(
+            "  # SSOT 受保护文件只能经 CLI 写入（chapter-commit 等）。"
+            "deny 会把 edit/write/patch 从模型可见集整体移除，"
+            "比 write-guard.js 的运行时拒绝更靠前；两者并存。"
+        )
+        lines += [
+            f'  - action: edit\n    resource: "*{suffix}"\n    effect: deny'
+            for suffix in PROTECTED_SUFFIXES
+        ]
     return "\n".join(lines)
+
+
+def _already_current(fm: str, tools: list[str]) -> bool:
+    """已迁移且渲染结果与当前一致——此时才跳过。
+
+    不能只看 "permissions:" 是否存在：本脚本的渲染规则会演进（例如给需要
+    edit 的 agent 追加 SSOT 受保护路径的 deny），若沿用"见到 permissions
+    就跳过"，规则更新后重跑不会生效，且没有任何提示。
+    """
+    if "permissions:" not in fm:
+        return False
+    return render_permissions(tools) in fm
+
+
+def parse_allowed_actions(fm: str) -> list[str]:
+    """从已迁移的 permissions 里读回被显式 allow 的动作。
+
+    tools: 块被替换掉之后，这是唯一能还原"该 agent 需要哪些工具"的来源。
+    只认显式 `effect: allow` 的规则——deny-all 与 external_directory: ask
+    都不算。
+    """
+    allowed = set()
+    for action, resource, effect in re.findall(
+        r'^\s*- action:\s*"?([^"\n]+?)"?\s*\n\s*resource:\s*"?([^"\n]+?)"?\s*\n'
+        r'\s*effect:\s*(\w+)\s*$',
+        fm, re.M,
+    ):
+        if effect == "allow" and resource == "*" and action != "*":
+            allowed.add(action)
+    return sorted(allowed)
+
+
+def _v1_tools_for(allowed: list[str]) -> list[str]:
+    """把 V2 动作名反推回 V1 工具名，供 render_permissions 复用同一套渲染。"""
+    inverse = {v: k for k, v in _ACTION.items() if k not in ("write", "edit")}
+    out = []
+    for action in allowed:
+        out.append(inverse.get(action, action))
+    if "edit" in allowed:
+        out.append("write")
+    return out
 
 
 def convert(text: str) -> str:
@@ -95,12 +167,20 @@ def convert(text: str) -> str:
     if not m:
         raise ValueError("缺少 frontmatter")
     fm = m.group(1)
-    if "permissions:" in fm:
-        return text  # 已迁移，幂等
     tools = parse_tools(fm)
     if not tools:
-        raise ValueError("未找到 tools: 块")
+        if "permissions:" not in fm:
+            raise ValueError("未找到 tools: 块")
+        # 已迁移：从 allowlist 反推需要的 V1 工具名后重新渲染。
+        tools = _v1_tools_for(parse_allowed_actions(fm))
+    if _already_current(fm, tools):
+        return text  # 幂等
     block = render_permissions(tools) + "\n"
+    if "permissions:" in fm:
+        # 规则演进后的就地重写：替换掉整个旧的 permissions 块。
+        fm = re.sub(r"^permissions:\s*$.*?(?=^\S|\Z)",
+                    lambda _m: block, fm, flags=re.M | re.S)
+        return text[:m.start(1)] + fm + text[m.end(1):]
     # 用 lambda 替换：渲染出的文本含 E:\workspace 这类反斜杠，直接当 repl 会
     # 被 re 当转义序列处理（re.error: bad escape \w）。
     fm = re.sub(r"^tools:\s*$.*?(?=^\S|\Z)", lambda _m: block, fm, flags=re.M | re.S)
@@ -108,14 +188,18 @@ def convert(text: str) -> str:
 
 
 def main() -> int:
+    changed = 0
     for path in sorted(AGENTS_DIR.glob("*.md")):
         original = path.read_text(encoding="utf-8")
         updated = convert(original)
         if updated != original:
             path.write_text(updated, encoding="utf-8")
             print(f"migrated: {path.name}")
+            changed += 1
         else:
-            print(f"skipped (already migrated): {path.name}")
+            print(f"skipped (already current): {path.name}")
+    if changed:
+        print(f"✅ {changed} 个 agent 更新")
     return 0
 
 

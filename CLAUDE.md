@@ -131,6 +131,24 @@ V2 三处破坏性变更中两处直接影响本仓库——**① 插件 API 全
 **本次收紧的**（相对原先"实际全放行"的行为）：`subagent`/`skill`/`webfetch`/`websearch`/`question` 一律 deny——子 agent 不该自行委派、联网或向用户追问（与 DSH `general` 出厂策略一致）。`edit` 逐个判定：`reviewer`/`chapter-writer-agent`/`data-agent`/`observer-agent` 有（reviewer 正文要求"用 Write 工具将完整 JSON 写入 `${REVIEW_OUTPUT}`"）；`context-agent`/`deconstruction-agent` 无（后者正文明写"只返回结构化结果，不写任何文件"）。
 仍待办：3 个 skill 的 `allowed-tools` 在 V2 不被解释（V2 只认 `name`/`description`/`slash`/`metadata`）。该键对 OpenCode 两代都是惰性的，保留它是为兼容 Claude Code / Agent Skills 生态，若不跨宿主使用可直接删。
 
+### OpenCode v2 深度适配（.opencode/opencode.json + commands/）
+
+`.opencode/opencode.json`（JSONC，**故意不带 `$schema`**）只有 5 个键，每条都有实测依据：
+
+- **不带 `$schema`**：2026-10-01 实测 `https://opencode.ai/config.json` 返回的**仍是 V1 形状**——顶层 `additionalProperties: false`，只认 `permission`/`agent`/`command`/`plugin`/`snapshot`/`attachment`/`provider`，文档里的 V2 原生键（`permissions`/`agents`/`commands`/`plugins`/`snapshots`/`media`/`warming`/`update`/`providers`）一个都没有，嵌套的 `compaction` 也还只有 `auto`/`prune`/`tail_turns`/`preserve_recent_tokens`/`reserved`。挂上去只会让编辑器把**正确的** V2 字段全标红。schema 声称自己"is the source of truth"，这一点上目前不成立。
+- **不带 `instructions`**：V2 文档原文 "OpenCode accepts this field but does not load its entries; use AGENTS.md for instructions" —— 能过校验、什么都不做的静默空操作。项目说明唯一真实通道是 `AGENTS.md`。
+- **`formatter: false`（显式）**：V2 内置 formatter 里 prettier/biome **都覆盖 `.md`**，而本书 65 章正文全是 `.md`（`正文/第1卷/第0001章-….md`）。开启会把已发布正文重排折行、规范空白——那是**改用户作品**，且 formatter 在写盘**之后**才跑，拦不住。
+- **全局 `permissions`**：与 V2 基础策略一致（`*` → allow），额外恢复 `external_directory: ask`（书项目在仓库外）、`read: *.env → ask`，并 **deny 6 类 SSOT 路径的 edit**。此前主 agent（用户直接对话的那个）完全裸奔——只有子 agent 和 plugin 两层，主 agent 没有任何 SSOT 约束。
+- **`compaction`**：用 V2 的 `keep.tokens`（24000），不用 V1 的 `tail_turns`/`prune`（V2 会忽略并告警）。调高 keep 是为让刚写完那章原文尽量逐字留在尾部。
+- **`watcher.ignore`**：屏蔽 `node_modules`/`__pycache__`/`.tmp`/`外部参考`，减少无意义的文件事件。
+
+**SSOT 三层防护**（同一份 6 条路径清单，`test_agent_v2_permissions.py::test_matches_write_guard_plugin_list` 钉住两侧不漂移）：① 主 agent 的全局 `permissions` deny；② 子 agent 各自的 `permissions` deny（排在 `edit: * allow` **之后**，靠"最后命中者生效"压过）；③ `write-guard.js` 的 `tool.execute.before` 运行时抛错。①②靠配置让模型**看不见** edit/write/patch，③兜住绕过配置直接调工具的情况——单靠任一层都不够。
+
+`.opencode/commands/` 5 个只读斜杠命令（`wn-status` / `wn-doctor` / `wn-ssot-verify` / `wn-where` / `wn-chapter-status`），用 `!\`shell\`` 块把 CLI 真实输出**在 prompt 提交前**注入，模型不必先猜再跑。**关键约束**：V2 文档 Warning 明确 shell 块"run when OpenCode evaluates the command, **outside the agent's tool permission flow**"——即 `write-guard.js` 拦不到它。所以 `test_opencode_v2_config.py` 断言 shell 块里**不得出现破坏性子命令**（`delete-chapters`/`rebuild`/`chapter-commit`/`publish`/`export`/…）；写路径必须走 skill + agent permissions + write-guard 链路。破坏性命令仍留 dry-run 默认 + `--apply` 二次确认。
+实测 5 个命令的真书（`E:\workspace\webnovel2\凡尘之舞`）均正常执行；`ssot verify` 在真书上确实检出漂移并以 rc=1 退出（`foreshadowing` 0 vs 26、`entities_v3` 0 vs 4、`world_rules` 0 vs 10、`reader_promises` 0 vs 7），故 `wn-ssot-verify` 明确要求模型**不得自行 rebuild**。
+
+**未做及原因**：`$schema`（如上，schema 未跟上）；`experimental.policies`（想用它做 SSOT 硬 deny，但实测 schema 里 `Policy.action` 枚举**只有 `provider.use`**，文档示例中的 `"action":"permission"` 过不了校验，不冒这个险）；MCP 暴露 Python 数据层（需 `opencode.json` 的 `mcp.servers` + 给 6 个 agent 加 `<server>_<tool>` 放行规则，工作量中等且收益待观察）；FastAPI 面板**不可**迁进 OpenCode（插件只能挂 TUI slot / OpenTUI JSX，**没有 webview 宿主**，ECharts 无等价物）。
+
 **DSH 适配**：
 DeepSeek Harness（deepseek-ai/deepseek-harness）的 skill provider 不读 `.opencode/`；
 `.dsh/skills/` + `.dsh/agents/` 是派生镜像（17 个 SKILL.md 含桥接层 webnovel-writer

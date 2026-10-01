@@ -45,12 +45,25 @@ def _rules(path: Path) -> list[tuple[str, str, str]]:
     ]
 
 
-def _effect_of(rules, action, default="ask"):
-    """最后命中的规则生效（V2 语义）。"""
+def _effect_of(rules, action, resource="*", default="ask"):
+    """最后命中的规则生效（V2 语义）。
+
+    匹配规则：规则的 action 等于查询 action，或规则 action 为 `*`（兜底）；
+    再看 resource——查询用固定 resource 时，规则的 resource 也要匹配
+    （`*` 通配一切，其余按字面量比）。
+
+    这里刻意只查**单个 action + 单个 resource** 的最终效果，因为测试要的
+    是「某条具体规则有没有被后面的规则盖掉」——例如 SSOT 的
+    `edit: *.webnovel/state.json deny` 排在 `edit: * allow` 之后，
+    对该具体路径而言 deny 生效，但对普通章节文件的 edit 仍是 allow。
+    """
     effect = default
-    for rule_action, _resource, rule_effect in rules:
-        if rule_action in (action, "*"):
-            effect = rule_effect
+    for rule_action, rule_resource, rule_effect in rules:
+        if rule_action not in (action, "*"):
+            continue
+        if rule_resource != "*" and rule_resource != resource:
+            continue
+        effect = rule_effect
     return effect
 
 
@@ -107,6 +120,65 @@ class TestLeastPrivilege:
         for action in ("subagent", "skill", "webfetch", "websearch", "question"):
             assert _effect_of(_rules(agent), action) == "deny", (
                 f"{agent.name} 意外放行了 {action}"
+            )
+
+
+class TestSSOTProtectedPaths:
+    """SSOT 受保护文件在 permissions 层就要拦住——比运行时拒绝更靠前一层。
+
+    与 .opencode/plugins/write-guard.js 是同一份清单但两道闸门：
+    V2 文档对 permissions 的 deny 说会把工具"从模型可见集整体移除"，
+    即模型根本拿不到 edit；write-guard 则在 tool.execute.before 抛错。
+    两者缺一可：只有 plugin 时模型看得见工具，只有 permissions 时绕过配置
+    直接调 hook 就漏了。
+    """
+
+    PROTECTED = (
+        ".webnovel/state.json",
+        ".webnovel/index.db",
+        ".webnovel/vectors.db",
+        ".webnovel/memory_scratchpad.json",
+        ".story-system/events/",
+        ".story-system/master_setting.json",
+    )
+
+    def _edit_agents(self):
+        return [p for p in AGENT_FILES if _effect_of(_rules(p), "edit") == "allow"]
+
+    def test_at_least_some_agent_can_edit(self):
+        assert self._edit_agents(), "没有 agent 拿到 edit，迁移把写能力全掐死了"
+
+    @pytest.mark.parametrize("suffix", PROTECTED)
+    def test_protected_path_denied_for_every_editing_agent(self, suffix):
+        resource = f"*{suffix}"
+        for path in self._edit_agents():
+            matching = [r for r in _rules(path)
+                        if r[0] == "edit" and r[1] == resource]
+            assert matching, f"{path.name} 缺少对 {resource} 的 edit deny"
+            # 最后命中者生效：deny 必须排在 edit 的 allow 之后
+            assert matching[-1][2] == "deny", (
+                f"{path.name}: {resource} 的最后一条规则不是 deny，"
+                "会被前面的 edit allow 盖过"
+            )
+
+    def test_deny_comes_after_the_edit_allow(self, agent):
+        rules = _rules(agent)
+        allow_at = [i for i, r in enumerate(rules) if r == ("edit", "*", "allow")]
+        if not allow_at:
+            return  # 只读 agent，没有 edit allow，也就不需要这层
+        first_deny = next(i for i, r in enumerate(rules)
+                          if r[0] == "edit" and r[2] == "deny")
+        assert first_deny > allow_at[0], (
+            f"{agent.name}: SSOT deny 排在 edit allow 之前，会被盖过"
+        )
+
+    def test_matches_write_guard_plugin_list(self):
+        """两份清单必须一致——漂移了就等于有一侧失效。"""
+        plugin = (REPO_ROOT / ".opencode" / "plugins" / "write-guard.js").read_text(
+            encoding="utf-8")
+        for suffix in self.PROTECTED:
+            assert f"'{suffix}'" in plugin, (
+                f"write-guard.js 不再保护 {suffix}，与 permissions 层清单漂移"
             )
 
 

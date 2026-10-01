@@ -28,6 +28,25 @@ permissions:
   - action: edit
     resource: "*"
     effect: allow
+  # SSOT 受保护文件只能经 CLI 写入（chapter-commit 等）。deny 会把 edit/write/patch 从模型可见集整体移除，比 write-guard.js 的运行时拒绝更靠前；两者并存。
+  - action: edit
+    resource: "*.webnovel/state.json"
+    effect: deny
+  - action: edit
+    resource: "*.webnovel/index.db"
+    effect: deny
+  - action: edit
+    resource: "*.webnovel/vectors.db"
+    effect: deny
+  - action: edit
+    resource: "*.webnovel/memory_scratchpad.json"
+    effect: deny
+  - action: edit
+    resource: "*.story-system/events/"
+    effect: deny
+  - action: edit
+    resource: "*.story-system/master_setting.json"
+    effect: deny
 
 ---
 > **DSH 环境自举**：本 skill 正文与命令使用 `${SCRIPTS_DIR}` 变量（OpenCode 侧由调用方
