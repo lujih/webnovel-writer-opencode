@@ -1,0 +1,139 @@
+"""6 个 agent 的 OpenCode V2 `permissions:` 契约。
+
+迁移动机（依据 V1 /docs/permissions 与 V2 /docs/permissions）：
+
+V1 文档明写 "the legacy `tools` boolean config is deprecated and has been
+merged into `permission`"，而两代的默认策略都是**放行**：
+
+    { "action": "*", "resource": "*", "effect": "allow" }
+
+也就是说仓库里那 6 个 `tools: {read: true, ...}` **从未构成白名单**——未列出的
+工具回落到默认放行。只把 true 翻成 allow 规则的话，迁移前后行为完全一致，
+约束仍是零。要让声明的意图真正生效，必须先 deny-all 再逐条放行。
+
+本文件钉住四条容易踩空的不变式，其中第 3 条是迁移过程中真踩到的坑。
+"""
+import re
+from pathlib import Path
+
+import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[4]
+AGENTS_DIR = REPO_ROOT / ".opencode" / "agents"
+
+AGENT_FILES = sorted(AGENTS_DIR.glob("*.md"))
+
+
+def _frontmatter(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    m = re.search(r"^---\s*\n(.*?)\n---", text, re.S)
+    assert m, f"{path.name} 缺少 frontmatter"
+    return m.group(1)
+
+
+def _rules(path: Path) -> list[tuple[str, str, str]]:
+    """解析 permissions 列表为 (action, resource, effect) 三元组，保持顺序。"""
+    fm = _frontmatter(path)
+    assert "permissions:" in fm, f"{path.name} 还没有迁移到 permissions"
+    assert not re.search(r"^tools:", fm, re.M), f"{path.name} 仍残留 legacy tools:"
+    return [
+        (m.group(1), m.group(2), m.group(3))
+        for m in re.finditer(
+            r'^\s*- action:\s*"?([^"\n]+?)"?\s*\n\s*resource:\s*"?([^"\n]+?)"?\s*\n'
+            r'\s*effect:\s*(\w+)\s*$',
+            fm, re.M)
+    ]
+
+
+def _effect_of(rules, action, default="ask"):
+    """最后命中的规则生效（V2 语义）。"""
+    effect = default
+    for rule_action, _resource, rule_effect in rules:
+        if rule_action in (action, "*"):
+            effect = rule_effect
+    return effect
+
+
+@pytest.fixture(params=AGENT_FILES, ids=lambda p: p.name)
+def agent(request):
+    return request.param
+
+
+class TestMigratedShape:
+    def test_uses_v2_permissions(self, agent):
+        rules = _rules(agent)
+        assert rules, f"{agent.name} 的 permissions 是空的"
+
+    def test_first_rule_is_deny_all(self, agent):
+        """没有 deny-all 就等于没迁移——V2 默认放行一切。"""
+        assert _rules(agent)[0] == ("*", "*", "deny")
+
+    def test_uses_v2_action_names(self, agent):
+        """V1 的 bash/task/write 不是 V2 动作名。"""
+        for action, _r, _e in _rules(agent):
+            assert action not in {"bash", "task", "write", "patch"}, (
+                f"{agent.name} 仍用 V1 动作名 {action}"
+                )
+
+    def test_deny_all_comes_before_allows(self, agent):
+        """顺序即优先级；allow 排在 deny-all 前面会被整体拒绝吃掉。"""
+        rules = _rules(agent)
+        deny_at = next(i for i, r in enumerate(rules) if r == ("*", "*", "deny"))
+        assert all(r[2] != "allow" for r in rules[:deny_at]), (
+            f"{agent.name} 在 deny-all 之前就有 allow 规则"
+        )
+
+
+class TestExternalDirectoryTrap:
+    """书项目在仓库之外，deny * 会连 external_directory 一起拒掉。"""
+
+    def test_external_directory_is_restored_to_ask(self, agent):
+        assert _effect_of(_rules(agent), "external_directory") == "ask", (
+            f"{agent.name} 没有把 external_directory 放回 ask——"
+            "agent 读不到 E:\\workspace\\webnovel2 下的正文与 state.json"
+        )
+
+
+class TestLeastPrivilege:
+    def test_read_only_discovery_always_allowed(self, agent):
+        """glob 是只读发现工具，各 agent 都要定位章节/参考文件。"""
+        for action in ("read", "glob", "grep", "shell"):
+            assert _effect_of(_rules(agent), action) == "allow", (
+                f"{agent.name} 缺 {action}（V1 默认放行，收紧它属于自造回归）"
+            )
+
+    def test_privilege_escalating_actions_are_denied(self, agent):
+        """委派 / 联网 / 追问用户都不该由子 agent 自行发起。"""
+        for action in ("subagent", "skill", "webfetch", "websearch", "question"):
+            assert _effect_of(_rules(agent), action) == "deny", (
+                f"{agent.name} 意外放行了 {action}"
+            )
+
+
+class TestPerAgentToolFit:
+    """edit 只能给真正要落盘的 agent，且必须与正文一致。"""
+
+    NEEDS_EDIT = {
+        "reviewer.md",           # 正文要求「用 Write 工具将 JSON 写入 ${REVIEW_OUTPUT}」
+        "chapter-writer-agent.md",  # 写章节文件
+        "data-agent.md",           # 原 tools 声明了 write
+        "observer-agent.md",       # 原 tools 声明了 write
+    }
+    MUST_NOT_EDIT = {
+        "context-agent.md",        # 只组装上下文，原 tools 未声明 write
+        "deconstruction-agent.md",  # 正文明写「只返回结构化结果，不写任何文件」
+    }
+
+    def test_edit_granted_only_where_declared(self, agent):
+        expected = agent.name in self.NEEDS_EDIT
+        actual = _effect_of(_rules(agent), "edit") == "allow"
+        assert actual == expected, (
+            f"{agent.name} 的 edit 放行={actual}，与原文需求声明 {expected} 不符"
+        )
+
+    def test_read_only_agent_body_agrees_with_permissions(self):
+        """deconstruction-agent 的正文自述只读，权限必须与之一致。"""
+        path = AGENTS_DIR / "deconstruction-agent.md"
+        body = path.read_text(encoding="utf-8")
+        assert "不写任何文件" in body
+        assert _effect_of(_rules(path), "edit") == "deny"

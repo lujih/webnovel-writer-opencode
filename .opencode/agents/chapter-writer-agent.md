@@ -2,12 +2,33 @@
 name: chapter-writer-agent
 description: 根据写作任务书起草并润色单个章节，在干净上下文中完成创作闭环。
 mode: subagent
-tools:
-  read: true
-  grep: true
-  bash: true
-  write: true
-  edit: true
+permissions:
+  # V2 默认策略是 allow-all（见 V2 /docs/permissions 的 Defaults），
+  # 不先整体拒绝就等于没有约束——V1 的 `tools:` 布尔映射其实也从未构成白名单。
+  - action: "*"
+    resource: "*"
+    effect: deny
+  # 恢复基础策略里的 external_directory 询问：书项目在仓库之外
+  # （E:\workspace\webnovel2 等），一并 deny 会让 agent 读不到正文与 state.json。
+  - action: external_directory
+    resource: "*"
+    effect: ask
+  - action: read
+    resource: "*"
+    effect: allow
+  - action: glob
+    resource: "*"
+    effect: allow
+  - action: grep
+    resource: "*"
+    effect: allow
+  - action: shell
+    resource: "*"
+    effect: allow
+  - action: edit
+    resource: "*"
+    effect: allow
+
 ---
 
 # chapter-writer-agent

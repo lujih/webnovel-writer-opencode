@@ -2,10 +2,33 @@
 name: data-agent
 description: 从正文提取事实，生成 commit artifacts。
 mode: subagent
-tools:
-  read: true
-  write: true
-  bash: true
+permissions:
+  # V2 默认策略是 allow-all（见 V2 /docs/permissions 的 Defaults），
+  # 不先整体拒绝就等于没有约束——V1 的 `tools:` 布尔映射其实也从未构成白名单。
+  - action: "*"
+    resource: "*"
+    effect: deny
+  # 恢复基础策略里的 external_directory 询问：书项目在仓库之外
+  # （E:\workspace\webnovel2 等），一并 deny 会让 agent 读不到正文与 state.json。
+  - action: external_directory
+    resource: "*"
+    effect: ask
+  - action: read
+    resource: "*"
+    effect: allow
+  - action: glob
+    resource: "*"
+    effect: allow
+  - action: grep
+    resource: "*"
+    effect: allow
+  - action: shell
+    resource: "*"
+    effect: allow
+  - action: edit
+    resource: "*"
+    effect: allow
+
 ---
 > **DSH 环境自举**：本 skill 正文与命令使用 `${SCRIPTS_DIR}` 变量（OpenCode 侧由调用方
 > prompt 传入 `${PWD}/.opencode/scripts`）。在 DeepSeek Harness 下若该变量未设置，

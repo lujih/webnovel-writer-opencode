@@ -96,11 +96,19 @@ def _extract_cli_subcommands(text: str) -> list[str]:
 
 @pytest.mark.parametrize("agent_file", AGENT_FILES, ids=lambda f: f.name)
 def test_agent_frontmatter_complete(agent_file: Path):
-    """每个 agent 必须有 name, description, tools。"""
+    """每个 agent 必须有 name, description，以及一份工具约束。
+
+    工具约束的键随 OpenCode 版本变过：V1 的 `tools` 布尔映射已废弃并并入
+    `permission`（见 V1 /docs/permissions），V2 文档更明令 "Do not use legacy
+    top-level fields such as ... `tools`"，要求写成有序的 `permissions`。
+    两代任一存在即算通过——测试要守的是"有约束"，不是"是哪个键"。
+    """
     fm = _extract_frontmatter(_read_text(agent_file))
     assert "name" in fm, f"{agent_file.name}: 缺少 name"
     assert "description" in fm, f"{agent_file.name}: 缺少 description"
-    assert "tools" in fm, f"{agent_file.name}: 缺少 tools"
+    assert ("permissions" in fm) or ("tools" in fm), (
+        f"{agent_file.name}: 既没有 permissions（V2）也没有 tools（V1）"
+    )
 
 
 @pytest.mark.parametrize("skill_file", SKILL_FILES, ids=lambda f: f.parent.name)
@@ -400,9 +408,12 @@ def test_deconstruction_agent_preserves_init_handoff_and_boundaries():
     assert "不写任何文件" in text
     assert "不得写 `_progress.md`" in text
     assert "resume_state" in text
-    assert "read: true" in text
-    assert "grep: true" in text
-    assert "bash: true" in text
+    # 工具约束：V2 起写 permissions（只读 discovery + shell），不再写 tools 布尔。
+    # 这个 agent 的正文自称"不写任何文件"，所以 edit 必须落在 deny 上——
+    # 具体断言见 test_agent_v2_permissions.py。
+    assert "- action: read" in text
+    assert "- action: shell" in text
+    assert "- action: glob" in text
     assert "快速模式" in text
     assert "深度模式" in text
     assert "黄金三章" in text

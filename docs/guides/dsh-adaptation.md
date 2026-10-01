@@ -45,9 +45,12 @@ python -X utf8 .opencode/scripts/webnovel.py dsh-sync --check     # 幂等校验
 1. **镜像**：把 16 个 `SKILL.md` + 6 个 agent `.md` 复制进 `.dsh/`。
 2. **保留 frontmatter**：原 YAML `name`/`description`（满足 DSH 的
    `name`+`description` 必填 + kebab-case 校验；目录名即 skill name）。
-   非标准键（`compatibility`/`allowed-tools`/`mode`/`tools`）原样保留——
+   非标准键（`compatibility`/`allowed-tools`/`mode`/`permissions`）原样保留——
    DSH 解析器只校验 `name`/`description`/`whenToUse`/`invocation`/`metadata`，
    未知键忽略，不影响加载。
+   agent 的 `permissions:` 是 OpenCode V2 的权限规则（v2.9.3 起取代 `tools:`），
+   **DSH 不解释它**——DSH 无 `.opencode/agents/` 等价物，委派是把 agent 正文
+   拼进 prompt（见下），工具可用性由主流程决定。镜像保留它只为信息完整。
 3. **注入 DSH 适配段**（frontmatter 之后、原正文之前）：
    - **SCRIPTS_DIR 自举**：OpenCode 侧 skill 依赖调用方在 prompt 传入
      `${SCRIPTS_DIR}`；DSH 下模型读 skill 正文时可能没有该变量，适配段给出
