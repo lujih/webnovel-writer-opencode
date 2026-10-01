@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261001.1530",
+  "version": "v2.9.2-20261001.1549",
   "tag": "v2.9.2",
-  "updated": "2026-10-01T15:30:55Z",
+  "updated": "2026-10-01T15:49:40Z",
   "changelog": [
     {
-      "hash": "ef77ee7",
-      "type": "fix",
-      "message": "fix: OpenCode v2 \u9002\u914d\u2014\u2014\u8865 AGENTS.md\u3001write-guard \u6539\u53cc\u5165\u53e3"
+      "hash": "6a715ae",
+      "type": "refactor",
+      "message": "refactor: 6 \u4e2a agent \u8fc1\u79fb\u5230 OpenCode V2 \u539f\u751f permissions"
     },
     {
-      "hash": "9e0ce78",
+      "hash": "15a4b3a",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20260930.1424 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261001.1530 [skip ci]"
     }
   ],
   "files": {
@@ -380,28 +380,28 @@
       "size": 5501
     },
     ".opencode/agents/data-agent.md": {
-      "sha256": "8d168e9c1bcaff697b3b36d46a8079e52b4d04780b8046986bfe19fe29dfb0bb",
-      "size": 7723
+      "sha256": "169b4217222bfddcbd1d9927047ed1d0c01b475c76476adb59a879e22acd8aa2",
+      "size": 8441
     },
     ".opencode/agents/observer-agent.md": {
-      "sha256": "74dd7ce22b111e4f788a3c33639e80e1048ebea196032668ae4cc024c4d6262d",
-      "size": 2626
+      "sha256": "1c62c343e56c7bf125fea21662ddc60d6e6b53911b6cb542a1d5d35ed3ff9941",
+      "size": 3344
     },
     ".opencode/agents/chapter-writer-agent.md": {
-      "sha256": "55e09673d9785b17b88a4ccfe194db4f423166538db3fe9c455c3e033c880006",
-      "size": 5464
+      "sha256": "12e832c10aec0e9565574dcbc4f17eb16130d33b5984b200caf553805546af6c",
+      "size": 6156
     },
     ".opencode/agents/deconstruction-agent.md": {
-      "sha256": "087bb7930389ffb4274ea2a017781bbe4c713183a8f5358792d0d99670c63de3",
-      "size": 8444
+      "sha256": "6c1228351682c2e245c541be06e162a950075a4e1a6c853580f91d61f0940759",
+      "size": 9110
     },
     ".opencode/agents/context-agent.md": {
-      "sha256": "94e96ab5ea27d354d599a18d43a25cb32ccf0efb7de30a6ba89f9368eea053d8",
-      "size": 8644
+      "sha256": "0245161a70afb8f91da7180d9a7f457177534e40f07feacc078c8a7d88015fc7",
+      "size": 9310
     },
     ".opencode/agents/reviewer.md": {
-      "sha256": "6c8b02795e2a8c0aab6b9f44f05872f723747af4d9fc4f488cfd9cc3ccbca29f",
-      "size": 4563
+      "sha256": "03074491d8b45fa4ffc8145be26fc308a52ddc753dac4a6ee51fb982a15c5264",
+      "size": 5268
     },
     ".opencode/agents/references/context-agent-example.md": {
       "sha256": "5b8da19bca68db90cf89c0d3c43d1e365bcf144c85d316ab8e0dfc7d4d109622",
@@ -750,6 +750,10 @@
     ".opencode/scripts/data_modules/sql_state_manager.py": {
       "sha256": "4387e79c60ecea9d542a1dce71390fb40b1457bd896e738f6bff69773822b54a",
       "size": 21853
+    },
+    ".opencode/scripts/data_modules/migrate_agents_v2_permissions.py": {
+      "sha256": "6ac2e3a4c9399157ee40621bb01f5c61fd62471925147eb5b9437f91691b385a",
+      "size": 4865
     },
     ".opencode/scripts/data_modules/chapter_commit_service.py": {
       "sha256": "20c705614abd6cc14f44249515cd7181554c22cda6181c5dcbfd4e1c229ee9b8",
@@ -1244,8 +1248,8 @@
       "size": 7063
     },
     ".opencode/scripts/data_modules/tests/test_prompt_integrity.py": {
-      "sha256": "c43f625a368a5f113217facb4b53e41b917baaf89e8dcedad08864ba73580386",
-      "size": 19105
+      "sha256": "a1a107a2a7db53b58f32c2eeb7e6fdfe7394ff3e894ca4f8f4295498d61aa762",
+      "size": 19841
     },
     ".opencode/scripts/data_modules/tests/test_story_contracts.py": {
       "sha256": "86f87f5d7d947b9f0fc02946d25dd1bd1180c185de09847bff25a1799d3e8e6a",
@@ -1314,6 +1318,10 @@
     ".opencode/scripts/data_modules/tests/test_placeholder_scanner.py": {
       "sha256": "f32b195b8c7524d7bff3f0b519bf523898c53a6a12a3368e4fe9da2645d4ba4a",
       "size": 4941
+    },
+    ".opencode/scripts/data_modules/tests/test_agent_v2_permissions.py": {
+      "sha256": "b99863954f47c682ae1dfccf1e05e274e883c70b80301f39d4e5752bc831310d",
+      "size": 5673
     },
     ".opencode/scripts/data_modules/tests/test_memory_store.py": {
       "sha256": "dc85907932875531862c337e9280e35b548b377a65e27342ae6260b5f120c40b",
