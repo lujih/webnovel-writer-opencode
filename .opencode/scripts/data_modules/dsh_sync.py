@@ -41,6 +41,7 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 OPENCODE_SKILLS = REPO_ROOT / ".opencode" / "skills"
 OPENCODE_AGENTS = REPO_ROOT / ".opencode" / "agents"
 DSH_ROOT = REPO_ROOT / ".dsh"
+CLAUDE_MD = REPO_ROOT / "CLAUDE.md"
 
 # 工具映射表：OpenCode 工具 → DSH 等价物
 _TOOL_MAP = """\
@@ -257,8 +258,27 @@ def main() -> int:
         bridge_dst.parent.mkdir(parents=True, exist_ok=True)
         bridge_dst.write_text(bridge_new, encoding="utf-8")
 
+    # 根级指令文件镜像：CLAUDE.md → AGENTS.md
+    # OpenCode V2 只发现 AGENTS.md，不再回退 CLAUDE.md（见
+    # https://opencode.ai/v2/docs/migrate-v1 "Instruction files"），没有
+    # AGENTS.md 的话整套项目说明在 V2 下完全不可见。
+    # 内容保持**逐字节一致**：DSH 的 instructionFileCandidates 同时包含
+    # AGENTS.md 与 CLAUDE.md，且内容相同时会去重并优先 AGENTS.md
+    # （packages/context/agent-instructions/tests/agent-instructions.spec.ts
+    # "deduplicates one AGENTS.md that is both user-global and the
+    # project-root candidate"），所以复制而非拆分不会造成双重注入。
+    if CLAUDE_MD.is_file():
+        agents_md = REPO_ROOT / "AGENTS.md"
+        new_md = CLAUDE_MD.read_bytes()
+        if args.check:
+            if not agents_md.is_file() or agents_md.read_bytes() != new_md:
+                print(f"stale: {agents_md.relative_to(REPO_ROOT)}")
+                changed += 1
+        else:
+            agents_md.write_bytes(new_md)
+
     print(
-        f"✅ .dsh 适配层：{len(skill_dirs)} skills + {len(agent_files)} agents"
+        f"✅ .dsh 适配层：{len(skill_dirs)} skills + {len(agent_files)} agents + AGENTS.md"
         + ("（--check 有 stale）" if changed and args.check else " 已同步")
     )
     return 1 if changed and args.check else 0

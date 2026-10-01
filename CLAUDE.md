@@ -123,13 +123,23 @@ Code is organized as a pipeline — each layer feeds the next:
 
 ### OpenCode Integration
 
-16 skills and 6 agents defined in `.opencode/skills/` and `.opencode/agents/`. **DSH 适配**：
+16 skills and 6 agents defined in `.opencode/skills/` and `.opencode/agents/`。**OpenCode v2 适配**（依据 https://opencode.ai/v2/docs/migrate-v1 ）：
+V2 三处破坏性变更中两处直接影响本仓库——**① 插件 API 全换，V1 插件实现在 V2 里根本不会被加载**（不报错、静默不加载，守卫无声失效），故 `write-guard.js` 采用官方并存写法：同一个 default export 上同时给 `setup(ctx)`（V2 调用）与 `server()`（V1 调用，OpenCode ≥ 1.18.29 支持 object 入口）。两代 hook 入参形状不同（V1 `input.tool`/`output.args` vs V2 `event.tool`/`event.input`），判定逻辑抽成共享的 `guard(tool, args)`，`test_write_guard_plugin.py` 逐例比对两代判定必须一致。有意不 `import { Plugin } from '@opencode/plugin'`：该包本机未安装，静态 import 解析失败会让插件在 V1 下也加载不了。
+**② V2 只发现 `AGENTS.md`，不再回退 `CLAUDE.md`**——没有 AGENTS.md 则整套项目说明在 V2 下不可见。故 `dsh-sync` 额外把 `CLAUDE.md` 逐字节镜像为 `AGENTS.md` 并纳入 `--check` 门禁；内容一致是刻意的：DSH 的 `instructionFileCandidates` 同时含两者，且内容相同时去重并优先 AGENTS.md，不会双重注入。
+已确认无需改动：skills 目录式 + `name`/`description`（V2 明示不需重写）、`mode: subagent`（V2 仍接受）、`.opencode/plugins/` 与 `.opencode/agents/`（已是 V2 推荐位置）。
+**待办**：6 个 agent 的 frontmatter 仍用 legacy `tools:` 映射，V2 文档明令 "Do not use legacy top-level fields such as ... `tools`"，且工具名改为 `bash`→`shell`、`write`→`edit`、`task`→`subagent`，需改为有序的 `permissions: [{action, resource, effect}]`；3 个 skill 的 `allowed-tools` 在 V2 不被解释（V2 只认 `name`/`description`/`slash`/`metadata`），约束应落到 agent 的 `permissions` 上。
+
+**DSH 适配**：
 DeepSeek Harness（deepseek-ai/deepseek-harness）的 skill provider 不读 `.opencode/`；
 `.dsh/skills/` + `.dsh/agents/` 是派生镜像（17 个 SKILL.md 含桥接层 webnovel-writer
 + 6 个 agent），由 `python .opencode/scripts/webnovel.py dsh-sync` 单向生成（幂等，
 `--check` 做 CI 门禁）；工具映射（Agent→subagent / AskUserQuestion→ask_user_question /
 Task→job_*）与差异点（write-guard 钩子在 DSH 退化为流程纪律）详见
 `docs/guides/dsh-adaptation.md`。SSOT/原子写/伏笔契约等数据层不变式与 harness 无关。
+**DSH 原生化由上游 v8 线负责**（`外部参考/webnovel-writer` 的 v8 分支已用 TypeScript
+重写成 DSH 原生插件 `@linfengqaqtat/dsh-scriptor`，以 `dsh-baseline.json` 锁
+tag/commit/version，并用真实 DSH checkout 跑类型检查；v8 明确不含 OpenCode 宿主），
+本仓库不再追那条线。
 
 Skills: `webnovel-write`, `webnovel-write-batch`, `webnovel-delete`, `webnovel-rewrite`, `webnovel-heal`, `webnovel-review`, `webnovel-init`, `webnovel-plan`, `webnovel-query`, `webnovel-export`, `webnovel-publish`, `webnovel-dashboard`, `webnovel-learn`, `webnovel-doctor`, `webnovel-fanqie-write`, `webnovel-qimao-write`.
 
