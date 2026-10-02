@@ -13,7 +13,8 @@
     "bin/",
     "src/",
     "offline/opencode-bundle.tar.gz",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
     "build:bundle": "node scripts/build-bundle.js",
@@ -27,7 +28,7 @@
     "opencode",
     "chinese"
   ],
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lujih/webnovel-writer-opencode.git"

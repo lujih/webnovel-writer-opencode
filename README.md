@@ -29,7 +29,7 @@
 |----------|------|------|
 | **故事合约引擎** | 维护世界规则的"法律体系" | 总编辑 |
 | **上下文管理** | 每章组装最相关的设定和伏笔 | 责任编辑 |
-| **分层审查** | 13 维度结构化检查章节质量 | 审校团队 |
+| **分层审查** | 6 维度结构化检查章节质量 | 审校团队 |
 | **记忆系统** | 三层记忆压缩和检索 | 资料管理员 |
 | **知识库** | CSV 结构化写作技法和命名规则 | 风格指南 |
 
@@ -108,9 +108,30 @@ RERANK_API_KEY=your_api_key
 | `/webnovel-dashboard` | 可视化看板 + 文风约束编辑 | 全局监控 + 文风管理 |
 | `/webnovel-query` | 查询设定 | 快速检索 |
 
-正如《C++编程思想》中所说："代码的清晰是优秀软件的基石。" 每个命令都设计为自解释的——你只需要告诉系统"做什么"，它会自动处理"怎么做"。
+### 3.4 OpenCode v2 诊断命令
 
-### 3.4 提供帮助和支持
+除创作流程外，另有一组只读斜杠命令，用于随时核对数据一致性：
+
+| 命令 | 功能 | 说明 |
+|------|------|------|
+| `/wn-status` | 项目健康总览 | 章节进度、字数、投影一致性 |
+| `/wn-doctor` | 五类健康诊断 | 文件 / JSON / SQLite / 投影 / Python |
+| `/wn-ssot-verify` | SSOT 一致性校验 | state.json 与事件日志是否漂移 |
+| `/wn-where` | 查看当前绑定的书 | 防止写错项目（静默数据损坏） |
+| `/wn-chapter-status N` | 第 N 章阶段状态 | PLANNING→…→COMMITTED |
+
+这些命令会把命令行的真实输出**在提问提交前**注入，无需你手动粘贴。它们只做只读诊断；`ssot verify` 发现漂移时不会自动重建——重建会按事件日志重写全部投影，需你确认后才执行。
+
+### 3.5 OpenCode 版本兼容性
+
+同时兼容 **OpenCode 1.x 与 2.x**：
+
+- **1.x**：≥ 1.18.29（旧版需升级——写保护插件的双入口写法从该版本起才生效）。
+- **2.x**：直接可用。仓库已按 V2 规范适配，配置文件 `.opencode/opencode.json`。
+- **项目说明走 `AGENTS.md`**：OpenCode 2.x 只发现 `AGENTS.md`、不再回退 `CLAUDE.md`。克隆后请运行 `python .opencode/scripts/webnovel.py sync-agents-md` 生成（CI 会校验二者一致）。**注意不要把 `AGENTS.md` 加进 `.gitignore`**——那是仓库的正式产物，漏了会导致模型看不到全部项目规则。
+- **不要开启 `formatter`**：内置格式化器（prettier / biome）覆盖 `.md`，而章节正文全是 `.md`，开启会重排你的作品。配置里已显式关闭。
+
+### 3.6 提供帮助和支持
 
 遇到问题时，可以通过以下渠道获取帮助：
 
@@ -127,41 +148,54 @@ Donald Knuth 在《计算机程序设计艺术》中写道："程序是为人类
 ```
 webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 ├── manifest.json                 # 文件清单（SHA256，增量更新用）
-├── .env                          # API 配置（不提交）
-├── README.md                     # 项目技术概览
-├── README_CN.md                  # 项目详细说明（本文件）
+├── LICENSE                       # GPL v3（继承自 lingfengQAQ/webnovel-writer）
+├── CLAUDE.md                     # 项目说明正本（面向开发者与 agent）
+├── AGENTS.md                     # 正本的镜像：OpenCode v2 只发现这个文件
+├── README.md                     # 项目技术概览（本文件）
 │
 ├── .opencode/                    # OpenCode 引擎核心
-│   ├── agents/                   # Agent 定义
+│   ├── opencode.json             # 项目配置（v2 规范；权限 / 压缩 / 监听）
+│   │
+│   ├── agents/                   # 6 个 Agent
 │   │   ├── context-agent.md      # 上下文搜集 Agent
-│   │   ├── data-agent.md         # 数据处理 Agent
-│   │   ├── reviewer.md           # 审查 Agent（13 维度结构化检查）
+│   │   ├── observer-agent.md     # 自由事实提取 Agent（coverage-first）
+│   │   ├── chapter-writer-agent.md # 章节起草 Agent
+│   │   ├── data-agent.md         # 数据处理 Agent（实体消歧 + 履约）
+│   │   ├── reviewer.md           # 审查 Agent（6 维度结构化检查）
 │   │   └── deconstruction-agent.md # 作品解构 Agent
 │   │
-│   ├── skills/                   # 13 个 Skills（webnovel-*）
+│   ├── skills/                   # 16 个 Skills（webnovel-*）
+│   │
+│   ├── commands/                 # 5 个只读诊断斜杠命令（wn-*）
+│   │
+│   ├── plugins/                  # write-guard.js：禁止直接写 SSOT 文件
 │   │
 │   ├── dashboard/                # 可视化面板
 │   │   ├── app.py                # FastAPI 应用入口
 │   │   ├── server.py             # 服务器配置
 │   │   └── frontend/             # React 19 前端（ECharts）
 │   │
-│   ├── genres/                   # 38+ 题材模板
+│   ├── genres/                   # 6 大题材模板（38+ 细分）
 │   ├── references/               # 结构化知识库
 │   │   ├── csv/                  # 9 张知识表 + BM25 检索
 │   │   ├── writing/              # 写作技法参考
 │   │   └── review/               # 审查规则
 │   │
 │   └── scripts/                  # Python 核心脚本
-│       ├── webnovel.py           # CLI 统一入口（28 个子命令）
-│       ├── data_modules/         # 核心数据模块（60+ 个）
-│       └── tests/                # 测试（59 个测试文件）
+│       ├── webnovel.py           # CLI 统一入口（38 个子命令）
+│       ├── data_modules/         # 核心数据模块（72 个）
+│       └── tests/                # 测试（99 个测试文件，1097 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构
     ├── guides/                   # 使用指南
     ├── operations/               # 运维文档
+    ├── memory/                   # 记忆系统设计
+    ├── specs/                    # 规格说明
     └── research/                 # 研究笔记
 ```
+
+> **审查维度是 6 个**（设定 / 时间线 / 连贯 / 角色 / 逻辑 / 项目规则）。AI 味、节奏、毒点**不由** reviewer 检查，而由润色阶段处理——早期文档曾写"13 维"，代码中并不存在。
 
 ### 4.2 六层数据流架构
 
@@ -169,8 +203,8 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 
 | 层级 | 名称 | 职责 | 核心模块 |
 |------|------|------|----------|
-| **L1** | Knowledge | CSV 结构化知识 + BM25 检索 | `references/csv/`, `reference_search.py` |
-| **L2** | Reasoning | 题材路由 + 反模式排序 | `genres/` |
+| **L1** | Knowledge | CSV 结构化知识 + BM25 检索 | `.opencode/references/csv/`, `reference_search.py` |
+| **L2** | Reasoning | 题材路由 + 反模式排序 | `.opencode/genres/` |
 | **L3** | Contract | MASTER_SETTING + 卷纲章纲 + 审查合约 | `story_system_engine.py`, `story_contracts.py` |
 | **L4** | Context | JSON 拼装写作上下文 | `context_manager.py` |
 | **L5** | Commit | 事实提取 + 事件溯源 + 投影路由 | `chapter_commit_service.py`, `event_log_store.py` |
@@ -187,10 +221,10 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 | **Override 合约引擎** | `override_contract_engine.py` | 世界规则版本化演进 + 上下文提示生成 |
 | **Observer→Reflector** | `observer_settler.py` | 双段事实提取——自由文本提取+Pydantic Schema 校验 |
 | **记忆系统** | `memory/orchestrator.py` | 三层记忆（工作/情节/语义）+ 压缩编排 |
-| **审查管线** | `review_pipeline.py` | Code Checker 预处理 → 13 维度结构化审查（最多 3 轮收敛） |
+| **审查管线** | `review_pipeline.py` | Code Checker 预处理 → 6 维度结构化审查（写-修循环最多 2 轮） |
 | **Graph-RAG** | `entity_linker.py` | 实体关系图谱 + SQLite 持久化 |
 | **DebtTracker** | `index_debt_mixin.py` | 伏笔创建 → 偿还 → 硬约束阻塞 |
-| **发布模块** | `publisher/` | Playwright 浏览器自动化 + HTTP API |
+| **发布模块** | `.opencode/scripts/publisher/` | Playwright 浏览器自动化（番茄 / 七猫适配器） |
 
 ## 5. 贡献指南
 
@@ -251,6 +285,12 @@ GPL v3 要求任何使用、修改或分发本代码的人必须将其更改公�
 | 私人使用 | ✓ | 无限制 |
 
 完整许可证文本见 [LICENSE](LICENSE) 文件。
+
+> ⚠️ **npm 包同样受 GPL v3 约束。** `@cszx/webnovel-writer-opencode` 的
+> `package.json` 过去声明为 `"license": "MIT"`，与仓库正本矛盾——MIT 允许
+> 闭源再分发，与 GPL 的 copyleft 义务不兼容。现已更正为 `GPL-3.0-only`，
+> 并在构建时把 `LICENSE` 一并打进包内（GPL §4(a) 要求分发时附许可证副本）。
+> 通过 npm 安装与通过 git clone 使用，受同一许可证约束。
 
 ## 7. 联系信息和致谢
 

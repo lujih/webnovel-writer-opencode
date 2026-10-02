@@ -117,11 +117,23 @@ function collectFiles(dir, base) {
 // ── 构建 tar.gz 流 ──────────────────────────────────────
 
 async function buildBundle() {
-  const { mkdirSync } = await import('node:fs');
+  const { mkdirSync, copyFileSync } = await import('node:fs');
   mkdirSync(OUT_DIR, { recursive: true });
 
   if (!statSync(OPC_DIR).isDirectory()) {
     throw new Error(`.opencode/ 不存在: ${OPC_DIR}`);
+  }
+
+  // GPL §4(a)：分发时必须附上许可证副本。package.json 的 "files" 以
+  // .npm-package/ 为基准，而正本 LICENSE 在仓库根，故构建时复制一份过去。
+  // 在这里复制而不是把两份文件都提交进 git——后者必然漂移。
+  const REPO_LICENSE = join(__pkgRoot, '..', 'LICENSE');
+  const PKG_LICENSE = join(__pkgRoot, 'LICENSE');
+  if (statSync(REPO_LICENSE).isFile()) {
+    copyFileSync(REPO_LICENSE, PKG_LICENSE);
+    process.stdout.write(`  ✅ 许可证已附: ${PKG_LICENSE}\n`);
+  } else {
+    throw new Error(`LICENSE 不存在: ${REPO_LICENSE}（GPL 分发必须附许可证）`);
   }
 
   process.stdout.write('\n=== 构建离线包 ===\n');
