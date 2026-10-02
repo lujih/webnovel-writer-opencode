@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261002.1453",
+  "version": "v2.9.2-20261002.1525",
   "tag": "v2.9.2",
-  "updated": "2026-10-02T14:53:49Z",
+  "updated": "2026-10-02T15:25:23Z",
   "changelog": [
     {
-      "hash": "eefba78",
-      "type": "refactor",
-      "message": "refactor: \u79fb\u9664 DSH \u9002\u914d\u5c42\uff0c\u4e13\u6ce8 OpenCode"
+      "hash": "f13955c",
+      "type": "fix",
+      "message": "fix: \u4fee\u6b63 npm \u5305\u8bb8\u53ef\u8bc1\u51b2\u7a81\uff0c\u5e76\u8ba9 README \u5bf9\u5916\u4fe1\u606f\u4e0e\u4ee3\u7801\u4e00\u81f4"
     },
     {
-      "hash": "b4e56d0",
+      "hash": "9779509",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261001.1608 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261002.1453 [skip ci]"
     }
   ],
   "files": {
@@ -1119,6 +1119,10 @@
       "sha256": "d44d7c1a1744e5f870ff9a447f8b4c952dc94d4b4a8192fc8e3c0b175d7f24c5",
       "size": 17217
     },
+    ".opencode/scripts/data_modules/tests/test_npm_package_license.py": {
+      "sha256": "3bd30e2f25cfd7e083726e05aa7be10916fdc213c63bf18697d350ae72e4fa1f",
+      "size": 4284
+    },
     ".opencode/scripts/data_modules/tests/test_foreshadowing_debt_keys.py": {
       "sha256": "f70f867891f0487116b004b4e30b4ffebf09561669f6faa1f51399138107cc6e",
       "size": 6403
@@ -1262,6 +1266,10 @@
     ".opencode/scripts/data_modules/tests/test_story_contracts.py": {
       "sha256": "86f87f5d7d947b9f0fc02946d25dd1bd1180c185de09847bff25a1799d3e8e6a",
       "size": 2634
+    },
+    ".opencode/scripts/data_modules/tests/test_readme_accuracy.py": {
+      "sha256": "9a3f2f8c2f9d4216f4ff5d1114d9f07110d3e047470496213cb17f9154a0f8da",
+      "size": 6990
     },
     ".opencode/scripts/data_modules/tests/mock_demo.py": {
       "sha256": "92c9b0aa3a3116394f8be8d49ad5688500102a1097d0d66c0009cff3e3617cb4",
