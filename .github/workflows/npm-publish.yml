@@ -17,6 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      # Trusted Publishing（OIDC）：用 GitHub 的短期身份令牌换取 npm 发布凭证。
+      # 不再需要长期 npm 令牌——它会过期/泄露，而令牌过期正是本
+      # workflow 连续失败两周无人察觉的根因。
+      id-token: write
     defaults:
       run:
         working-directory: .npm-package
@@ -30,6 +34,12 @@ jobs:
         with:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'
+
+      # OIDC 令牌交换是 npm CLI **11.5.1** 才引入的，而 node 22 自带的是
+      # 10.9.9 —— 不升级的话 npm 认不出 OIDC，会退回去找令牌然后报 E401/EOTP。
+      # 必须升到 11.5.1 以上（当前 npm 12.x）。
+      - name: 升级 npm 以支持 Trusted Publishing
+        run: npm install -g npm@latest && npm --version
 
       - name: 构建离线包
         run: node scripts/build-bundle.js
@@ -88,17 +98,21 @@ jobs:
           echo "版本: $VER"
           npm version "$VER" --no-git-tag-version --allow-same-version
 
-      - name: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # 不再注入 npm 认证令牌：Trusted Publishing 由 npm CLI 自动发现
+      # Actions 的 OIDC 环境变量并换取短期凭证。显式带令牌反而会让 npm
+      # 优先走令牌路径，而账号若强制 2FA 就又回到 EOTP。
+      - name: npm publish（Trusted Publishing / OIDC）
         run: |
           set -euo pipefail
           # 发布是**对外不可逆**的动作：一次失败只说明这次没成，但根因常被
           # 后续推送淹没。此处在失败时打醒目日志并回传 GitHub 注解，
           # 免得又出现"连续失败两周没人发现"。
-          if ! npm publish --access public --tag latest; then
-            echo "::error::npm publish 失败。常见根因：NPM_TOKEN 过期/无 publish 权限，或该 npm 账号要求 OTP 二次验证。" >&2
-            echo "::error::修复凭据后重跑本 workflow 即可；已发布的版本不受影响。" >&2
+          if ! npm publish --access public --tag latest --provenance; then
+            echo "::error::npm publish 失败。Trusted Publishing 下的常见根因：" >&2
+            echo "::error::  1) npm 包未配置 Trusted Publisher，或仓库/工作流名/环境对不上；" >&2
+            echo "::error::  2) workflow 缺少 permissions.id-token: write；" >&2
+            echo "::error::  3) npm CLI < 11.5.1，认不出 OIDC（本 workflow 会先自升级）。" >&2
+            echo "::error::修复后重跑本 workflow 即可；已发布的版本不受影响。" >&2
             exit 1
           fi
 
