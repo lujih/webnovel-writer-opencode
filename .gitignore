@@ -4,7 +4,10 @@
 .codex/
 .gemini/
 .trellis/
-AGENTS.md
+# ⚠️ AGENTS.md **刻意不忽略**：OpenCode 2.0 只发现 AGENTS.md，不再回退
+# CLAUDE.md。它是 CLAUDE.md 的派生成物（`webnovel.py sync-agents-md`），
+# 必须进 git，否则全新 clone 下项目说明对模型完全不可见，而
+# `sync-agents-md --check` 在缺失时才会报 stale——CI 反而会误判为通过。
 
 # Python caches & virtualenv
 __pycache__/

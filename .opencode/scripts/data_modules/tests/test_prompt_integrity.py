@@ -38,6 +38,7 @@ REGISTERED_CLI_SUBCOMMANDS = {
     "story-system", "chapter-commit", "story-events", "knowledge",
     "export", "publish", "chapter-path",
     "delete-chapters", "entity-clean", "ssot", "workflow", "override", "orchestrate",
+    "sync-agents-md",
 }
 
 

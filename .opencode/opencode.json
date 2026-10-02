@@ -71,7 +71,7 @@
   // ⚠️ 故意**不**写 "instructions": [...]。
   // V2 文档明写："OpenCode accepts this field but does not load its entries;
   // use AGENTS.md for instructions." —— 它能通过校验、什么都不做，是静默空操作。
-  // 项目说明的唯一真实通道是 AGENTS.md（由 dsh-sync 从 CLAUDE.md 镜像生成）。
+  // 项目说明的唯一真实通道是 AGENTS.md（由 `sync-agents-md` 从 CLAUDE.md 镜像生成）。
   //
   // 同样不写 "skills"：V2 已自动发现 .opencode/skills/，配空数组没有意义。
 }

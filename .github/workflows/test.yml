@@ -35,9 +35,10 @@ jobs:
           python -X utf8 -m pytest .opencode/scripts/data_modules/tests \
             -q -p no:cov -o "addopts="
 
-      # .dsh/ 镜像是生成物：dsh-sync 幂等，--check 在镜像过期时返回 1。
-      - name: Verify .dsh mirrors are in sync
-        run: python -X utf8 .opencode/scripts/webnovel.py dsh-sync --check
+      # AGENTS.md 是 CLAUDE.md 的派生成物：OpenCode V2 只发现 AGENTS.md，
+      # 两者不同步则整套项目说明对模型不可见。--check 在漂移时返回 1。
+      - name: Verify AGENTS.md mirror is in sync
+        run: python -X utf8 .opencode/scripts/webnovel.py sync-agents-md --check
 
       - name: Byte-compile all scripts
         run: python -m compileall -q .opencode/scripts

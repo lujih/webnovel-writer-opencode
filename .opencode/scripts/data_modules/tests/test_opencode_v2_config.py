@@ -12,9 +12,13 @@
    全是 .md；formatter 在写盘**之后**才跑，拦不住，只会把用户的作品重排。
 4. 斜杠命令的 `!` shell 块绕过工具权限流（V2 commands 文档的 Warning），
    因此只允许只读子命令出现在 shell 块里。
+5. AGENTS.md 必须真的在 git 里——.gitignore 曾把它当 legacy 产物忽略掉，
+   全新 clone 下 OpenCode V2 就看不到任何项目说明，而 --check 门禁反而通过。
 """
 import json
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -22,6 +26,8 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[4]
 CONFIG = REPO_ROOT / ".opencode" / "opencode.json"
 COMMANDS_DIR = REPO_ROOT / ".opencode" / "commands"
+
+sys.path.insert(0, str(REPO_ROOT / ".opencode" / "scripts"))
 
 
 def _strip_jsonc(text: str) -> dict:
@@ -46,6 +52,90 @@ class TestConfigParses:
         assert set(config) == {
             "permissions", "formatter", "compaction", "watcher", "tool_output",
         }, f"意外的键: {set(config) - {'permissions','formatter','compaction','watcher','tool_output'}}"
+
+
+class TestAgentsMdIsActuallyCommitted:
+    """AGENTS.md 必须真的在 git 里。
+
+    实测踩过的坑：`.gitignore` 曾把 `AGENTS.md` 当作 "Legacy Claude workspace
+    artifact" 忽略掉，于是全新 clone 下这个文件根本不存在——OpenCode V2 只
+    发现 AGENTS.md，等于整套项目说明对模型完全不可见，而 `sync-agents-md
+    --check` 在"缺失"时才会报 stale，CI 于是**误判通过**。光有门禁不够，
+    得确认它进得了版本库。
+    """
+
+    def test_not_gitignored(self):
+        # 注意：不能用 `git check-ignore` 判断——文件一旦被跟踪，gitignore 对它
+        # 就完全无效，check-ignore 会返回"未忽略"，即使 .gitignore 里写着规则。
+        # 那正是原 bug 难被发现的原因：本地一切正常，只有全新 clone 才暴露。
+        # 这里直接读 .gitignore 的实际规则。
+        ignore_file = REPO_ROOT / ".gitignore"
+        patterns = [
+            line.strip()
+            for line in ignore_file.read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
+        assert "AGENTS.md" not in patterns, (
+            ".gitignore 仍忽略 AGENTS.md——一旦取消跟踪，全新 clone 下 "
+            "OpenCode V2 就看不到任何项目说明"
+        )
+
+    def test_tracked_by_git(self):
+        proc = subprocess.run(
+            ["git", "ls-files", "--error-unmatch", "AGENTS.md"],
+            cwd=REPO_ROOT, capture_output=True, text=True)
+        assert proc.returncode == 0, (
+            "AGENTS.md 未被 git 跟踪；.gitignore 里的忽略规则已移除，"
+            "请确认 git add 过"
+        )
+
+    def test_matches_claude_md(self):
+        """内容逐字节一致，避免两套说明互相矛盾。"""
+        claude = REPO_ROOT / "CLAUDE.md"
+        agents = REPO_ROOT / "AGENTS.md"
+        assert agents.is_file(), "AGENTS.md 缺失"
+        assert agents.read_bytes() == claude.read_bytes(), (
+            "AGENTS.md 与 CLAUDE.md 不一致——运行 "
+            "`python .opencode/scripts/webnovel.py sync-agents-md`"
+        )
+
+
+class TestSyncAgentsMdCommand:
+    """门禁行为：缺失/漂移必须报错，不能静默通过。"""
+
+    @pytest.fixture(autouse=True)
+    def _importable(self):
+        from data_modules import sync_agents_md  # noqa: F401
+
+    def _run(self, tmp_path, monkeypatch, *argv):
+        from data_modules import sync_agents_md
+
+        monkeypatch.setattr(sync_agents_md, "CLAUDE_MD", tmp_path / "CLAUDE.md")
+        monkeypatch.setattr(sync_agents_md, "AGENTS_MD", tmp_path / "AGENTS.md")
+        monkeypatch.setattr(sys, "argv", ["sync-agents-md", *argv])
+        return sync_agents_md.main()
+
+    def test_missing_agents_md_fails_check(self, tmp_path, monkeypatch):
+        (tmp_path / "CLAUDE.md").write_text("x", encoding="utf-8")
+        assert self._run(tmp_path, monkeypatch, "--check") == 1, (
+            "AGENTS.md 缺失时 --check 必须返回 1，否则 CI 会误判通过"
+        )
+
+    def test_generates_then_is_idempotent(self, tmp_path, monkeypatch):
+        (tmp_path / "CLAUDE.md").write_text("x", encoding="utf-8")
+        assert self._run(tmp_path, monkeypatch) == 0
+        assert (tmp_path / "AGENTS.md").read_text(encoding="utf-8") == "x"
+        assert self._run(tmp_path, monkeypatch, "--check") == 0
+
+    def test_drift_is_detected(self, tmp_path, monkeypatch):
+        (tmp_path / "CLAUDE.md").write_text("new", encoding="utf-8")
+        assert self._run(tmp_path, monkeypatch) == 0
+        assert self._run(tmp_path, monkeypatch, "--check") == 0
+        (tmp_path / "AGENTS.md").write_text("stale", encoding="utf-8")
+        assert self._run(tmp_path, monkeypatch, "--check") == 1
+
+    def test_missing_source_fails(self, tmp_path, monkeypatch):
+        assert self._run(tmp_path, monkeypatch) == 1
 
 
 class TestNoStaleSchema:

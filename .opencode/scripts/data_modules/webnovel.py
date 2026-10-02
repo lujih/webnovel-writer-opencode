@@ -599,11 +599,11 @@ def main() -> None:
     ovr_ctx = p_ovr_sub.add_parser("context", help="生成上下文提示")
     ovr_ctx.add_argument("--chapter", type=int, required=True)
 
-    p_dsh_sync = sub.add_parser(
-        "dsh-sync",
-        help="镜像 .opencode 资产为 DeepSeek Harness 适配层（.dsh/skills + .dsh/agents）",
+    p_sync_agents = sub.add_parser(
+        "sync-agents-md",
+        help="把 CLAUDE.md 镜像为 AGENTS.md（OpenCode V2 只发现 AGENTS.md）",
     )
-    p_dsh_sync.add_argument("--check", action="store_true", help="只校验不写盘（幂等性检查）")
+    p_sync_agents.add_argument("--check", action="store_true", help="只校验不写盘（幂等性检查）")
 
     # 兼容：允许 `--project-root` 出现在任意位置（减少 agents/skills 拼命令的出错率）
     from .cli_args import normalize_global_project_root
@@ -632,13 +632,13 @@ def main() -> None:
     if tool == "init":
         raise SystemExit(_run_script("init_project.py", rest))
 
-    # dsh-sync 作用于仓库根（.opencode → .dsh），不需要书项目 root
-    if tool == "dsh-sync":
-        from .dsh_sync import main as _dsh_sync_main
+    # sync-agents-md 作用于仓库根（CLAUDE.md → AGENTS.md），不需要书项目 root
+    if tool == "sync-agents-md":
+        from .sync_agents_md import main as _sync_agents_main
         saved_argv = sys.argv
-        sys.argv = ["dsh-sync"] + (["--check"] if getattr(args, "check", False) else [])
+        sys.argv = ["sync-agents-md"] + (["--check"] if getattr(args, "check", False) else [])
         try:
-            rc = _dsh_sync_main()
+            rc = _sync_agents_main()
         finally:
             sys.argv = saved_argv
         raise SystemExit(rc)
