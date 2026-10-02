@@ -36,6 +36,7 @@ jobs:
 
       - name: 确定版本号
         run: |
+          set -euo pipefail
           PKG="@cszx/webnovel-writer-opencode"
 
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then
@@ -47,8 +48,20 @@ jobs:
             BASE_TAG=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//')
             BASE_TAG="${BASE_TAG:-0.0.0}"
 
-            # 查 npm 当前最新版本
-            NPM_LATEST=$(npm view "$PKG" version 2>/dev/null || echo "$BASE_TAG")
+            # ⚠️ `npm view` 失败时**不能**回落到 "$BASE_TAG"。回落会算出
+            # "${BASE_TAG}-1"，而那个版本（2.9.2-1）早在 2026-06 就发布过，
+            # 于是每次都撞 EPUBLISHCONFLICT，且报错与真实原因（registry 查询失败）
+            # 毫无关联。查不到就明确失败——这一步失败才是可诊断的。
+            if ! NPM_LATEST=$(npm view "$PKG" version 2>/dev/null); then
+              echo "::error::无法查询 npm 上 ${PKG} 的最新版本（registry 不可达或包名有误）。" >&2
+              echo "::error::为避免算出已发布过的 ${BASE_TAG}-1 并触发 EPUBLISHCONFLICT，此处中止。" >&2
+              exit 1
+            fi
+
+            if [[ -z "$NPM_LATEST" ]]; then
+              echo "::error::npm view 返回空版本号，中止。" >&2
+              exit 1
+            fi
 
             if [[ "$NPM_LATEST" == "$BASE_TAG" ]]; then
               VER="${BASE_TAG}-1"
@@ -56,8 +69,17 @@ jobs:
               N=$(echo "$NPM_LATEST" | sed "s/${BASE_TAG}-//")
               VER="${BASE_TAG}-$((N + 1))"
             else
-              VER="${BASE_TAG}-1"
+              echo "::error::npm 上最新版本 ${NPM_LATEST} 与最新 git tag ${BASE_TAG} 不在同一 base，" >&2
+              echo "::error::自动 bump 无从判断，请人工发 tag（v${BASE_TAG}）后再发布。" >&2
+              exit 1
             fi
+          fi
+
+          # 算出来的版本是否已被占用——早失败并说人话，而不是让 npm 抛
+          # EPUBLISHCONFLICT。
+          if npm view "$PKG@$VER" version >/dev/null 2>&1; then
+            echo "::error::版本 ${VER} 已存在于 npm。请人工确认要发的新版本号。" >&2
+            exit 1
           fi
 
           echo "版本: $VER"
@@ -66,7 +88,16 @@ jobs:
       - name: npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public --tag latest
+        run: |
+          set -euo pipefail
+          # 发布是**对外不可逆**的动作：一次失败只说明这次没成，但根因常被
+          # 后续推送淹没。此处在失败时打醒目日志并回传 GitHub 注解，
+          # 免得又出现"连续失败两周没人发现"。
+          if ! npm publish --access public --tag latest; then
+            echo "::error::npm publish 失败。常见根因：NPM_TOKEN 过期/无 publish 权限，或该 npm 账号要求 OTP 二次验证。" >&2
+            echo "::error::修复凭据后重跑本 workflow 即可；已发布的版本不受影响。" >&2
+            exit 1
+          fi
 
       - name: 生成 Release Notes
         if: startsWith(github.ref, 'refs/tags/v')

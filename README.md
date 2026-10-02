@@ -68,6 +68,20 @@ npx @cszx/webnovel-writer-opencode init
 
 离线包内置（1.7 MB），无需联网下载。自动检测 Python 并安装依赖。完成后在工作目录打开 OpenCode 即可开始写作。
 
+> ⚠️ **npm 上的版本已陈旧（截至 2026-10-02）**：`@cszx/webnovel-writer-opencode`
+> 最后一次成功发布是 **2026-09-18 的 `2.9.2-11`**，此后的自动发布一直失败。
+> 因此 npm 包里**不含**最近的 OpenCode v2 适配（`opencode.json`、agent 权限、
+> `AGENTS.md`、写保护插件双入口等）。需要最新版本请直接从仓库安装：
+>
+> ```bash
+> git clone https://github.com/lujih/webnovel-writer-opencode.git
+> cd webnovel-writer-opencode
+> python .opencode/scripts/webnovel.py sync-agents-md   # 生成 AGENTS.md（v2 必需）
+> ```
+>
+> 顺带一提：该包在 npm 上的 `license` 字段长期误标为 MIT（实际是 GPL-3.0）。
+> 仓库侧已更正，新发布版本起生效。
+
 ```bash
 npx @cszx/webnovel-writer-opencode update   # 更新
 npx @cszx/webnovel-writer-opencode uninstall # 卸载
