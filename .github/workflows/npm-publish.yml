@@ -8,6 +8,9 @@ on:
       - '.opencode/**'
     tags:
       - 'v*'
+  # 凭据轮换后需要一个主动重发的入口：只有 push 触发的话，修了 token 也只能
+  # 靠制造空提交来触发，那类提交会污染 master 历史。
+  workflow_dispatch:
 
 jobs:
   publish:
