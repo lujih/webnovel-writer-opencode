@@ -101,6 +101,54 @@
 /webnovel-heal
 ```
 
+### `/webnovel-write-batch [范围]`
+
+连续写多章。**多章需求一律用这个**，不要循环调用单章 `/webnovel-write`——
+批量流程有独立的上下文隔离协议（`references/batch-protocol.md`），
+逐章调用会丢失跨章一致性检查。
+
+```bash
+/webnovel-write-batch 5-8
+```
+
+### `/webnovel-doctor`
+
+项目健康诊断：目录 / JSON / SQLite / 投影 / Python 五类检查。
+只读操作，不修改任何文件。等价的只读斜杠命令见下方 `/wn-doctor`。
+
+### `/webnovel-export [格式]`
+
+导出正文为 Markdown / TXT / EPUB / HTML / DOCX / PDF。
+
+### `/webnovel-publish`
+
+发布到番茄 / 七猫等平台。使用前建议先 `/webnovel-review` 自查。
+
+### `/webnovel-fanqie-write` / `/webnovel-qimao-write`
+
+平台风格**补充**规则，不是独立流程。写作番茄章时在 `/webnovel-write` 之上
+叠加 fanqie 的开头/节奏/对话/钩子/留存约束；七猫同理。不可替代主 skill。
+
+## 只读诊断斜杠命令（`wn-*`）
+
+这组命令把 CLI 的**真实输出在提问提交前**注入，模型不必先猜再跑，
+也不会把关键数据读错。它们**全部只读**，不会改写任何文件。
+
+| 命令 | 等价 CLI | 用途 |
+|------|----------|------|
+| `/wn-status` | `status` | 章节进度、字数、投影一致性总览 |
+| `/wn-doctor` | `doctor --format text` | 五类健康诊断 |
+| `/wn-ssot-verify` | `ssot verify` | state.json 与事件日志是否漂移 |
+| `/wn-where` | `where` | 当前绑定的是哪本书 |
+| `/wn-chapter-status N` | `workflow status --chapter N` | 第 N 章的阶段状态 |
+
+⚠️ **`/wn-ssot-verify` 发现漂移时不会自动重建。** `ssot rebuild` 会按事件日志
+重写全部投影，属破坏性操作，必须由你确认后手动执行。
+
+⚠️ 这些命令走 `!` shell 块执行，**绕过 OpenCode 的工具权限流**（写保护插件
+拦不到）。因此只放只读子命令；`delete-chapters` / `chapter-commit` / `publish`
+这类写操作不提供斜杠命令，请走上面的 skill 流程。
+
 ## 统一 CLI（命令行使用）
 
 所有 CLI 命令的入口都是 `webnovel.py`，格式：
@@ -184,6 +232,24 @@ python -X utf8 "<OPENCODE_ROOT>/scripts/webnovel.py" --project-root "<PROJECT_RO
 | `export` | 正文导出（MD/TXT/EPUB/HTML/DOCX/PDF） |
 | `publish` | 番茄小说平台发布 |
 | `clean-tmp --keep <filename>` | 清理临时文件时保留指定文件 |
+| `sync-agents-md` | 把 `CLAUDE.md` 镜像为 `AGENTS.md`（**OpenCode v2 必需**，见下） |
+
+#### `sync-agents-md`（OpenCode v2）
+
+OpenCode 2.x **只发现 `AGENTS.md`，不再回退 `CLAUDE.md`**。没有该文件，
+16 个 skill 与 6 个 agent 的硬规则对模型完全不可见——模型会照常调用 skill，
+但不知道"SSOT 只能经 CLI 写入""审查载荷异常必须 fail-closed"这类约束。
+
+```bash
+python -X utf8 "<OPENCODE_ROOT>/scripts/webnovel.py" sync-agents-md          # 生成
+python -X utf8 "<OPENCODE_ROOT>/scripts/webnovel.py" sync-agents-md --check  # 校验（CI 用）
+```
+
+`CLAUDE.md` 是正本，`AGENTS.md` 是其**逐字节镜像**。改完 `CLAUDE.md` 需重跑
+（否则 CI 的 `--check` 会失败）。npm 包内已含 `AGENTS.md`，从 git 安装才需自己生成。
+
+⚠️ 不要把 `AGENTS.md` 加进 `.gitignore`——它必须进版本库，否则全新 clone 下
+v2 用户看不到任何项目说明。
 
 ### 长期记忆子命令
 

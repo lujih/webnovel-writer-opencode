@@ -68,19 +68,19 @@ npx @cszx/webnovel-writer-opencode init
 
 离线包内置（1.7 MB），无需联网下载。自动检测 Python 并安装依赖。完成后在工作目录打开 OpenCode 即可开始写作。
 
-> ⚠️ **npm 上的版本已陈旧（截至 2026-10-02）**：`@cszx/webnovel-writer-opencode`
-> 最后一次成功发布是 **2026-09-18 的 `2.9.2-11`**，此后的自动发布一直失败。
-> 因此 npm 包里**不含**最近的 OpenCode v2 适配（`opencode.json`、agent 权限、
-> `AGENTS.md`、写保护插件双入口等）。需要最新版本请直接从仓库安装：
+> 📌 **如果你在此之前（2026-09-18 之前）装过 npm 版，请重装一次。**
+> 上一版 `2.9.2-11` 遗漏了整批 OpenCode v2 适配，且该版本的 `license` 字段
+> 误标为 MIT（实际是 GPL-3.0）。当前 `latest` 为 `2.9.2-12`，已包含：
+> `.opencode/opencode.json`、6 个 agent 的 v2 `permissions`、写保护插件双入口、
+> `AGENTS.md` 生成脚本、5 个 `wn-*` 诊断命令，以及随包分发的 `LICENSE`。
+>
+> 从 git 安装则须自己生成 `AGENTS.md`（npm 包内已含）：
 >
 > ```bash
 > git clone https://github.com/lujih/webnovel-writer-opencode.git
 > cd webnovel-writer-opencode
-> python .opencode/scripts/webnovel.py sync-agents-md   # 生成 AGENTS.md（v2 必需）
+> python .opencode/scripts/webnovel.py sync-agents-md
 > ```
->
-> 顺带一提：该包在 npm 上的 `license` 字段长期误标为 MIT（实际是 GPL-3.0）。
-> 仓库侧已更正，新发布版本起生效。
 
 ```bash
 npx @cszx/webnovel-writer-opencode update   # 更新
@@ -198,7 +198,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   └── scripts/                  # Python 核心脚本
 │       ├── webnovel.py           # CLI 统一入口（38 个子命令）
 │       ├── data_modules/         # 核心数据模块（72 个）
-│       └── tests/                # 测试（100 个测试文件，1106 用例）
+│       └── tests/                # 测试（100 个测试文件，1109 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构

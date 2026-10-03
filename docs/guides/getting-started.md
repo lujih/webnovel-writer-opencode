@@ -208,6 +208,17 @@ AI 会分 7 步和你交互。以下是每一步会问什么，以及你需要�
 
 > ⚠️ **非常重要**：之后所有的写作、规划、审查操作，OpenCode 的当前目录必须是**书项目目录**（`D:\novels\凡人资本论\`），不是工作区目录（`D:\novels`）。系统会自动识别，但如果你发现命令报错"找不到 project_root"，在 OpenCode 中用 `File → Open Folder` 切到书项目目录即可。
 
+> 🔧 **OpenCode 2.x 用户请确认 `AGENTS.md` 已生成**。2.x 只发现 `AGENTS.md`、
+> 不再回退 `CLAUDE.md`；缺了它，模型看不到本项目的硬规则（SSOT 只能经 CLI 写入、
+> 审查载荷异常必须 fail-closed 等），会"照常调用 skill 但不守规矩"。
+> npm 安装包内已含该文件；从 git 安装请执行：
+>
+> ```bash
+> python .opencode/scripts/webnovel.py sync-agents-md
+> ```
+>
+> 验证是否就位：`/wn-doctor` 正常返回即说明工作区结构完整。
+
 ---
 
 ## 4. 大纲规划

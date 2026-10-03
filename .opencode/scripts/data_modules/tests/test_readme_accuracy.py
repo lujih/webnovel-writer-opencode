@@ -137,6 +137,66 @@ class TestReviewDimensions:
         )
 
 
+DOCS_DIR = REPO_ROOT / "docs"
+# 带日期的审查报告 / 已实施的 spec：保留旧数值是刻意的，不算陈旧
+HISTORICAL_DOCS = ("workflow-review-report.md", "review-polish-refactor-spec.md")
+
+
+class TestOperationalDocsHaveNoStaleMarkers:
+    """面向使用者的文档里不得残留已废除的标记。
+
+    范围只含**运维文档**（根 md + docs/，排除 docs/superpowers/）。
+    `docs/superpowers/` 与带日期的审查报告是**历史记录**——它们记录"当时是什么
+    样"本来就该保留旧数值，改写等于篡改记录。
+    """
+
+    @pytest.fixture(scope="class")
+    def live_docs(self):
+        files = [README, REPO_ROOT / "INSTALL.md", REPO_ROOT / "CLAUDE.md",
+                 DOCS_DIR / "README.md", REPO_ROOT / ".npm-package" / "README.md"]
+        files += [p for p in DOCS_DIR.rglob("*.md") if "superpowers" not in p.parts]
+        return [p for p in files if p.is_file() and p.name not in HISTORICAL_DOCS]
+
+    # DSH 适配层已删除。豁免两类行：一是刻意的决策说明（"不追求 DSH 原生化"），
+    # 二是陈述其已被移除的句子（"`.dsh/` 镜像层……已删除"）——它们都不是把 DSH
+    # 当成现有能力在描述。
+    DSH_ALLOWED = ("不追求 DSH", "v8", "dsh-baseline",
+                   "DeepSeek Harness 侧", "已删除", "已移除")
+
+    def test_no_dsh_residue(self, live_docs):
+        offenders = []
+        for path in live_docs:
+            for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+                low = line.lower()
+                if ("dsh-sync" in low or ".dsh/" in low
+                        or "dsh-adaptation" in low):
+                    if not any(a in line for a in self.DSH_ALLOWED):
+                        offenders.append(f"{path.name}:{i}")
+        assert not offenders, f"仍把 DSH 适配当现有能力: {offenders}"
+
+    def test_no_stale_counts(self, live_docs):
+        stale = {
+            "28 个子命令": "现为 38 个顶层子命令",
+            "13 个 Skills": "现为 16 个",
+            "README_CN.md": "该文件不存在",
+            "59 个测试文件": "现为 100 个",
+        }
+        offenders = []
+        for path in live_docs:
+            text = path.read_text(encoding="utf-8")
+            for marker, why in stale.items():
+                if marker in text:
+                    offenders.append(f"{path.name}: {marker}（{why}）")
+        assert not offenders, offenders
+
+    def test_review_dimensions_not_stated_as_13(self, live_docs):
+        offenders = [p.name for p in live_docs
+                     if "13 维度" in p.read_text(encoding="utf-8")]
+        assert not offenders, (
+            f"这些现行文档把审查维度写成 13（实为 6）: {offenders}"
+        )
+
+
 class TestV2AssetsAreAdvertised:
     """OpenCode v2 适配是对外可见的特性，README 应当说明。"""
 

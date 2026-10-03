@@ -31,7 +31,7 @@
 python .opencode/scripts/webnovel.py <command> [args]
 ```
 
-**角色**：所有用户/脚本/AI Agent 的统一入口。28 个子命令 + 嵌套子命令。
+**角色**：所有用户/脚本/AI Agent 的统一入口。38 个顶层子命令 + 嵌套子命令。
 
 **核心流程**：
 

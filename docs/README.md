@@ -13,10 +13,14 @@
 - [architecture/frontend-backend-collab-review.md](./architecture/frontend-backend-collab-review.md)：前后端协作审查报告（写作/审查/Dashboard/初始化/SSOT 逐流程分析）
 - [architecture/writing-workflow-analysis.md](./architecture/writing-workflow-analysis.md)：写作工作流详细分析报告（4 阶段 + 6 Agent + 数据流）
 - [architecture/workflow-review-report.md](./architecture/workflow-review-report.md)：工作流审查报告（6 严重 + 23 中等 + 15 低）
+- [architecture/story-system-phase4.md](./architecture/story-system-phase4.md)：Story System Phase 4 设计
+- [architecture/story-system-phase5.md](./architecture/story-system-phase5.md)：Story System Phase 5 设计
 
 ### 使用指南
 
+- [`guides/getting-started.md`](./guides/getting-started.md)：新手完全指南（安装 → 第一本书，手把手）
 - [`guides/commands.md`](./guides/commands.md)：Skill 命令与 CLI 子命令速查
+- [`guides/custom-style-prompts.md`](./guides/custom-style-prompts.md)：自定义文风提示词与约束层级
 - [`guides/rag-and-config.md`](./guides/rag-and-config.md)：RAG 检索链路、环境变量与配置
 - [`guides/genres.md`](./guides/genres.md)：37 个题材模板与复合题材规则
 
@@ -34,9 +38,13 @@
 
 - [`research/long-term-memory-research-report.md`](./research/long-term-memory-research-report.md)：长期记忆论文与开源方案调研
 - [`research/storyteller-paper-summary.md`](./research/storyteller-paper-summary.md)：STORYTELLER 论文总结
+- [`research/2026-04-14-ui-ux-pro-max-skill-architecture-research.md`](./research/2026-04-14-ui-ux-pro-max-skill-architecture-research.md)：UI/UX skill 架构调研
 
 ### Specs
 
+- [specs/user-prompts-folder-spec.md](./specs/user-prompts-folder-spec.md)：用户提示词目录规范
+- [specs/plugin-runtime-hardening-spec.md](./specs/plugin-runtime-hardening-spec.md)：插件运行时加固规范（写保护）
+- [specs/review-polish-refactor-spec.md](./specs/review-polish-refactor-spec.md)：审查/润色环节重构规范
 - [`superpowers/README.md`](./superpowers/README.md)：架构 spec 与设计文档导航
 - [superpowers/specs/2026-05-25-inkos-inspired-improvements-design.md](./superpowers/specs/2026-05-25-inkos-inspired-improvements-design.md)：inkOS 借鉴改进设计文档
 - [superpowers/specs/2026-06-06-dashboard-development-roadmap.md](./superpowers/specs/2026-06-06-dashboard-development-roadmap.md)：看板发展规划（Phase 4-11，含实施状态）
@@ -55,12 +63,30 @@
 - `guides/`：使用者需要查阅的命令、配置、题材说明
 - `memory/`：长期记忆架构说明
 - `research/`：论文总结与外部方案调研
-- `superpowers/`：架构 spec 与设计文档
+- `specs/`：具体功能的设计规范
+- `superpowers/`：架构 spec 与历史设计/计划文档（**历史记录，不随代码回改**）
+
+## OpenCode 宿主适配
+
+本项目**只适配 OpenCode**（1.x ≥ 1.18.29 与 2.x 均可）。适配面包括：
+
+| 资产 | 位置 |
+|------|------|
+| 项目配置 | `.opencode/opencode.json` |
+| 写保护插件（v1/v2 双入口） | `.opencode/plugins/write-guard.js` |
+| 只读诊断斜杠命令 | `.opencode/commands/wn-*.md` |
+| Agent 权限（v2 `permissions:`） | `.opencode/agents/*.md` |
+| 项目说明 | `AGENTS.md`（由 `CLAUDE.md` 经 `sync-agents-md` 镜像） |
+
+DeepSeek Harness 原生化由上游 `lingfengQAQ/webnovel-writer` 的 v8 分支负责，
+本仓库不再维护 DSH 适配层。详见 [`../CLAUDE.md`](../CLAUDE.md) 的
+"OpenCode Integration" 一节。
 
 ## 推荐阅读顺序
 
 1. 先看 [`../README.md`](../README.md) 了解安装与基本使用
-2. 再看 [`architecture/overview.md`](./architecture/overview.md) 了解整体架构
-3. 需要配置检索时看 [`guides/rag-and-config.md`](./guides/rag-and-config.md)
-4. 需要使用命令时看 [`guides/commands.md`](./guides/commands.md)
-5. 系统运行健康状态用 `preflight` 和 `status` 命令诊断，详见 [commands.md](./guides/commands.md) 运维子命令
+2. 新手直接走 [`guides/getting-started.md`](./guides/getting-started.md)
+3. 再看 [`architecture/overview.md`](./architecture/overview.md) 了解整体架构
+4. 需要配置检索时看 [`guides/rag-and-config.md`](./guides/rag-and-config.md)
+5. 需要使用命令时看 [`guides/commands.md`](./guides/commands.md)
+6. 系统运行健康状态用 `preflight` 和 `status` 命令诊断，详见 [commands.md](./guides/commands.md) 运维子命令
