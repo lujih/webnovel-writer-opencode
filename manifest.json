@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261003.1430",
+  "version": "v2.9.2-20261003.1450",
   "tag": "v2.9.2",
-  "updated": "2026-10-03T14:30:43Z",
+  "updated": "2026-10-03T14:50:02Z",
   "changelog": [
     {
-      "hash": "142c587",
-      "type": "docs",
-      "message": "docs: \u7cfb\u7edf\u6027\u7ef4\u62a4\u5168\u90e8\u8fd0\u7ef4\u6587\u6863\uff0c\u4fee\u6b63\u9648\u65e7\u6570\u636e\u5e76\u8865\u9f50 OpenCode v2 \u5185\u5bb9"
+      "hash": "fba7f4e",
+      "type": "ci",
+      "message": "ci: \u4fee\u590d GitHub Actions \u4f9b\u5e94\u94fe\u9690\u60a3\uff0c\u8865 topics \u5e76\u52a0\u536b\u751f\u95e8\u7981"
     },
     {
-      "hash": "7d8fdb6",
+      "hash": "3137448",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261002.1636 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261003.1430 [skip ci]"
     }
   ],
   "files": {
@@ -1074,6 +1074,10 @@
     ".opencode/scripts/data_modules/tests/test_config.py": {
       "sha256": "72de732cc754d25e19808296992a43fde57b17fd1d6b845e2400769857412678",
       "size": 1955
+    },
+    ".opencode/scripts/data_modules/tests/test_workflow_hygiene.py": {
+      "sha256": "0d1099d96d6450299fea2f98c39ab2ed5a12afd543be2ec3da5a73868e3b9787",
+      "size": 6101
     },
     ".opencode/scripts/data_modules/tests/test_ssot_rebuild_field_retention.py": {
       "sha256": "5ffb3e3982b3d589e956947efb3b0740ec366b88367a47ce5c5384dcc8d11f57",
