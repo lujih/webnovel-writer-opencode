@@ -118,7 +118,7 @@ jobs:
 
       - name: 生成 Release Notes
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
           generate_release_notes: true
           files: .npm-package/cszx-webnovel-writer-opencode-*.tgz
