@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261006.1604",
+  "version": "v2.9.2-20261006.1606",
   "tag": "v2.9.2",
-  "updated": "2026-10-06T16:04:54Z",
+  "updated": "2026-10-06T16:06:56Z",
   "changelog": [
     {
-      "hash": "749f757",
-      "type": "fix",
-      "message": "fix: \u79fb\u9664 opencode.json \u7684 V2 permissions\u2014\u2014\u5b83\u4f1a\u8ba9\u5168\u90e8 OpenCode V1 \u7528\u6237\u65e0\u6cd5\u542f\u52a8"
+      "hash": "b4abdd4",
+      "type": "docs",
+      "message": "docs: \u66f4\u6b63 write-guard \u5173\u4e8e @opencode-ai/plugin\u300c\u672a\u5b89\u88c5\u300d\u7684\u8868\u8ff0"
     },
     {
-      "hash": "6048609",
+      "hash": "131bbea",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261003.1450 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261006.1604 [skip ci]"
     }
   ],
   "files": {
@@ -380,8 +380,8 @@
       "size": 6335
     },
     ".opencode/plugins/write-guard.js": {
-      "sha256": "803a8587d3c94200787a1bdff90c3f01e27341919fe2bfb70c71527790275a46",
-      "size": 5501
+      "sha256": "d1c8e964731c176f381e12305bb227d45a72bfb31be881c73448c069a3c683c3",
+      "size": 5938
     },
     ".opencode/agents/data-agent.md": {
       "sha256": "ada0d5f6abb39d95d5596be8b88e8c5b1e08619e38d5b45f22d5ebc17bb758bc",
