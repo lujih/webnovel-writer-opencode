@@ -1,18 +1,23 @@
-""".opencode/opencode.json 与 .opencode/commands/ 的 OpenCode V2 契约。
+""".opencode/opencode.json 与 .opencode/commands/ 的 OpenCode 契约。
 
-每条断言都对应一个**已实测**的 v2 文档结论，不是防御式编程：
+每条断言都对应一个**已实测**的结论，不是防御式编程：
 
-1. $schema 不写——实测 2026-10-01，https://opencode.ai/config.json 返回的仍是
+1. 配置不得含 V2 `permissions`——实测 2026-10-04（opencode 1.18.34
+   `opencode debug config`）：V1 遇到该键以 rc=1 **拒绝整份配置**，
+   "V2 permissions are not supported by OpenCode V1"，所有 V1 用户无法启动。
+   同次实测：agent frontmatter 里的 V2 `permissions` 只是被静默忽略，不致命。
+2. $schema 不写——实测 2026-10-01，https://opencode.ai/config.json 返回的仍是
    V1 形状（顶层 additionalProperties: false，只有 permission/agent/command/
    plugin/snapshot/attachment/provider 这些 V1 键），挂上去只会把正确的 V2 字段
    全标红。哪天它改成 V2 了，本测试会失败并提醒去掉这条禁令。
-2. instructions 不写——V2 文档原文 "OpenCode accepts this field but does not
+3. instructions 不写——V2 文档原文 "OpenCode accepts this field but does not
    load its entries; use AGENTS.md for instructions"，是静默空操作。
-3. formatter 必须 false——内置 prettier/biome 都覆盖 .md，而本书 65 章正文
-   全是 .md；formatter 在写盘**之后**才跑，拦不住，只会把用户的作品重排。
-4. 斜杠命令的 `!` shell 块绕过工具权限流（V2 commands 文档的 Warning），
+4. formatter 必须 false——依据 V2 文档，内置 prettier/biome 都覆盖 .md，
+   而本书 65 章正文全是 .md；formatter 在写盘**之后**才跑，拦不住，
+   只会把用户的作品重排。（文档转述，未在本书正文上实测。）
+5. 斜杠命令的 `!` shell 块绕过工具权限流（V2 commands 文档的 Warning），
    因此只允许只读子命令出现在 shell 块里。
-5. AGENTS.md 必须真的在 git 里——.gitignore 曾把它当 legacy 产物忽略掉，
+6. AGENTS.md 必须真的在 git 里——.gitignore 曾把它当 legacy 产物忽略掉，
    全新 clone 下 OpenCode V2 就看不到任何项目说明，而 --check 门禁反而通过。
 """
 import json
@@ -46,12 +51,80 @@ class TestConfigParses:
     def test_is_valid_jsonc(self, config):
         assert isinstance(config, dict)
 
-    def test_only_v2_keys(self, config):
-        """V1 形状的键混进来会被静默警告或直接忽略（migrate-v1「Accepted but
-        unsupported fields」），所以只允许列出的这几个。"""
-        assert set(config) == {
-            "permissions", "formatter", "compaction", "watcher", "tool_output",
-        }, f"意外的键: {set(config) - {'permissions','formatter','compaction','watcher','tool_output'}}"
+    def test_only_cross_generation_safe_keys(self, config):
+        """只允许 V1 与 V2 都能加载的键。
+
+        实测（opencode 1.18.34）：`formatter` / `compaction`（V2 形状的 keep）
+        / `watcher` / `tool_output` 四个 V1 均接受；`permissions` 会让 V1 以 rc=1
+        拒绝**整份**配置。新增键前请先按下方 TestConfigDoesNotBreakV1 验证。
+        """
+        allowed = {"formatter", "compaction", "watcher", "tool_output"}
+        assert set(config) == allowed, (
+            f"出现未验证的键: {set(config) - allowed}。"
+            "新增前须确认 OpenCode V1 不会因此拒绝加载整份配置。"
+        )
+
+
+class TestConfigDoesNotBreakV1:
+    """opencode.json 里不得出现让 OpenCode V1 致命的键。
+
+    背景：本项目是对外公开的仓库，安装器会把 `.opencode/` 部署到用户工作区。
+    2026-10-04 实测 opencode 1.18.34：
+
+        $ opencode debug config
+        Error: Configuration is invalid at .../.opencode/opencode.json
+        ↳ V2 permissions are not supported by OpenCode V1.
+          Use V1 "permission" rules or run opencode2.  permissions
+
+    关键在于它是**致命**的且拒绝**整份文件**——不是忽略单个键、不是降级。
+    一旦有 V2 `permissions`，全部 V1 用户直接起不来。
+
+    同一次实测确认了一件相关的事：**agent frontmatter** 里的 V2 `permissions`
+    是被静默忽略的（agent 照常加载，回落到 V1 默认规则），不会触发这种失败。
+    所以子 agent 可以保留 V2 规则，配置文件不行。
+    """
+
+    # 已实测会让 V1 拒绝整份配置的 V2 键
+    V2_FATAL_KEYS = {"permissions"}
+
+    def test_no_v2_fatal_key(self, config):
+        present = self.V2_FATAL_KEYS & set(config)
+        assert not present, (
+            f"opencode.json 含 {present}——OpenCode V1 会拒绝加载**整份**配置"
+            "（实测 rc=1），所有 V1 用户将无法启动。"
+        )
+
+    def test_ssot_guard_still_exists(self):
+        """移除全局 permissions 后，SSOT 写保护不能同时消失。
+
+        实际执行层是 write-guard.js 的 tool hook：与 agent 无关、对主 agent 也
+        生效、V1/V2 都可用。若这个文件也没了，SSOT 就真的没有运行时拦截了。
+        """
+        plugin = (REPO_ROOT / ".opencode" / "plugins" / "write-guard.js")
+        text = plugin.read_text(encoding="utf-8")
+        assert "tool.execute.before" in text, "write-guard 的拦截 hook 不见了"
+        assert "ctx.tool.hook('execute.before'" in text.replace('"', "'"), \
+            "write-guard 缺少 V2 的 setup 入口"
+
+
+class TestAgentFrontmatterIsV1Safe:
+    """子 agent 的 V2 permissions 在 V1 下是静默忽略，不得是致命错误。
+
+    实测：`.opencode/agents/*.md` 带 V2 `permissions` frontmatter 时，
+    `opencode debug agent <name>` 正常返回，解析出的 permission 是 V1 默认集
+    （102 条），不是我们写的 V2 规则。也就是说：V2 用户拿到前端拦截，
+    V1 用户安全降级到运行时 hook，两边都不报错。
+    """
+
+    AGENTS = ("context-agent", "observer-agent", "chapter-writer-agent",
+              "data-agent", "reviewer", "deconstruction-agent")
+
+    def test_agents_still_use_v2_permissions(self):
+        """前提条件：子 agent 仍保留 V2 规则（前端拦截层）。"""
+        for name in self.AGENTS:
+            path = REPO_ROOT / ".opencode" / "agents" / f"{name}.md"
+            text = path.read_text(encoding="utf-8")
+            assert "permissions:" in text, f"{name}.md 丢掉了 permissions 段"
 
 
 class TestAgentsMdIsActuallyCommitted:
@@ -139,15 +212,37 @@ class TestSyncAgentsMdCommand:
 
 
 class TestNoStaleSchema:
-    def test_does_not_reference_published_schema(self, config):
-        """实测该地址仍是 V1 形状 schema；挂着只会让编辑器把 V2 字段标红。
+    """配置里不主动写 $schema——但 OpenCode 会自己加回来。
 
-        只看真实键，不看注释——配置文件里刻意写了解释为什么**不**加
-        $schema 的那段散文，它当然包含这个 URL 字符串。
-        """
+    两件相关的事，都实测过：
+
+    1. 我们**主动不写**：2026-10-01 实测 https://opencode.ai/config.json 返回的
+       仍是 V1 形状 schema，挂上去只会让编辑器把正确的 V2 字段全标红。
+    2. 但**跑一次 OpenCode 就会被写回**：2026-10-04 实测，执行
+       `opencode debug config` 之后，本文件第 2 行被自动插入
+       `"$schema": "https://opencode.ai/config.json",`——这是 OpenCode 的配置
+       迁移行为，不经我们同意，且它写的恰是上面那个陈旧 schema。
+
+    所以这里断言的是"仓库里的版本不含 $schema"（保证提交物干净），而不是
+    "任何人跑过 opencode 之后本地文件不含它"。后者在真实使用中无法维持，
+    且不该为一个编辑器侧的 JSON 标记去跟运行时反复较劲。
+    """
+
+    def test_repository_copy_has_no_schema_key(self, config):
+        """只看真实键，不看注释——配置里刻意写了为什么不加它的散文。"""
         assert "$schema" not in config, (
-            "发布的 schema 已更改为 V2 形状，请重新评估并移除本文件顶部的禁令——"
-            "见 test_opencode_v2_config.py 顶部说明"
+            "提交的 opencode.json 不应含 $schema：发布地址仍是 V1 形状，"
+            "挂上会让编辑器把正确的 V2 字段标红。若确认它已更新为 V2，"
+            "请连同文件顶部的禁令注释一起更新。"
+        )
+
+    def test_documented_that_opencode_reinjects_it(self, config):
+        """把这个行为写进配置注释，免得下一个人以为配置被改坏了。"""
+        text = CONFIG.read_text(encoding="utf-8")
+        assert "opencode" in text and "$schema" in text
+        # 注释里必须说明是 OpenCode 会写回来，而不是我们打算加上
+        assert re.search(r"(自动|写回|插入|会加)", text), (
+            "配置注释需说明 $schema 是 OpenCode 自动写回的，避免被误当作有意改动"
         )
 
 
@@ -167,46 +262,61 @@ class TestFormatterOff:
         )
 
 
-class TestGlobalPermissions:
-    def test_allows_by_default_like_v2_base(self, config):
-        """与 V2 基础策略一致：* → allow，主 agent 不会被过度收紧。"""
-        assert config["permissions"][0] == {
-            "action": "*", "resource": "*", "effect": "allow"}
+class TestSsotGuardSurvivesPermissionsRemoval:
+    """全局 permissions 被移除后，SSOT 写保护必须仍然成立。
 
-    def test_external_directory_stays_ask(self, config):
-        """书项目在仓库之外，恢复基础策略里的询问。"""
-        rules = config["permissions"]
-        assert {"action": "external_directory", "resource": "*",
-                "effect": "ask"} in rules
+    2026-10-04 之前，配置里有一段全局 `permissions`：6 条 SSOT 路径 edit deny +
+    external_directory/read 的 ask。它覆盖**所有** agent（含主 agent），是
+    三层防护的第①层。
 
-    def test_env_read_stays_ask(self, config):
-        assert {"action": "read", "resource": "*.env", "effect": "ask"} in \
-            config["permissions"]
+    移除原因：V1 见到该键会拒绝加载整份配置（见 TestConfigDoesNotBreakV1）。
+    移除代价：V2 的主 agent 不再"看不见" SSOT 路径的 edit 工具。
 
-    def test_ssot_edits_denied(self, config):
-        """主 agent 也必须碰不到 SSOT——之前只有子 agent 和 plugin 两层。"""
-        denied = {r["resource"] for r in config["permissions"]
-                  if r["action"] == "edit" and r["effect"] == "deny"}
-        for suffix in (
+    但保护本身没消失——第③层 write-guard.js 挂的是全局 tool hook，与 agent 无关、
+    对主 agent 生效、V1/V2 都能跑。所以这里钉的是"兜底层不许被一起删掉"。
+    """
+
+    # 权威清单在 write-guard.js 的 PROTECTED_SUFFIXES 里——**不要**在这里抄一份。
+    # 实测教训：早先按配置里的 glob 写法（`*.story-system/events/*`）抄过来，
+    # 而插件实际用的是后缀匹配（`.story-system/events/`），还漏了 commits/，
+    # 结果测试自己造出一个不存在的清单。
+    LIST_RE = re.compile(
+        r"PROTECTED_SUFFIXES\s*=\s*\[(.*?)\]", re.S)
+
+    def _guard_text(self):
+        return (REPO_ROOT / ".opencode" / "plugins" / "write-guard.js") \
+            .read_text(encoding="utf-8")
+
+    def test_write_guard_has_protected_list(self):
+        assert self.LIST_RE.search(self._guard_text()), \
+            "write-guard 找不到 PROTECTED_SUFFIXES 清单"
+
+    def test_protected_list_covers_ssot(self):
+        """兜底层必须覆盖 SSOT 的全部落盘位置，否则移除全局 permissions 即净损失。"""
+        m = self.LIST_RE.search(self._guard_text())
+        entries = set(re.findall(r"'([^']+)'", m.group(1)))
+        required = {
             ".webnovel/state.json",
             ".webnovel/index.db",
             ".webnovel/vectors.db",
             ".webnovel/memory_scratchpad.json",
-            ".story-system/events/*",
+            ".story-system/events/",
             ".story-system/master_setting.json",
-        ):
-            assert f"*{suffix}" in denied, f"全局权限漏了 {suffix}"
+        }
+        missing = required - entries
+        assert not missing, f"write-guard 未覆盖: {sorted(missing)}"
 
-    def test_ssot_denies_come_after_allows(self, config):
-        """最后命中者生效：edit 的 allow 排在 deny 前面，deny 才有意义。"""
-        rules = config["permissions"]
-        allow_at = next(i for i, r in enumerate(rules)
-                        if r["action"] == "edit" and r["effect"] == "allow") \
-            if any(r["action"] == "edit" and r["effect"] == "allow" for r in rules) \
-            else -1
-        deny_at = next(i for i, r in enumerate(rules)
-                       if r["action"] == "edit" and r["effect"] == "deny")
-        assert allow_at < deny_at, "SSOT deny 排在 edit allow 之前会被盖过"
+    def test_write_guard_is_agent_agnostic(self):
+        """兜底层必须对主 agent 也生效，否则移除全局 permissions 就是净损失。"""
+        text = self._guard_text()
+        assert "tool.execute.before" in text, "缺少 V1 的运行时拦截 hook"
+        assert "ctx.tool.hook('execute.before'" in text.replace('"', "'"), \
+            "缺少 V2 的 setup 入口"
+        # guard() 只看 (tool, args)，不应按 agent 分流——它是全局 tool hook
+        start = text.find("export function guard")
+        assert start != -1, "找不到共享的 guard()"
+        signature = text[start:text.find(")", start)]
+        assert "agent" not in signature, f"guard() 签名不应依赖 agent: {signature}"
 
 
 class TestCompaction:

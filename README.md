@@ -145,6 +145,15 @@ RERANK_API_KEY=your_api_key
 - **项目说明走 `AGENTS.md`**：OpenCode 2.x 只发现 `AGENTS.md`、不再回退 `CLAUDE.md`。克隆后请运行 `python .opencode/scripts/webnovel.py sync-agents-md` 生成（CI 会校验二者一致）。**注意不要把 `AGENTS.md` 加进 `.gitignore`**——那是仓库的正式产物，漏了会导致模型看不到全部项目规则。
 - **不要开启 `formatter`**：内置格式化器（prettier / biome）覆盖 `.md`，而章节正文全是 `.md`，开启会重排你的作品。配置里已显式关闭。
 
+> ⚠️ **V1 用户的一处功能差异**：`opencode.json` 里**刻意不写** V2 的 `permissions` 键。
+> 实测 OpenCode 1.18.34 遇到该键会以 rc=1 **拒绝加载整份配置**
+> （"V2 permissions are not supported by OpenCode V1"），那会让所有 V1 用户起不来。
+>
+> 代价是：**在 V2 下，主 agent（你直接对话的那个）不再"看不见" SSOT 路径的
+> edit 工具**，改为在运行时被拒绝。SSOT 写保护本身没有消失——
+> `.opencode/plugins/write-guard.js` 是全局 tool hook，对所有 agent 生效、V1/V2 都跑。
+> 受影响的只是 V2 主 agent 少了一层"工具不可见"的提前拦截。
+
 ### 3.6 提供帮助和支持
 
 遇到问题时，可以通过以下渠道获取帮助：
@@ -198,7 +207,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   └── scripts/                  # Python 核心脚本
 │       ├── webnovel.py           # CLI 统一入口（38 个子命令）
 │       ├── data_modules/         # 核心数据模块（72 个）
-│       └── tests/                # 测试（101 个测试文件，1117 用例）
+│       └── tests/                # 测试（101 个测试文件，1119 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构

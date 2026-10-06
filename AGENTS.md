@@ -133,16 +133,23 @@ V2 三处破坏性变更中两处直接影响本仓库——**① 插件 API 全
 
 ### OpenCode v2 深度适配（.opencode/opencode.json + commands/）
 
-`.opencode/opencode.json`（JSONC，**故意不带 `$schema`**）只有 5 个键，每条都有实测依据：
+`.opencode/opencode.json`（JSONC）只有 4 个键，且**每一个都要求 OpenCode V1 也能加载**：
 
-- **不带 `$schema`**：2026-10-01 实测 `https://opencode.ai/config.json` 返回的**仍是 V1 形状**——顶层 `additionalProperties: false`，只认 `permission`/`agent`/`command`/`plugin`/`snapshot`/`attachment`/`provider`，文档里的 V2 原生键（`permissions`/`agents`/`commands`/`plugins`/`snapshots`/`media`/`warming`/`update`/`providers`）一个都没有，嵌套的 `compaction` 也还只有 `auto`/`prune`/`tail_turns`/`preserve_recent_tokens`/`reserved`。挂上去只会让编辑器把**正确的** V2 字段全标红。schema 声称自己"is the source of truth"，这一点上目前不成立。
+- ⚠️ **不带 `permissions`（关键约束）**：2026-10-04 实测 opencode 1.18.34，`opencode debug config` 遇到 V2 的 `permissions` 键会以 **rc=1 拒绝加载整份配置**——不是忽略单个键、不是降级：
+  `Error: Configuration is invalid at .../.opencode/opencode.json` / `↳ V2 permissions are not supported by OpenCode V1. Use V1 "permission" rules or run opencode2.`
+  本仓库是对外公开的、安装器会把 `.opencode/` 部署到用户工作区，写死 V2 权限会让**全部 V1 用户起不来**。同次实测确认 `formatter`/`compaction`(V2 形状的 `keep`)/`watcher`/`tool_output` 四个键 V1 均接受，故只留这四个。`test_opencode_v2_config.py::TestConfigDoesNotBreakV1` 钉死此约束。
+  同次实测还确认一件**不对称**的事：`.opencode/agents/*.md` frontmatter 里的 V2 `permissions` 在 V1 下是**静默忽略**（agent 照常加载，规则回落 V1 默认 102 条），不触发这种失败。所以子 agent 可以留 V2 规则，配置文件不行。
+- **不带 `$schema`**：2026-10-01 实测 `https://opencode.ai/config.json` 返回的**仍是 V1 形状**——顶层 `additionalProperties: false`，只认 `permission`/`agent`/`command`/`plugin`/`snapshot`/`attachment`/`provider`，文档里的 V2 原生键一个都没有，挂上去只会让编辑器把**正确的** V2 字段全标红。
+  ⚠️ 但 **OpenCode 会自动把它写回来**：2026-10-04 实测，执行任意一次 `opencode debug config` 后本文件第 2 行被自动插入 `"$schema": ...`。仓库提交的版本刻意不含它；本地被写回不必修（V1 也接受 `$schema`）。测试因此断言的是"仓库副本不含"，不是"任何本地副本都不含"。
 - **不带 `instructions`**：V2 文档原文 "OpenCode accepts this field but does not load its entries; use AGENTS.md for instructions" —— 能过校验、什么都不做的静默空操作。项目说明唯一真实通道是 `AGENTS.md`。
-- **`formatter: false`（显式）**：V2 内置 formatter 里 prettier/biome **都覆盖 `.md`**，而本书 65 章正文全是 `.md`（`正文/第1卷/第0001章-….md`）。开启会把已发布正文重排折行、规范空白——那是**改用户作品**，且 formatter 在写盘**之后**才跑，拦不住。
-- **全局 `permissions`**：与 V2 基础策略一致（`*` → allow），额外恢复 `external_directory: ask`（书项目在仓库外）、`read: *.env → ask`，并 **deny 6 类 SSOT 路径的 edit**。此前主 agent（用户直接对话的那个）完全裸奔——只有子 agent 和 plugin 两层，主 agent 没有任何 SSOT 约束。
-- **`compaction`**：用 V2 的 `keep.tokens`（24000），不用 V1 的 `tail_turns`/`prune`（V2 会忽略并告警）。调高 keep 是为让刚写完那章原文尽量逐字留在尾部。
+- **`formatter: false`（显式）**：依据 V2 文档，内置 formatter 里 prettier/biome **都覆盖 `.md`**，而本书 65 章正文全是 `.md`（`正文/第1卷/第0001章-….md`）。开启会把已发布正文重排折行、规范空白——那是**改用户作品**，且 formatter 在写盘**之后**才跑，拦不住。（**文档转述，未在本书正文上实测**。）
+- **`compaction`**：用 V2 的 `keep.tokens`（24000），不用 V1 的 `tail_turns`/`prune`。调高 keep 是为让刚写完那章原文尽量逐字留在尾部。
 - **`watcher.ignore`**：屏蔽 `node_modules`/`__pycache__`/`.tmp`/`外部参考`，减少无意义的文件事件。
+- **`tool_output`**：`max_lines`/`max_bytes` 取 V2 文档给出的默认值 2000/51200，写出来只为长输出时尽早暴露截断，不改变默认行为。
 
-**SSOT 三层防护**（同一份 6 条路径清单，`test_agent_v2_permissions.py::test_matches_write_guard_plugin_list` 钉住两侧不漂移）：① 主 agent 的全局 `permissions` deny；② 子 agent 各自的 `permissions` deny（排在 `edit: * allow` **之后**，靠"最后命中者生效"压过）；③ `write-guard.js` 的 `tool.execute.before` 运行时抛错。①②靠配置让模型**看不见** edit/write/patch，③兜住绕过配置直接调工具的情况——单靠任一层都不够。
+**SSOT 写保护现状（2026-10-04 调整后）**：原本是三层——① 主 agent 的全局 `permissions` deny、② 子 agent 各自的 `permissions` deny、③ `write-guard.js` 的 `tool.execute.before` 运行时抛错。**因①会让 V1 拒绝加载配置，已移除**，故主 agent 在 V2 下不再"看不见" SSOT 路径的 edit 工具（改为运行时拒绝）。
+**保护本身没有缺口**：③ 挂的是全局 tool hook，与 agent 无关、对主 agent 生效、V1/V2 都能跑；②对 V2 仍在。丢失的只是"V2 主 agent 少一层提前拦截"，不是拦截本身。`test_opencode_v2_config.py::TestSsotGuardSurvivesPermissionsRemoval` 从 `write-guard.js` 的 `PROTECTED_SUFFIXES` **解析**清单（不抄一份——早先抄写时把后缀写成了 glob 且漏了 `commits/`，自己造出个不存在的清单），钉住兜底层不许被一起删掉。
+另外 ② 与 ③ 的清单一致性由 `test_agent_v2_permissions.py::test_matches_write_guard_plugin_list` 钉住。
 
 `.opencode/commands/` 5 个只读斜杠命令（`wn-status` / `wn-doctor` / `wn-ssot-verify` / `wn-where` / `wn-chapter-status`），用 `!\`shell\`` 块把 CLI 真实输出**在 prompt 提交前**注入，模型不必先猜再跑。**关键约束**：V2 文档 Warning 明确 shell 块"run when OpenCode evaluates the command, **outside the agent's tool permission flow**"——即 `write-guard.js` 拦不到它。所以 `test_opencode_v2_config.py` 断言 shell 块里**不得出现破坏性子命令**（`delete-chapters`/`rebuild`/`chapter-commit`/`publish`/`export`/…）；写路径必须走 skill + agent permissions + write-guard 链路。破坏性命令仍留 dry-run 默认 + `--apply` 二次确认。
 实测 5 个命令的真书（`E:\workspace\webnovel2\凡尘之舞`）均正常执行；`ssot verify` 在真书上确实检出漂移并以 rc=1 退出（`foreshadowing` 0 vs 26、`entities_v3` 0 vs 4、`world_rules` 0 vs 10、`reader_promises` 0 vs 7），故 `wn-ssot-verify` 明确要求模型**不得自行 rebuild**。
