@@ -1,35 +1,35 @@
 {
-  "version": "v2.9.2-20261003.1450",
+  "version": "v2.9.2-20261006.1604",
   "tag": "v2.9.2",
-  "updated": "2026-10-03T14:50:02Z",
+  "updated": "2026-10-06T16:04:54Z",
   "changelog": [
     {
-      "hash": "fba7f4e",
-      "type": "ci",
-      "message": "ci: \u4fee\u590d GitHub Actions \u4f9b\u5e94\u94fe\u9690\u60a3\uff0c\u8865 topics \u5e76\u52a0\u536b\u751f\u95e8\u7981"
+      "hash": "749f757",
+      "type": "fix",
+      "message": "fix: \u79fb\u9664 opencode.json \u7684 V2 permissions\u2014\u2014\u5b83\u4f1a\u8ba9\u5168\u90e8 OpenCode V1 \u7528\u6237\u65e0\u6cd5\u542f\u52a8"
     },
     {
-      "hash": "3137448",
+      "hash": "6048609",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261003.1430 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261003.1450 [skip ci]"
     }
   ],
   "files": {
     ".opencode/package-lock.json": {
-      "sha256": "9f95cf967187512dce2f7be3fd94cff4301aa2407f79751ec3b3291ec6a4235c",
-      "size": 13727
+      "sha256": "ece852a44e1bb44a28df99eaf32ea30bafd6f30a289339200462807891f73e51",
+      "size": 17662
     },
     ".opencode/.gitignore": {
       "sha256": "e1ea563c7f69c5502b623b7563a99fffe542694331b6bae3806c9c8e603afa7f",
       "size": 386
     },
     ".opencode/opencode.json": {
-      "sha256": "c41940a0d031741a047f027c005c6f4ea191133195f845967971466515b4f0cb",
-      "size": 4219
+      "sha256": "2e6f439398d0b3e3a98a0294cc37dc1cfaf84e610909814b8de8756b5852d0a8",
+      "size": 4651
     },
     ".opencode/package.json": {
-      "sha256": "894b4b85c472d84f0fc7c8c880592cfd365280bc440cf852d6aa54b491f5874f",
-      "size": 61
+      "sha256": "6bcb101df0d6dadf278b6e1db944cc654424ad4767e3115338414db43dba6be6",
+      "size": 99
     },
     ".opencode/dashboard/path_guard.py": {
       "sha256": "bb71a48252d31b0e0e99f62948f2dfd764611f7939907b4591ae676417ed1414",
@@ -1112,8 +1112,8 @@
       "size": 22284
     },
     ".opencode/scripts/data_modules/tests/test_opencode_v2_config.py": {
-      "sha256": "507df258e9b4ee0d6692a9025491b89794e87cfb9fa665da25ec2c98ae76dd0c",
-      "size": 12203
+      "sha256": "7d90e8cb8f05f68f61ff532dbde883d53e7e5ed5f906273ebdba5f66e4455ffb",
+      "size": 18071
     },
     ".opencode/scripts/data_modules/tests/test_cli_exit_codes.py": {
       "sha256": "f5617e433bd974d67a84d6831449fa24694309893428146c3ff2af899f8b96a1",
