@@ -27,11 +27,16 @@
  * 满足该前提：升级前守卫照常工作，升级后也不会静默失效（V1 插件在 V2 里
  * 不报错、只是不加载——那才是真正危险的失败模式）。
  *
- * 有意**不** `import { Plugin } from '@opencode/plugin'`：该包在本机并未安装
- * （只有 @kilocode/plugin 与全局 opencode-ai CLI），静态 import 解析失败会让
- * 整个插件在 V1 下也加载不了——等于把"升级后失效"换成"现在就崩"。V2 文档对
- * 默认导出的要求是"带 id 与 setup(ctx) 的定义"，属形状要求；`Plugin.define`
+ * 有意**不** `import { Plugin } from '@opencode/plugin'`。原因为静态 import
+ * 解析失败会让整个插件在 V1 下也加载不了——等于把"升级后失效"换成"现在就崩"。
+ * V2 文档对默认导出的要求是"带 id 与 setup(ctx) 的定义"，属形状要求；`Plugin.define`
  * 是 TS 侧的书写便利，本文件是 .js，不需要类型。
+ *
+ * ⚠️ 该包现已**会被自动装上**：2026-10-04 实测，只要在项目里跑过一次 opencode，
+ *     `.opencode/package.json` 就会被加上 `"@opencode-ai/plugin"`（与 lock 同步），
+ *     回退后下次运行又出现，无法持久去除。所以上面那句"该包未安装"已不成立——
+ *     保留不用它的理由只剩"少一个 import 依赖"，而非"装不上"。
+ *     即便已安装也不用：形状要求用原生 default export 就满足，引入它没有收益。
  */
 
 const PROTECTED_SUFFIXES = [
