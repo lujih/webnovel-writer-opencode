@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261009.1609",
+  "version": "v2.9.2-20261009.1614",
   "tag": "v2.9.2",
-  "updated": "2026-10-09T16:09:40Z",
+  "updated": "2026-10-09T16:14:43Z",
   "changelog": [
     {
-      "hash": "d7dfeb0",
-      "type": "fix",
-      "message": "fix: \u8865\u58f0\u660e\u5bfc\u51fa\u5b50\u7cfb\u7edf\u7684\u7f3a\u5931\u4f9d\u8d56\u2014\u2014CI \u7f3a mistune/python-docx \u800c\u6536\u96c6\u5931\u8d25"
+      "hash": "b93aa60",
+      "type": "test",
+      "message": "test: \u4fee\u6b63 conftest \u81ea\u68c0\u65ad\u8a00\u7684\u53c2\u7167\u7269\u2014\u2014\u5e94\u6bd4\u5bf9\u88ab\u8f6c\u53d1\u7684\u539f\u59cb\u7c7b\u800c\u975e\u5df2\u88ab patch \u7684\u5f53\u524d\u7c7b"
     },
     {
-      "hash": "364a0de",
+      "hash": "690f7d9",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261009.1558 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261009.1609 [skip ci]"
     }
   ],
   "files": {
@@ -1280,8 +1280,8 @@
       "size": 2634
     },
     ".opencode/scripts/data_modules/tests/test_conftest_py_compat.py": {
-      "sha256": "9be0b33043b970bc261883edd8714c26772cfa86dcfb4f736a2369cbecfcf57a",
-      "size": 3502
+      "sha256": "8fd79910efbdf0feb58b991bb6b9630335465b2960153e5791bf83c9df573483",
+      "size": 4045
     },
     ".opencode/scripts/data_modules/tests/test_readme_accuracy.py": {
       "sha256": "afb7562dab6e56e03024d9549f0db0680f51dfaaa61de000f28275d167bef3e6",
