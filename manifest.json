@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261009.1558",
+  "version": "v2.9.2-20261009.1609",
   "tag": "v2.9.2",
-  "updated": "2026-10-09T15:58:59Z",
+  "updated": "2026-10-09T16:09:40Z",
   "changelog": [
     {
-      "hash": "f5ba7b5",
+      "hash": "d7dfeb0",
       "type": "fix",
-      "message": "fix: \u4fee\u590d CI \u6536\u96c6\u9636\u6bb5\u5d29\u6e83\uff08conftest \u5728 Python 3.11 \u4e0a\u8bef\u8f6c\u53d1 delete \u53c2\u6570\uff09\uff0c\u66f4\u6b63 npm \u7248\u672c\u65f6\u95f4\u7ebf"
+      "message": "fix: \u8865\u58f0\u660e\u5bfc\u51fa\u5b50\u7cfb\u7edf\u7684\u7f3a\u5931\u4f9d\u8d56\u2014\u2014CI \u7f3a mistune/python-docx \u800c\u6536\u96c6\u5931\u8d25"
     },
     {
-      "hash": "9d9712b",
+      "hash": "364a0de",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261009.1539 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261009.1558 [skip ci]"
     }
   ],
   "files": {
@@ -512,8 +512,8 @@
       "size": 13284
     },
     ".opencode/scripts/requirements.txt": {
-      "sha256": "6063cc8e2a44ebef9fbdec6c6cfaa4c1c4ac5c8890e54f5c23e2f6b885e77957",
-      "size": 262
+      "sha256": "2512e2904b9547cf63ca708a41b838b04ffad6f44ff1f184fe4687141edaaad7",
+      "size": 1138
     },
     ".opencode/scripts/init_project.py": {
       "sha256": "188da218eda424e09182204c38ff6419136f5709bb650f4ccd3fff6df58f7a63",
@@ -1090,6 +1090,10 @@
     ".opencode/scripts/data_modules/tests/test_skill_runner.py": {
       "sha256": "41f52dadeecd6687642ef2d700fba1b119402443f9c03e883478f73dde5ed479",
       "size": 6975
+    },
+    ".opencode/scripts/data_modules/tests/test_dep_declarations.py": {
+      "sha256": "912c6ad2828f8578e84622ce6cafacb5eca994a928845425f4118dff1c1ad79e",
+      "size": 4837
     },
     ".opencode/scripts/data_modules/tests/test_debt_repair.py": {
       "sha256": "2bfcce856341662f7d8fe2281479b8a0a2c126c57e5cb33e53273a51d033adc7",
