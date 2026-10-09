@@ -74,9 +74,9 @@ python .opencode/scripts/webnovel.py sync-agents-md
 `CLAUDE.md` 是正本，`AGENTS.md` 是它的逐字节镜像；改完 `CLAUDE.md` 需重跑该命令
 （CI 会校验二者一致）。
 
-- **npm 安装**：`2.9.2-13` 起离线包内置两份文件，安装时部署到**工作区根**
+- **npm 安装**：`2.9.2-16` 起离线包内置两份文件，安装时部署到**工作区根**
   （与 `.opencode/` 平级——那正是 OpenCode 2.x 能发现的位置），无需手工生成；
-  `≤2.9.2-12` 的旧版不含，执行 `npx @cszx/webnovel-writer-opencode update` 补齐。
+  `≤2.9.2-15` 的旧版不含，执行 `npx @cszx/webnovel-writer-opencode update` 补齐。
   装完若未发现 `AGENTS.md`，安装器会出声警告。
 - **git 安装**：需自行执行上面的 `sync-agents-md`。
 

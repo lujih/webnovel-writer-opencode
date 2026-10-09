@@ -23,7 +23,7 @@ python -m pytest .opencode/scripts/data_modules/tests/test_config.py -q -p no:co
 python -m pytest .opencode/scripts/data_modules/tests/test_config.py::test_load_env -q -p no:cov -o "addopts="
 ```
 
-Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` and sets `sqlite3` journal mode for test safety；它还会把 `WEBNOVEL_OPENCODE_HOME` 指向临时目录并在会话结束时还原工作区指针，**测试不会改写开发者的项目绑定**。**884 passed / 0 failed，零排除**（第4轮审查后：`test_publisher.py` 的陈旧 `from publisher import REGISTRY` 与陈旧 `get_upload_log_dir` 零参 lambda 已随产品签名更新修复，publisher 子系统重新获得覆盖；`test_rag_adapter.py` 的 17 例也已纳入）。
+Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` **与 `tempfile.TemporaryDirectory`（包装类 `_SafeTemporaryDirectory`，同时把临时目录钉进仓库 `.tmp/pytest`）**并 sets `sqlite3` journal mode for test safety；它还会把 `WEBNOVEL_OPENCODE_HOME` 指向临时目录并在会话结束时还原工作区指针，**测试不会改写开发者的项目绑定**。⚠️ `_SafeTemporaryDirectory` 转发 `delete=` 关键字参数**必须带 `_TEMPDIR_ACCEPTS_DELETE` 守卫**——`delete` 是 Python 3.14 才有的参数，无条件转发会让 CI（test.yml 跑 **Python 3.11**）在**收集阶段**全灭（filelock 导入期探测是第一个触发者；2026-10-09 Test 连红 6 次的根因，本机只有 3.14 所以一直全绿）。`test_conftest_py_compat.py` 钉住。当前计数以 README 目录树为准（`test_readme_accuracy` 强制与实际一致）；历史里程碑：第4轮审查后 884 passed 零排除，publisher 子系统重新获得覆盖、`test_rag_adapter.py` 的 17 例纳入。
 
 ### CLI
 

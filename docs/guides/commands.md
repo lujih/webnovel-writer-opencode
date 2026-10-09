@@ -246,8 +246,8 @@ python -X utf8 "<OPENCODE_ROOT>/scripts/webnovel.py" sync-agents-md --check  # �
 ```
 
 `CLAUDE.md` 是正本，`AGENTS.md` 是其**逐字节镜像**。改完 `CLAUDE.md` 需重跑
-（否则 CI 的 `--check` 会失败）。npm 安装（`2.9.2-13` 起）随离线包自带
-`AGENTS.md` 并部署到工作区根；旧版执行 `npx ... update` 补齐，git 安装才需自己生成。
+（否则 CI 的 `--check` 会失败）。npm 安装（`2.9.2-16` 起）随离线包自带
+`AGENTS.md` 并部署到工作区根；`≤2.9.2-15` 执行 `npx ... update` 补齐，git 安装才需自己生成。
 
 ⚠️ 不要把 `AGENTS.md` 加进 `.gitignore`——它必须进版本库，否则全新 clone 下
 v2 用户看不到任何项目说明。

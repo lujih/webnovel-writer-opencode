@@ -70,10 +70,10 @@ npx @cszx/webnovel-writer-opencode init
 
 > 📌 **npm 版本与 `AGENTS.md` 的时间线**（`npm view @cszx/webnovel-writer-opencode version` 可查当前最新）：
 > - `2.9.2-11`（2026-09-18）：遗漏整批 OpenCode v2 适配，`license` 还误标为 MIT。**勿再使用。**
-> - `2.9.2-12`：已含 v2 适配（`opencode.json`、agent `permissions`、写保护双入口、
->   `wn-*` 诊断命令、随包 `LICENSE`），**但离线包里没有 `AGENTS.md`**——OpenCode 2.x
->   用户装完没有任何项目说明（2.x 不回退 `CLAUDE.md`）。
-> - `2.9.2-13` 起：离线包内置 `AGENTS.md` + `CLAUDE.md`，安装时部署到工作区根
+> - `2.9.2-12` ～ `2.9.2-15`：已含 v2 适配（`opencode.json`、agent `permissions`、
+>   写保护双入口、`wn-*` 诊断命令、随包 `LICENSE`），**但离线包里没有 `AGENTS.md`**——
+>   OpenCode 2.x 用户装完没有任何项目说明（2.x 不回退 `CLAUDE.md`）。
+> - `2.9.2-16` 起：离线包内置 `AGENTS.md` + `CLAUDE.md`，安装时部署到工作区根
 >   （与 `.opencode/` 平级，正是 2.x 的发现位置）。装过旧版执行
 >   `npx @cszx/webnovel-writer-opencode update` 即可补齐。
 >
@@ -222,7 +222,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   └── scripts/                  # Python 核心脚本
 │       ├── webnovel.py           # CLI 统一入口（38 个子命令）
 │       ├── data_modules/         # 核心数据模块（72 个）
-│       └── tests/                # 测试（102 个测试文件，1130 用例）
+│       └── tests/                # 测试（103 个测试文件，1135 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构

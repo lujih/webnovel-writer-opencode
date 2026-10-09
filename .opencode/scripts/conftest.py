@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import os
 import shutil
 import sqlite3
@@ -52,15 +53,28 @@ def _install_safe_tempfile() -> None:
     tempfile.TemporaryDirectory = _SafeTemporaryDirectory
 
 
+# `delete` 是 Python **3.14 起**才加入 TemporaryDirectory 的关键字参数。
+# CI 跑 3.11（test.yml python-version: 3.11），无条件转发会让**每一个**
+# TemporaryDirectory 构造抛 TypeError——conftest 在收集前就装上这个 patch，
+# 于是整个收集阶段全灭（filelock 导入期的目录探测是第一个触发者）。
+# 3.11 没有此参数，语义上等价于 delete=True（close 时删除目录），故仅在
+# 真类接受时转发；3.11 上若调用方传 delete=False，忽略它（测试沙箱可接受）。
+_TEMPDIR_ACCEPTS_DELETE = "delete" in inspect.signature(
+    _ORIGINAL_TEMPORARY_DIRECTORY.__init__
+).parameters
+
+
 class _SafeTemporaryDirectory(_ORIGINAL_TEMPORARY_DIRECTORY):
     def __init__(self, suffix=None, prefix=None, dir=None, ignore_cleanup_errors=True, *, delete=True):
-        super().__init__(
+        kwargs = dict(
             suffix=suffix,
             prefix=prefix,
             dir=dir,
             ignore_cleanup_errors=ignore_cleanup_errors,
-            delete=delete,
         )
+        if _TEMPDIR_ACCEPTS_DELETE:
+            kwargs["delete"] = delete
+        super().__init__(**kwargs)
 
 
 def _safe_sqlite_connect(*args, **kwargs):
