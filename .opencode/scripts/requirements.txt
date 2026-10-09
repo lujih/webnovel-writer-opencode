@@ -5,3 +5,15 @@
 aiohttp>=3.8.0          # 异步 HTTP 客户端（API 调用）
 filelock>=3.0.0         # 文件锁（状态文件并发控制）
 pydantic>=2.0.0         # Schema 校验
+
+# 导出子系统（export_manager）。前三项是**包级硬依赖**：parser.py 与
+# formats/docx.py 的 import 在模块顶层，不装则 `from export_manager import ...`
+# 整包 ImportError——CI 收集 test_export_manager 直接失败、npm 用户 export 直接崩。
+mistune>=3.0.0          # Markdown→HTML 解析（export_manager/parser.py 顶层）
+python-docx>=1.0.0      # DOCX 导出（formats/docx.py 顶层）
+ebooklib>=0.18.0        # EPUB 构建（export_epub 调用时，测试真实覆盖）
+Pillow>=10.0.0          # EPUB 封面裁剪（未装会降级为原图并告警，建议装）
+
+# 可选依赖（按功能，产品已有优雅降级，故不进必装清单）:
+#   weasyprint>=61    # PDF 导出；Windows/macOS 另需系统 GTK/pango 库
+#   playwright        # 发布平台浏览器自动化；另需 `playwright install` 下载浏览器
