@@ -16,7 +16,6 @@ TypeError，整个收集阶段全灭（filelock 导入期的目录探测只是�
 """
 import inspect
 import sys
-import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
@@ -52,11 +51,20 @@ class TestRuntimeOnThisInterpreter:
     def test_probe_is_bool(self):
         assert isinstance(_conftest()._TEMPDIR_ACCEPTS_DELETE, bool)
 
-    def test_probe_matches_real_signature(self):
+    def test_probe_matches_forward_target(self):
+        """探测结果必须与**实际被转发的原始类**一致。
+
+        反面教训（本测试自己踩过）：不能拿 `tempfile.TemporaryDirectory` 的
+        *当前* 签名对比——conftest 已把它 patch 成带 `delete` 的包装类。
+        于是 3.14 上"当前签名有 delete、探测 True"碰巧一致，而 3.11 上
+        "当前签名有 delete（包装类）、探测 False"必然不一致——
+        一个写错的自检，恰好只在正确性最关键的解释器上失败。
+        """
+        conf = _conftest()
         accepts = "delete" in inspect.signature(
-            tempfile.TemporaryDirectory.__init__).parameters
-        assert _conftest()._TEMPDIR_ACCEPTS_DELETE is accepts, (
-            "探测结果与当前解释器真实签名不一致"
+            conf._ORIGINAL_TEMPORARY_DIRECTORY.__init__).parameters
+        assert conf._TEMPDIR_ACCEPTS_DELETE is accepts, (
+            "探测结果与被转发的原始类签名不一致"
         )
 
     def test_construct_without_typeerror(self):
