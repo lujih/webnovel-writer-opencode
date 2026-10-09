@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261009.1539",
+  "version": "v2.9.2-20261009.1558",
   "tag": "v2.9.2",
-  "updated": "2026-10-09T15:39:43Z",
+  "updated": "2026-10-09T15:58:59Z",
   "changelog": [
     {
-      "hash": "3fd7be5",
+      "hash": "f5ba7b5",
       "type": "fix",
-      "message": "fix: npm \u79bb\u7ebf\u5305\u643a\u5e26 AGENTS.md/CLAUDE.md\u2014\u2014\u4e3b\u5b89\u88c5\u8def\u5f84\u5728 OpenCode V2 \u4e0b\u539f\u672c\u6ca1\u6709\u9879\u76ee\u8bf4\u660e"
+      "message": "fix: \u4fee\u590d CI \u6536\u96c6\u9636\u6bb5\u5d29\u6e83\uff08conftest \u5728 Python 3.11 \u4e0a\u8bef\u8f6c\u53d1 delete \u53c2\u6570\uff09\uff0c\u66f4\u6b63 npm \u7248\u672c\u65f6\u95f4\u7ebf"
     },
     {
-      "hash": "da00b7a",
+      "hash": "9d9712b",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261006.1606 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261009.1539 [skip ci]"
     }
   ],
   "files": {
@@ -440,8 +440,8 @@
       "size": 2659
     },
     ".opencode/scripts/conftest.py": {
-      "sha256": "17a190ef533be4e20fd05ebd7de321550778a3f74256daef85825c1408e6a9f7",
-      "size": 4732
+      "sha256": "0df41a7ff29228a389333ca5dac382d7e208709e7f5f11ad583c74bbb2063eff",
+      "size": 5500
     },
     ".opencode/scripts/gen_manifest.py": {
       "sha256": "4349584531b9b6124017dd3e05e880de61f7ec8c84d42f94a93ca926f259da96",
@@ -1274,6 +1274,10 @@
     ".opencode/scripts/data_modules/tests/test_story_contracts.py": {
       "sha256": "86f87f5d7d947b9f0fc02946d25dd1bd1180c185de09847bff25a1799d3e8e6a",
       "size": 2634
+    },
+    ".opencode/scripts/data_modules/tests/test_conftest_py_compat.py": {
+      "sha256": "9be0b33043b970bc261883edd8714c26772cfa86dcfb4f736a2369cbecfcf57a",
+      "size": 3502
     },
     ".opencode/scripts/data_modules/tests/test_readme_accuracy.py": {
       "sha256": "afb7562dab6e56e03024d9549f0db0680f51dfaaa61de000f28275d167bef3e6",
