@@ -68,13 +68,16 @@ npx @cszx/webnovel-writer-opencode init
 
 离线包内置（1.7 MB），无需联网下载。自动检测 Python 并安装依赖。完成后在工作目录打开 OpenCode 即可开始写作。
 
-> 📌 **如果你在此之前（2026-09-18 之前）装过 npm 版，请重装一次。**
-> 上一版 `2.9.2-11` 遗漏了整批 OpenCode v2 适配，且该版本的 `license` 字段
-> 误标为 MIT（实际是 GPL-3.0）。当前 `latest` 为 `2.9.2-12`，已包含：
-> `.opencode/opencode.json`、6 个 agent 的 v2 `permissions`、写保护插件双入口、
-> `AGENTS.md` 生成脚本、5 个 `wn-*` 诊断命令，以及随包分发的 `LICENSE`。
+> 📌 **npm 版本与 `AGENTS.md` 的时间线**（`npm view @cszx/webnovel-writer-opencode version` 可查当前最新）：
+> - `2.9.2-11`（2026-09-18）：遗漏整批 OpenCode v2 适配，`license` 还误标为 MIT。**勿再使用。**
+> - `2.9.2-12`：已含 v2 适配（`opencode.json`、agent `permissions`、写保护双入口、
+>   `wn-*` 诊断命令、随包 `LICENSE`），**但离线包里没有 `AGENTS.md`**——OpenCode 2.x
+>   用户装完没有任何项目说明（2.x 不回退 `CLAUDE.md`）。
+> - `2.9.2-13` 起：离线包内置 `AGENTS.md` + `CLAUDE.md`，安装时部署到工作区根
+>   （与 `.opencode/` 平级，正是 2.x 的发现位置）。装过旧版执行
+>   `npx @cszx/webnovel-writer-opencode update` 即可补齐。
 >
-> 从 git 安装则须自己生成 `AGENTS.md`（npm 包内已含）：
+> 从 git 安装则须自己生成 `AGENTS.md`：
 >
 > ```bash
 > git clone https://github.com/lujih/webnovel-writer-opencode.git
@@ -154,6 +157,18 @@ RERANK_API_KEY=your_api_key
 > `.opencode/plugins/write-guard.js` 是全局 tool hook，对所有 agent 生效、V1/V2 都跑。
 > 受影响的只是 V2 主 agent 少了一层"工具不可见"的提前拦截。
 
+> ⚠️ **OpenCode 会自动改写你的文件（已实测，非 bug，不必修）**：
+> 1. **每次运行都会往 `.opencode/opencode.json` 插入 `"$schema"`**——
+>    恰是我们刻意避开的那个陈旧 V1 schema。仓库提交的版本不含它；
+>    本地被写回无害（V1/V2 都接受该键）。
+> 2. **每次运行都会往 `.opencode/package.json` 追加 `@opencode-ai/plugin` 依赖**
+>    （并同步 lock）。回退后下次运行又出现，无法持久去除。本项目刻意不用它，
+>    留着无副作用。
+> 3. **不要在 V2 里运行官方的 "Migrate my OpenCode configuration" 迁移提示词。**
+>    它会把配置转成 V2 原生形态（含 `permissions`），此后 **V1 将无法加载**
+>    （rc=1，见上方 V1 差异说明）。双版本兼容的前提是配置保持 V1 安全形态；
+>    V2 官方文档也明确警告"不要让 V1 指向已转换为原生 V2 形态的配置"。
+
 ### 3.6 提供帮助和支持
 
 遇到问题时，可以通过以下渠道获取帮助：
@@ -207,7 +222,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   └── scripts/                  # Python 核心脚本
 │       ├── webnovel.py           # CLI 统一入口（38 个子命令）
 │       ├── data_modules/         # 核心数据模块（72 个）
-│       └── tests/                # 测试（101 个测试文件，1119 用例）
+│       └── tests/                # 测试（102 个测试文件，1130 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构

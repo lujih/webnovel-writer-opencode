@@ -72,7 +72,13 @@ python .opencode/scripts/webnovel.py sync-agents-md
 ```
 
 `CLAUDE.md` 是正本，`AGENTS.md` 是它的逐字节镜像；改完 `CLAUDE.md` 需重跑该命令
-（CI 会校验二者一致）。npm 包内已含 `AGENTS.md`，只有从 git 安装才需要自己生成。
+（CI 会校验二者一致）。
+
+- **npm 安装**：`2.9.2-13` 起离线包内置两份文件，安装时部署到**工作区根**
+  （与 `.opencode/` 平级——那正是 OpenCode 2.x 能发现的位置），无需手工生成；
+  `≤2.9.2-12` 的旧版不含，执行 `npx @cszx/webnovel-writer-opencode update` 补齐。
+  装完若未发现 `AGENTS.md`，安装器会出声警告。
+- **git 安装**：需自行执行上面的 `sync-agents-md`。
 
 ⚠️ **不要把 `AGENTS.md` 加进 `.gitignore`** —— 它是仓库的正式产物。
 
@@ -81,3 +87,12 @@ python .opencode/scripts/webnovel.py sync-agents-md
 OpenCode 内置的格式化器（prettier / biome）覆盖 `.md`，而**章节正文全是 `.md`**。
 开启会把已发布正文重排折行、规范空白——那是改你的作品；且格式化在写盘**之后**
 才跑，拦不住。本项目的配置已显式关闭，升级或合并配置时留意别被打开。
+
+## 已知的 OpenCode 自动改写（实测行为，无需处理）
+
+1. 每次运行 OpenCode 都会往 `.opencode/opencode.json` 插入 `"$schema"` 键，
+   并往 `.opencode/package.json` 追加 `@opencode-ai/plugin` 依赖。回退后下次运行
+   又会出现，属宿主的迁移/依赖管理行为，无副作用。
+2. **不要**在 OpenCode 2.x 里执行官方的 "Migrate my OpenCode configuration"
+   迁移提示词——它会把配置转成 V2 原生形态，此后 OpenCode **1.x 将无法加载**
+   该配置（rc=1 致命拒绝），双版本兼容的前提是配置保持 V1 安全形态。

@@ -22,6 +22,9 @@ try {
     '.opencode/scripts/requirements.txt',
     '.opencode/skills/webnovel-write/SKILL.md',
     '.opencode/agents/context-agent.md',
+    // 项目说明必须在 tar 根（与 .opencode/ 平级），OpenCode V2 才发现得到
+    'AGENTS.md',
+    'CLAUDE.md',
   ];
 
   let failed = 0;

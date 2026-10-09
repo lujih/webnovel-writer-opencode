@@ -5,7 +5,7 @@
  * UStar 格式：512 字节 header 块 + 数据块（512 对齐）
  */
 
-import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync, readFileSync, existsSync } from 'node:fs';
 import { join, dirname, normalize, relative } from 'node:path';
 import { gunzipSync } from 'node:zlib';
 
@@ -40,9 +40,11 @@ function readOctal(buf, offset, len) {
  * @param {Buffer} tarBuffer
  * @param {string} destDir
  * @param {string} prefix - 路径前缀（如 'repo-master/.opencode/'）
+ * @param {string[]|null} only - 非空时只落盘这些剥离前缀后的相对路径
+ *   （用于从源码 tarball 根只抽 AGENTS.md/CLAUDE.md，不碰其余仓库文件）
  * @returns {number} 提取的文件数
  */
-function extractFromTar(tarBuffer, destDir, prefix = '') {
+function extractFromTar(tarBuffer, destDir, prefix = '', only = null) {
   let offset = 0;
   let fileCount = 0;
   const cleanPrefix = prefix ? prefix.replace(/^\.?\//, '').replace(/\/$/, '') : '';
@@ -90,6 +92,15 @@ function extractFromTar(tarBuffer, destDir, prefix = '') {
       }
     }
 
+    // only 过滤：只允许白名单路径落盘（含目录条目一并跳过——写文件时会自建父目录）
+    if (only) {
+      const t = targetName.replace(/\\/g, '/').replace(/\/$/, '');
+      if (!t || !only.includes(t)) {
+        offset += Math.ceil(size / BLOCK_SIZE) * BLOCK_SIZE;
+        continue;
+      }
+    }
+
     // 路径穿越防护
     if (targetName) {
       const clean = targetName.replace(/\\/g, '/').replace(/\/$/, '');
@@ -126,11 +137,35 @@ function extractFromTar(tarBuffer, destDir, prefix = '') {
  * @param {string} tarGzPath
  * @param {string} destDir
  * @param {string} prefix
+ * @param {string[]|null} only - 白名单过滤，见 extractFromTar
  * @returns {Promise<number>}
  */
-export async function extractTarGz(tarGzPath, destDir, prefix = '') {
+export async function extractTarGz(tarGzPath, destDir, prefix = '', only = null) {
   mkdirSync(destDir, { recursive: true });
   const compressed = readFileSync(tarGzPath);
   const decompressed = gunzipSync(compressed);
-  return extractFromTar(decompressed, destDir, prefix);
+  return extractFromTar(decompressed, destDir, prefix, only);
+}
+
+/** 从源码 tarball 根目录只抽项目说明文件（AGENTS.md / CLAUDE.md）。
+ *
+ * 必要性：init/update 的网络路径用 PREFIX 把解压限定在 `.opencode/` 内
+ * （dest 也是 `.opencode/`），仓库根的指令文件被前缀过滤跳过——于是
+ * OpenCode 2.x 的用户拿不到任何项目说明（V2 只发现 AGENTS.md）。
+ * 网络源码 tarball 里本来就有这两个文件，单抽一遍即可，无额外下载。
+ *
+ * @param {string} tarGzPath 源码 tarball（refs/heads 分支归档）
+ * @param {string} destDir 落盘目录（工作区根，与 .opencode/ 平级）
+ * @param {string} repoBase 归档顶层目录名，如 `webnovel-writer-opencode-master`
+ * @returns {Promise<{extracted: string[], missing: string[]}>}
+ */
+export async function extractRootDocs(tarGzPath, destDir, repoBase) {
+  const wanted = ['AGENTS.md', 'CLAUDE.md'];
+  const extracted = [];
+  for (const doc of wanted) {
+    // 逐文件抽：计数能精确说明 tarball 里到底有没有它
+    const n = await extractTarGz(tarGzPath, destDir, `${repoBase}/`, [doc]);
+    if (n > 0 && existsSync(join(destDir, doc))) extracted.push(doc);
+  }
+  return { extracted, missing: wanted.filter((d) => !extracted.includes(d)) };
 }

@@ -16,7 +16,7 @@ import { get as httpGet } from 'node:http';
 import { spawn } from 'node:child_process';
 
 import { step, stepOk, info, warn, createSpinner, confirm, success } from '../core/ui.js';
-import { extractTarGz } from '../core/extract.js';
+import { extractTarGz, extractRootDocs } from '../core/extract.js';
 import { detectPython } from '../core/python.js';
 
 const __pkgRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -36,7 +36,8 @@ const REPO = 'lujih/webnovel-writer-opencode';
 const BRANCH = 'master';
 const GITHUB_TARBALL = `https://github.com/${REPO}/archive/refs/heads/${BRANCH}.tar.gz`;
 const MIRRORS = ['https://ghproxy.com/', 'https://mirror.ghproxy.com/'];
-const PREFIX = `${REPO.split('/')[1]}-${BRANCH}/.opencode`;
+const REPO_BASE = `${REPO.split('/')[1]}-${BRANCH}`;
+const PREFIX = `${REPO_BASE}/.opencode`;
 
 // 可信域名白名单
 const TRUSTED_HOSTS = [
@@ -189,6 +190,18 @@ export async function update(options = {}) {
         if (count === 0) throw new Error('压缩包为空');
         es.stop(`已更新 ${count} 个文件`);
         stepOk(2, 3, `已更新 ${count} 个文件`);
+
+        // PREFIX 限定 .opencode/，仓库根的项目说明需单抽（须在删 tmp 之前）。
+        // 缺 AGENTS.md 是 V2 下的静默失败：模型照常调用 skill 但读不到项目规则。
+        // 抽取失败不判更新失败——主载荷已落盘，下方存在性检查会出声。
+        try {
+          const { extracted, missing } = await extractRootDocs(tmp, cwd, REPO_BASE);
+          if (extracted.length) info(`项目说明已更新: ${extracted.join(', ')}`);
+          if (missing.length) warn(`更新包中缺少 ${missing.join(', ')}，请从仓库根复制`);
+        } catch (ed) {
+          warn(`项目说明抽取失败: ${ed.message}`);
+        }
+
         try { unlinkSync(tmp); } catch {}
       } catch (e) {
         es.fail('解压失败');
@@ -221,6 +234,9 @@ export async function update(options = {}) {
       writeFileSync(join(dest, 'version.json'), JSON.stringify(info, null, 2), 'utf-8');
     } catch {}
 
+    if (!existsSync(join(cwd, 'AGENTS.md'))) {
+      warn('未发现 AGENTS.md：OpenCode 2.x 将看不到项目说明。可从仓库根复制，或在 git 安装下执行 sync-agents-md。');
+    }
     success('更新完成！', ['已更新到最新版本']);
   } catch (e) {
     process.stderr.write(`\n更新失败: ${e.message}\n`);

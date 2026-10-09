@@ -18,7 +18,7 @@ import {
   prompt, confirm,
   createSpinner,
 } from '../core/ui.js';
-import { extractTarGz } from '../core/extract.js';
+import { extractTarGz, extractRootDocs } from '../core/extract.js';
 import { detectPython } from '../core/python.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,7 +40,8 @@ function isTrustedHost(url) {
     return TRUSTED_HOSTS.some(h => host === h || host.endsWith('.' + h));
   } catch { return false; }
 }
-const PREFIX = `${REPO.split('/')[1]}-${BRANCH}/.opencode`;
+const REPO_BASE = `${REPO.split('/')[1]}-${BRANCH}`;
+const PREFIX = `${REPO_BASE}/.opencode`;
 
 // ── 步骤 0: Node 版本检查 ────────────────────────────────
 
@@ -182,6 +183,19 @@ async function deployOpencode(cwd, options) {
       error('请尝试离线安装：npx @cszx/webnovel-writer-opencode init --offline');
     }
     es.stop(`解压完成 (${netCount} 个文件)`);
+
+    // PREFIX 限定在 .opencode/ 内，仓库根的项目说明会被跳过——OpenCode 2.x
+    // 只发现 AGENTS.md，缺了它整套项目规则对模型不可见。源码 tarball 里本来
+    // 就有，这里单抽一遍（须在删除 tmp 之前）。
+    // 说明文件抽取失败不判安装失败：主载荷已落盘，末尾的存在性检查会出声。
+    try {
+      const { extracted, missing } = await extractRootDocs(tmp, cwd, REPO_BASE);
+      if (extracted.length) info(`项目说明已部署: ${extracted.join(', ')}`);
+      if (missing.length) warn(`tarball 中缺少 ${missing.join(', ')}（分支可能不含该文件）`);
+    } catch (ed) {
+      warn(`项目说明抽取失败: ${ed.message}`);
+    }
+
     try { unlinkSync(tmp); } catch {}
   } catch (e) {
     es.fail(`解压失败: ${e.message}`);
@@ -287,6 +301,12 @@ export async function init(options = {}) {
     const r = await deployOpencode(cwd, options);
     stepOk(1, 2, r === 'offline' ? '已部署（离线包）' : r === 'downloaded' ? '已部署（网络下载）' : '已跳过');
     if (r !== 'skipped') writeVersion(cwd, r);
+
+    // 项目说明缺失必须出声：OpenCode 2.x 只发现 AGENTS.md，缺了它是**静默**
+    // 失败——模型照常调用 skill，但读不到任何项目规则。
+    if (!existsSync(join(cwd, 'AGENTS.md'))) {
+      warn('未发现 AGENTS.md：OpenCode 2.x 将看不到项目说明。可从仓库根复制，或在 git 安装下执行 sync-agents-md。');
+    }
 
     step(2, 2, '安装 Python 依赖');                              // 4
     const pr = await installPythonDeps(cwd, options);

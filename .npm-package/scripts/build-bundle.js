@@ -144,6 +144,24 @@ async function buildBundle() {
   const entries = collectFiles(OPC_DIR, dirname(OPC_DIR));
   process.stdout.write(`${entries.length} 个条目\n`);
 
+  // 项目说明：OpenCode 2.x 只发现环境里的 AGENTS.md（不在 .opencode/ 里），
+  // 缺了它整套项目规则对模型不可见。这两份在仓库根、不在 .opencode/ 下，
+  // 必须显式追加为 tar 根条目——解压到 cwd 后与 .opencode/ 平级，
+  // 正是 AGENTS.md 发现路径能看到的位置。
+  // CLAUDE.md 是正本（sync-agents-md 从它镜像），随包提供以便日后重生成。
+  for (const doc of ['AGENTS.md', 'CLAUDE.md']) {
+    const p = join(__pkgRoot, '..', doc);
+    let st;
+    try {
+      st = statSync(p);
+    } catch {
+      throw new Error(`${doc} 不存在: ${p}（V2 用户需要它，缺失时拒绝出包）`);
+    }
+    if (!st.isFile()) throw new Error(`${doc} 不是普通文件: ${p}`);
+    entries.push({ name: doc, size: st.size, type: '0', mtime: Math.floor(st.mtimeMs / 1000), path: p });
+    process.stdout.write(`  ✅ 说明文件已入包: ${doc}\n`);
+  }
+
   // 构建 tar buffer
   process.stdout.write('打包 tar... ');
   const chunks = [];
