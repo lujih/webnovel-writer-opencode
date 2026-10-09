@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261006.1606",
+  "version": "v2.9.2-20261009.1539",
   "tag": "v2.9.2",
-  "updated": "2026-10-06T16:06:56Z",
+  "updated": "2026-10-09T15:39:43Z",
   "changelog": [
     {
-      "hash": "b4abdd4",
-      "type": "docs",
-      "message": "docs: \u66f4\u6b63 write-guard \u5173\u4e8e @opencode-ai/plugin\u300c\u672a\u5b89\u88c5\u300d\u7684\u8868\u8ff0"
+      "hash": "3fd7be5",
+      "type": "fix",
+      "message": "fix: npm \u79bb\u7ebf\u5305\u643a\u5e26 AGENTS.md/CLAUDE.md\u2014\u2014\u4e3b\u5b89\u88c5\u8def\u5f84\u5728 OpenCode V2 \u4e0b\u539f\u672c\u6ca1\u6709\u9879\u76ee\u8bf4\u660e"
     },
     {
-      "hash": "131bbea",
+      "hash": "da00b7a",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261006.1604 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261006.1606 [skip ci]"
     }
   ],
   "files": {
@@ -1350,6 +1350,10 @@
     ".opencode/scripts/data_modules/tests/test_memory_store.py": {
       "sha256": "dc85907932875531862c337e9280e35b548b377a65e27342ae6260b5f120c40b",
       "size": 5745
+    },
+    ".opencode/scripts/data_modules/tests/test_npm_bundle_instructions.py": {
+      "sha256": "545b6206dba59a5b7efd901d86fc609ea772db7bec57ac9126b11cb54eb9f77b",
+      "size": 8531
     },
     ".opencode/scripts/data_modules/write_gates/precommit.py": {
       "sha256": "fcdfc94562518bf7108a4ef30bcaf925e2423c7b9bc8ae4544be7a9dbac882a8",
