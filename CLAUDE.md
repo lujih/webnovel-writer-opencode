@@ -156,6 +156,14 @@ V2 三处破坏性变更中两处直接影响本仓库——**① 插件 API 全
 
 **npm 离线包必须携带项目说明**（2026-10-09，对照 V2 迁移文档追出的三重缺口，已修）：`build-bundle.js` 原来只打包 `.opencode/`，仓库根的 `AGENTS.md`/`CLAUDE.md` 从未进包——已发布的 `2.9.2-12` 实测无此二文件，即 **npm 主安装路径在 V2 下没有项目说明**（且是静默失败：模型照常调用 skill 但读不到规则）。修复：① 构建时把两份文件追加为 tar 根条目（解压到工作区根、与 `.opencode/` 平级——正是 V2 的发现位置），缺失即拒绝出包；② 网络安装路径 PREFIX 限定 `.opencode/`、抽不到根文件，`init`/`update` 改用 `extractRootDocs`（`extract.js` 新增 `only` 白名单过滤）从源码 tarball 单抽，**必须在 `unlinkSync(tmp)` 之前**；③ 抽取失败不判安装失败，靠部署后的 AGENTS.md 存在性检查出声警告；④ `uninstall` 只删逐字节镜像（AGENTS==CLAUDE 才删），用户改过的说明保留。`test_npm_bundle_instructions.py`（11 例，需 node）钉住：构建产物含二文件且与仓库根逐字节一致、缺文件时构建失败、`extractRootDocs` 白名单不越权、init/update 调用顺序。
 
+**OpenCode V2 实机验证（2026-10-10，opencode 2.0.26 全量实测）**：安装方式 `npm i -g --allow-scripts=@opencode/cli`（官方包，bin 同时提供 `opencode`/`opencode2`；⚠️ npm 上的 `opencode2` 包是**第三方分叉** `game-libgdx-unity/opencode2`，勿装；⚠️ 不带 `--allow-scripts` 时 postinstall 被 npm 门禁拦掉、选不了原生二进制）。回滚 V1：`npm uninstall -g @opencode/cli && npm install -g opencode-ai@1.18.34`。验证结论：
+- 4 键 `opencode.json` 加载 rc=0、4 键原样解析；V2 **未**像 V1 那样注入 `$schema`。
+- 6 个 agent 全被发现，**但 frontmatter 的 `permissions` 全部错位到 `request.body.permissions`**（顶层只剩出厂默认 5 条，SSOT deny 零生效）。根因是 frontmatter 里的 **`name:` 行**——隔离实验矩阵：无 name→规则正确追加到顶层（默认在前、文件规则在后、最后匹配者生效）；有 name→必然错位；而 name 的值本身还被忽略（id/展示名取文件名）。已从 6 个 agent 删除 name（V1 侧 id 本就取文件名，两代行为不变）；`test_agent_v2_permissions.py::TestNoFrontmatterName` 钉死，`test_prompt_integrity.py::test_agent_frontmatter_complete` 的"name 必须有"**反转为"禁止有"**。修复后 `opencode debug agents` 确认：4 个带 edit 的 agent = 18 条（5 默认+13 文件规则）、2 个只读 agent = 11 条（5+6），deny-all 与 6 条 SSOT deny 均在顶层生效字段。
+- **AGENTS.md 发现语义（npm 布局的成立依据）**：工作区根的 AGENTS.md 在三种 CWD 下均加载——工作区根本身、书子目录（书是独立 git 仓库）、书子目录（非 git），模型均可复述 marker。文档说 "outside home 时走到 project root 为止"，实测该 project root = **配置根**（含 `.opencode`/`package.json` 的目录），**书目录自身的 git 根不截断**向上发现。
+- 16 个 skills 模型逐个可见；**write-guard 端到端拦截**：V2 主 agent 默认 allow-all 下，模型 Edit `.webnovel/state.json` 被 hook 拒绝（中文提示原样返回、文件未变）——兜底层独立成立。
+- commands：V2 文档确认 `.opencode/commands/` 发现规则同 V1，frontmatter **只需 `description`、没有 name 字段**（id=文件名）——`wn-*` 形态本就符合；plugin-scanner 要求 name 是它自设约定，不是 OpenCode 规范。
+- 操作坑：V2 `debug` 仅剩 agents/config/paths；共享服务 stop 后**首跑可能返回 `[]` 或只含内置 agent**（预热竞态，重试即可）；`--standalone` 对 debug 子命令无效。**未实测**：TUI 内 `/wn-*` 实调（机制同 V1，真书已验过）。
+
 **未做及原因**：`$schema`（如上，schema 未跟上）；`experimental.policies`（想用它做 SSOT 硬 deny，但实测 schema 里 `Policy.action` 枚举**只有 `provider.use`**，文档示例中的 `"action":"permission"` 过不了校验，不冒这个险）；MCP 暴露 Python 数据层（需 `opencode.json` 的 `mcp.servers` + 给 6 个 agent 加 `<server>_<tool>` 放行规则，工作量中等且收益待观察）；FastAPI 面板**不可**迁进 OpenCode（插件只能挂 TUI slot / OpenTUI JSX，**没有 webview 宿主**，ECharts 无等价物）。
 
 **不追求 DSH 原生化。** 本仓库只适配 OpenCode。DeepSeek Harness 侧由上游

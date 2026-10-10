@@ -1,5 +1,4 @@
 ---
-name: chapter-writer-agent
 description: 根据写作任务书起草并润色单个章节，在干净上下文中完成创作闭环。
 mode: subagent
 permissions:

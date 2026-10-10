@@ -209,3 +209,31 @@ class TestPerAgentToolFit:
         body = path.read_text(encoding="utf-8")
         assert "不写任何文件" in body
         assert _effect_of(_rules(path), "edit") == "deny"
+
+
+class TestNoFrontmatterName:
+    """agent frontmatter 里**不得**有 `name:`——V2 会把 permissions 整个错位。
+
+    实测（2026-10-10，opencode 2.0.26，隔离实验矩阵）：frontmatter 含 `name:`
+    时，V2 把同一文件的 `permissions` 解析进 `request.body.permissions`
+    （模型请求体位置），顶层生效权限只剩出厂默认 5 条——**全部 SSOT deny
+    静默失效**。无 `name:` 则正确追加到顶层（"permission rules append"，
+    默认规则在前、本文件规则在后，最后匹配者生效）。
+
+    `name` 本身也是死字段：id/展示名永远取文件名（V2 忽略该值；V1 同样以
+    文件名为 id）。即这行零收益、纯破坏。迁移脚本不写它，本测试防回潮。
+
+    为什么本地 pytest 抓不到：测试自己解析 YAML，永远"读得到"规则——错位
+    只发生在真实 V2 运行时（`opencode debug agents` 才看得见）。
+    """
+
+    def test_no_name_key_in_frontmatter(self, agent):
+        fm = _frontmatter(agent)
+        assert not re.search(r"^name\s*:", fm, re.M), (
+            f"{agent.name} 的 frontmatter 含 name:——OpenCode V2 下会把 "
+            "permissions 错位到 request.body，SSOT deny 全部静默失效"
+        )
+
+    def test_frontmatter_still_has_permissions(self, agent):
+        """删 name 的前提 permissions 还在（防删错对象）。"""
+        assert "permissions:" in _frontmatter(agent)

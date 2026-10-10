@@ -78,6 +78,8 @@ python .opencode/scripts/webnovel.py sync-agents-md
   （与 `.opencode/` 平级——那正是 OpenCode 2.x 能发现的位置），无需手工生成；
   `≤2.9.2-15` 的旧版不含，执行 `npx @cszx/webnovel-writer-opencode update` 补齐。
   装完若未发现 `AGENTS.md`，安装器会出声警告。
+  （**2.0.26 实测**：从工作区根本身、以及从书子目录打开 OpenCode 都能加载到
+  工作区根的 AGENTS.md，书目录自身的 git 仓库不会截断向上发现。）
 - **git 安装**：需自行执行上面的 `sync-agents-md`。
 
 ⚠️ **不要把 `AGENTS.md` 加进 `.gitignore`** —— 它是仓库的正式产物。

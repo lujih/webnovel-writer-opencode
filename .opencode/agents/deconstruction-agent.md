@@ -1,5 +1,4 @@
 ---
-name: deconstruction-agent
 description: Reference-book deconstruction agent for webnovel-init. Extracts transferable craft patterns without contaminating story canon.
 mode: subagent
 permissions:

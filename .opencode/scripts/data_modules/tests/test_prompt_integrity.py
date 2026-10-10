@@ -97,15 +97,26 @@ def _extract_cli_subcommands(text: str) -> list[str]:
 
 @pytest.mark.parametrize("agent_file", AGENT_FILES, ids=lambda f: f.name)
 def test_agent_frontmatter_complete(agent_file: Path):
-    """每个 agent 必须有 name, description，以及一份工具约束。
+    """每个 agent 必须有 description 与一份工具约束，且**不得**有 name。
+
+    `name` 的兴衰（2026-10-10，OpenCode 2.0.26 实测）：V1 时代习惯在
+    frontmatter 写 name（与文件名同值）。V2 下该键是死字段——id 与展示名
+    永远取文件名——**但它的存在会把同一文件的 `permissions` 整个错位进
+    `request.body`**，顶层生效权限回落出厂默认，全部 SSOT deny 静默失效。
+    零收益、纯破坏，故从"必须有"反转为"禁止有"（隔离实验矩阵钉在
+    test_agent_v2_permissions.py::TestNoFrontmatterName）。
 
     工具约束的键随 OpenCode 版本变过：V1 的 `tools` 布尔映射已废弃并并入
     `permission`（见 V1 /docs/permissions），V2 文档更明令 "Do not use legacy
     top-level fields such as ... `tools`"，要求写成有序的 `permissions`。
     两代任一存在即算通过——测试要守的是"有约束"，不是"是哪个键"。
+    （skill 的 frontmatter 仍要求 name：那是 skills 子系统的独立规范。）
     """
     fm = _extract_frontmatter(_read_text(agent_file))
-    assert "name" in fm, f"{agent_file.name}: 缺少 name"
+    assert "name" not in fm, (
+        f"{agent_file.name}: frontmatter 含 name——V2 下会把 permissions 错位到 "
+        "request.body，SSOT deny 静默失效"
+    )
     assert "description" in fm, f"{agent_file.name}: 缺少 description"
     assert ("permissions" in fm) or ("tools" in fm), (
         f"{agent_file.name}: 既没有 permissions（V2）也没有 tools（V1）"

@@ -1,5 +1,4 @@
 ---
-name: data-agent
 description: 从正文提取事实，生成 commit artifacts。
 mode: subagent
 permissions:

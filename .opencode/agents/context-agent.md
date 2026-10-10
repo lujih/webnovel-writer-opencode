@@ -1,5 +1,4 @@
 ---
-name: context-agent
 description: 写前 research，输出写作任务书。
 mode: subagent
 permissions:

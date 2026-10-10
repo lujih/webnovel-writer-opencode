@@ -1,5 +1,4 @@
 ---
-name: reviewer
 description: 事实审查 agent。逐维度检查正文的设定一致性、时间线、叙事连贯、角色一致性、逻辑、项目规则，输出结构化问题清单。
 mode: subagent
 permissions:

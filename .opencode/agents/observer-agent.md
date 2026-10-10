@@ -1,5 +1,4 @@
 ---
-name: observer-agent
 description: 从正文自由提取事实——宁可多提，不做 schema 约束
 mode: subagent
 permissions:
