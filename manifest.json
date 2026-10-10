@@ -1,17 +1,17 @@
 {
-  "version": "v2.9.2-20261009.1614",
+  "version": "v2.9.2-20261010.1506",
   "tag": "v2.9.2",
-  "updated": "2026-10-09T16:14:43Z",
+  "updated": "2026-10-10T15:06:33Z",
   "changelog": [
     {
-      "hash": "b93aa60",
-      "type": "test",
-      "message": "test: \u4fee\u6b63 conftest \u81ea\u68c0\u65ad\u8a00\u7684\u53c2\u7167\u7269\u2014\u2014\u5e94\u6bd4\u5bf9\u88ab\u8f6c\u53d1\u7684\u539f\u59cb\u7c7b\u800c\u975e\u5df2\u88ab patch \u7684\u5f53\u524d\u7c7b"
+      "hash": "196aa41",
+      "type": "fix",
+      "message": "fix: \u79fb\u9664 6 \u4e2a agent frontmatter \u7684 name \u952e\u2014\u2014\u5b83\u8ba9 OpenCode V2 \u628a permissions \u6574\u4e2a\u9519\u4f4d"
     },
     {
-      "hash": "690f7d9",
+      "hash": "853bf48",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261009.1609 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261009.1614 [skip ci]"
     }
   ],
   "files": {
@@ -384,28 +384,28 @@
       "size": 5938
     },
     ".opencode/agents/data-agent.md": {
-      "sha256": "ada0d5f6abb39d95d5596be8b88e8c5b1e08619e38d5b45f22d5ebc17bb758bc",
-      "size": 9095
+      "sha256": "861d77bbe69475355c07177702116be6138fc6b5b66a68a78f954e5e82b1ae93",
+      "size": 9078
     },
     ".opencode/agents/observer-agent.md": {
-      "sha256": "7046b0300477d7b86c5c407ca9e1a1fae06c3825b382429bdeac8aca590574b6",
-      "size": 3998
+      "sha256": "d9a78ec120799116f17a390eeb8a2f6485e1a7741143e7d4de30e20a85f025d1",
+      "size": 3977
     },
     ".opencode/agents/chapter-writer-agent.md": {
-      "sha256": "f1fede5091f7eef3f8a67620a6ddb635ffea58ad63db73820a0496efd7b29551",
-      "size": 6810
+      "sha256": "575ce570883cd3afe6830b4c203a5c12fb9f38e653ce7fa0080bf2da97e8d14b",
+      "size": 6783
     },
     ".opencode/agents/deconstruction-agent.md": {
-      "sha256": "6c1228351682c2e245c541be06e162a950075a4e1a6c853580f91d61f0940759",
-      "size": 9110
+      "sha256": "b6e1bd96210beec32cd2affdc92409604d952044db8a040e9169b0c6f2cb624b",
+      "size": 9083
     },
     ".opencode/agents/context-agent.md": {
-      "sha256": "0245161a70afb8f91da7180d9a7f457177534e40f07feacc078c8a7d88015fc7",
-      "size": 9310
+      "sha256": "741f4155f0f435b9ad58b719dd2c256996edf4d3727a33b0bdb6e34a8f8cce3e",
+      "size": 9290
     },
     ".opencode/agents/reviewer.md": {
-      "sha256": "812ea6aedceed62c9b3402ffd7f93dbd6386fb71c0c5bd38043970b8e41f4133",
-      "size": 5922
+      "sha256": "61d54cdbfb6488b33a7d691b1a68ada4855715da35d746931b5383d1a9db4dfb",
+      "size": 5907
     },
     ".opencode/agents/references/context-agent-example.md": {
       "sha256": "5b8da19bca68db90cf89c0d3c43d1e365bcf144c85d316ab8e0dfc7d4d109622",
@@ -1272,8 +1272,8 @@
       "size": 7063
     },
     ".opencode/scripts/data_modules/tests/test_prompt_integrity.py": {
-      "sha256": "443ec64d28a000fe6d89b68d83c30f903fb07d785c1c87aeee7ec17f1e6fc832",
-      "size": 19863
+      "sha256": "a7eecb5e91ba75cd6243b65b74c53c8a9292dd406b678216e28fd98bd85f1b5c",
+      "size": 20613
     },
     ".opencode/scripts/data_modules/tests/test_story_contracts.py": {
       "sha256": "86f87f5d7d947b9f0fc02946d25dd1bd1180c185de09847bff25a1799d3e8e6a",
@@ -1352,8 +1352,8 @@
       "size": 4941
     },
     ".opencode/scripts/data_modules/tests/test_agent_v2_permissions.py": {
-      "sha256": "57d2a9263abdb174bfc444112a7b19c79deff633f8c972a1fe5fc7e3c886c0e4",
-      "size": 9039
+      "sha256": "6b5b8d1e656e4fba4c03633de00d0948b7a4cea57d2881c0855cb2ae6e938085",
+      "size": 10508
     },
     ".opencode/scripts/data_modules/tests/test_memory_store.py": {
       "sha256": "dc85907932875531862c337e9280e35b548b377a65e27342ae6260b5f120c40b",
