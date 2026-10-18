@@ -16,10 +16,12 @@ import sys
 from pathlib import Path
 
 try:
+    from .entity_index_utils import flatten_entities
     from .story_event_schema import StoryEvent
 except ImportError:
     # __main__ fallback — add parent dir to path for sibling imports
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from data_modules.entity_index_utils import flatten_entities  # noqa: F811
     from runtime_compat import enable_windows_utf8_stdio  # noqa: F811
     from story_event_schema import StoryEvent  # noqa: F811
 else:
@@ -29,13 +31,18 @@ logger = logging.getLogger(__name__)
 
 
 def _load_known_entities(project_root: Path) -> dict[str, dict]:
-    """Load known entities from state.json entities_v3 for disambiguation."""
+    """Load known entities from state.json entities_v3 for disambiguation.
+
+    返回**扁平**的 ``{entity_id: record}`` 视图：消歧逻辑只按 id / name 匹配，
+    而 `entities_v3` 既可能是权威嵌套形状（类型 → id → 记录），也可能是旧
+    rebuild 产出的扁平形状，两种都要能用。
+    """
     state_path = project_root / ".webnovel" / "state.json"
     if not state_path.is_file():
         return {}
     try:
         state = json.loads(state_path.read_text(encoding="utf-8"))
-        return state.get("entities_v3", {})
+        return flatten_entities(state.get("entities_v3"))
     except (OSError, ValueError):
         return {}
 

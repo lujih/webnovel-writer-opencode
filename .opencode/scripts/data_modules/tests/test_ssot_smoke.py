@@ -65,7 +65,10 @@ class TestSSOTEventLog:
         assert "1" in ch_status
         assert "2" in ch_status
         assert state["progress"]["current_chapter"] == 2
-        assert "萧炎" in state["entities_v3"]
+        # entities_v3 的权威形状是「类型 → 实体 id → 记录」的嵌套 dict
+        # （state_manager.add_entity / export_to_entities_v3_format 都这么写）。
+        # 早前 rebuild 直接写扁平 {eid: {...}}，与读取方形状不符，已修正。
+        assert "萧炎" in state["entities_v3"]["角色"]
 
     def test_rebuild_populates_plot_threads_foreshadowing_from_open_loop_events(self, tmp_path):
         """open_loop 事件必须同时聚合进 plot_threads.foreshadowing（与

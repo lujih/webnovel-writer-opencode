@@ -33,6 +33,7 @@ from datetime import datetime
 from typing import Dict, Any, List
 
 from .config import get_config, DataModulesConfig
+from .entity_index_utils import flatten_entities
 from .sql_state_manager import SQLStateManager, EntityData
 
 
@@ -91,40 +92,37 @@ def migrate_state_to_sqlite(
     if verbose:
         print(f"\n🔄 迁移 entities_v3...")
 
-    for entity_type, entities in entities_v3.items():
-        if not isinstance(entities, dict):
-            continue
+    # 扁平视图 {entity_id: record}，每条记录自带 entity_type。
+    # 旧代码 `for entity_type, entities in entities_v3.items()` 假定顶层是
+    # 类型名；若读到旧 rebuild 写出的**扁平**形状，实体 id 会被当成类型名
+    # 写进 index.db，迁移后所有实体类型错乱且无法回滚。flatten_entities()
+    # 把两种形状统一成一份，类型取自记录字段。
+    for entity_id, entity_data in flatten_entities(entities_v3).items():
+        try:
+            entity = EntityData(
+                id=entity_id,
+                type=str(entity_data.get("entity_type") or "角色"),
+                name=entity_data.get("canonical_name", entity_data.get("name", entity_id)),
+                tier=entity_data.get("tier", "装饰"),
+                desc=entity_data.get("desc", ""),
+                current=entity_data.get("current", {}),
+                aliases=[],  # 别名单独处理
+                first_appearance=entity_data.get("first_appearance", 0),
+                last_appearance=entity_data.get("last_appearance", 0),
+                is_protagonist=entity_data.get("is_protagonist", False)
+            )
 
-        for entity_id, entity_data in entities.items():
-            if not isinstance(entity_data, dict):
-                stats["skipped"] += 1
-                continue
+            if not dry_run:
+                sql_manager.upsert_entity(entity)
+            stats["entities"] += 1
 
-            try:
-                entity = EntityData(
-                    id=entity_id,
-                    type=entity_type,
-                    name=entity_data.get("canonical_name", entity_data.get("name", entity_id)),
-                    tier=entity_data.get("tier", "装饰"),
-                    desc=entity_data.get("desc", ""),
-                    current=entity_data.get("current", {}),
-                    aliases=[],  # 别名单独处理
-                    first_appearance=entity_data.get("first_appearance", 0),
-                    last_appearance=entity_data.get("last_appearance", 0),
-                    is_protagonist=entity_data.get("is_protagonist", False)
-                )
+            if verbose and stats["entities"] % 50 == 0:
+                print(f"  已迁移 {stats['entities']} 个实体...")
 
-                if not dry_run:
-                    sql_manager.upsert_entity(entity)
-                stats["entities"] += 1
-
-                if verbose and stats["entities"] % 50 == 0:
-                    print(f"  已迁移 {stats['entities']} 个实体...")
-
-            except Exception as e:
-                stats["errors"] += 1
-                if verbose:
-                    print(f"  ⚠️ 实体迁移失败 {entity_id}: {e}")
+        except Exception as e:
+            stats["errors"] += 1
+            if verbose:
+                print(f"  ⚠️ 实体迁移失败 {entity_id}: {e}")
 
     if verbose:
         print(f"  ✅ 实体: {stats['entities']} 个")

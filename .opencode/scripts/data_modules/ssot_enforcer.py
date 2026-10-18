@@ -31,6 +31,8 @@ try:
 except (ImportError, OSError):  # pragma: no cover
     FileLock = None  # type: ignore[assignment]
 
+from .entity_index_utils import ENTITY_TYPES
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,18 +66,53 @@ def _cleanup_orphan_tmp(log_dir: Path) -> None:
                 pass
 
 
+def _event_seq_of(path: Path) -> Optional[int]:
+    """Extract the numeric sequence from `NNNNNN.event.json`, or None."""
+    try:
+        return int(path.stem.split(".")[0])
+    except ValueError:
+        return None
+
+
+def _event_paths_in_seq_order(log_dir: Path) -> list[Path]:
+    """List event files ordered by **numeric** sequence, not by filename.
+
+    事件文件名是 `%06d.event.json`，补齐到 6 位。`sorted()` 是**字典序**，
+    因此序号一旦超过 6 位（第 100 万条）就与数值序不一致：
+
+        字典序:   "1000000.event.json"  <  "999999.event.json"
+        数值序:   999999  <  1000000
+
+    这不只是"顺序不对"：`_next_event_seq()` 用 `existing[-1]` 取最大序号，
+    字典序下 `[-1]` 会是 "999999"，`+1` 得到 1000000 —— **正好是已经存在的
+    那个文件名**，`os.replace()` 会静默覆盖掉一条真实事件（append-only 日志
+    被改成可丢事件的日志）。同理 `read_events()` 的重放顺序也会错乱。
+
+    改用数值序后，6 位以内行为与原先完全一致（文件名等宽，字典序 == 数值序），
+    超出 6 位也正确。无法解析的文件名排在最后（保持"坏文件不影响正常序号
+    推进"的既有语义）。
+    """
+    paths = list(log_dir.glob("*.event.json"))
+    return sorted(paths, key=lambda p: (
+        _event_seq_of(p) is None,
+        _event_seq_of(p) if _event_seq_of(p) is not None else 0,
+        p.name,
+    ))
+
+
 def _next_event_seq(log_dir: Path) -> int:
     """Return the next sequence number for the event log."""
     if not log_dir.is_dir():
         return 1
-    existing = sorted(log_dir.glob("*.event.json"))
+    existing = _event_paths_in_seq_order(log_dir)
     if not existing:
         return 1
-    last = existing[-1].stem.replace(".event", "")
-    try:
-        return int(last) + 1
-    except ValueError:
-        return len(existing) + 1
+    for path in reversed(existing):
+        seq = _event_seq_of(path)
+        if seq is not None:
+            return seq + 1
+    # 全是无法解析的文件名：退回按条数推进（保持既有行为）
+    return len(existing) + 1
 
 
 def publish_event(project_root: Path, event_type: str, payload: dict,
@@ -151,10 +188,11 @@ def read_events(project_root: Path,
 
     events = []
     skipped = 0
-    for path in sorted(log_dir.glob("*.event.json")):
-        try:
-            seq = int(path.stem.split(".")[0])
-        except ValueError:
+    # 数值序（不是字典序）：重放顺序必须与事件发生顺序一致，
+    # 详见 _event_paths_in_seq_order() 的说明。
+    for path in _event_paths_in_seq_order(log_dir):
+        seq = _event_seq_of(path)
+        if seq is None:
             logger.error("ssot: 事件文件名无法解析，跳过: %s", path.name)
             skipped += 1
             continue
@@ -243,16 +281,16 @@ def rebuild_state_json(project_root: Path,
         elif etype == "entity_created":
             eid = payload.get("entity_id", subject)
             if eid:
-                state.setdefault("entities_v3", {})[eid] = {
+                _put_entity(state, eid, {
                     "entity_type": payload.get("entity_type", "unknown"),
                     "name": payload.get("entity_name", payload.get("name", eid)),
                     "first_seen_chapter": evt["chapter"],
-                }
+                })
 
         elif etype == "entity_updated":
             eid = payload.get("entity_id", subject)
-            if eid and eid in state.get("entities_v3", {}):
-                ent = state["entities_v3"][eid]
+            ent = _get_entity(state, eid) if eid else None
+            if ent is not None:
                 for key in ("name", "entity_type", "tier"):
                     if key in payload:
                         ent[key] = payload[key]
@@ -262,7 +300,7 @@ def rebuild_state_json(project_root: Path,
             field = payload.get("field", "")
             new_val = payload.get("new") if "new" in payload else payload.get("new_value")
             if eid and field and new_val is not None:
-                ent = state.setdefault("entities_v3", {}).setdefault(eid, {
+                ent = _put_entity(state, eid, {
                     "entity_type": payload.get("entity_type", "unknown"),
                     "name": payload.get("entity_name", eid),
                     "first_seen_chapter": evt["chapter"],
@@ -282,7 +320,7 @@ def rebuild_state_json(project_root: Path,
             eid = payload.get("entity_id", subject)
             realm = payload.get("new_realm") or payload.get("realm") or payload.get("new")
             if eid and realm:
-                ent = state.setdefault("entities_v3", {}).setdefault(eid, {
+                ent = _put_entity(state, eid, {
                     "entity_type": "角色",
                     "name": payload.get("entity_name", eid),
                     "first_seen_chapter": evt["chapter"],
@@ -500,11 +538,48 @@ def _set_dotted(target: dict, path: str, value) -> None:
     cursor[parts[-1]] = value
 
 
+def _count_entities(state: dict) -> int:
+    """实体数（跨形状）：嵌套与扁平都按实体个数算，而不是顶层键数。"""
+    from .entity_index_utils import flatten_entities
+    return len(flatten_entities(state.get("entities_v3")))
+
+
+def _entity_tools():
+    """延迟导入实体形状工具（避免模块顶层引入 data_modules 相对导入问题）。"""
+    from .entity_index_utils import coerce_entity_type, normalize_entities
+    return coerce_entity_type, normalize_entities
+
+
+def _get_entity(state: dict, entity_id: str) -> Optional[dict]:
+    """按 id 取实体记录（兼容嵌套/扁平两种 entities_v3 形状）。"""
+    _, _ = _entity_tools()
+    from .entity_index_utils import flatten_entities
+    return flatten_entities(state.get("entities_v3")).get(entity_id)
+
+
+def _put_entity(state: dict, entity_id: str, defaults: dict) -> dict:
+    """把实体写入 `entities_v3[entity_type][entity_id]`（权威嵌套形状）。
+
+    回放可能先读到**扁平**旧形状（历史 rebuild 产物），此时整体归一成嵌套
+    再继续写，保证一次 rebuild 之后 state.json 里不留混合形状。
+
+    `defaults` 只在实体不存在时使用；返回可继续写入的记录对象。
+    """
+    coerce_type, normalize = _entity_tools()
+    type_name = coerce_type(defaults.get("entity_type"))
+    nested, _ = normalize(state.get("entities_v3"))
+    state["entities_v3"] = nested
+    bucket = nested.setdefault(type_name, {})
+    if entity_id not in bucket:
+        bucket[entity_id] = dict(defaults)
+    return bucket[entity_id]
+
+
 def _empty_state() -> dict:
     return {
         "schema_version": "5.1",
         "progress": {"current_chapter": 0, "chapter_status": {}, "last_updated": ""},
-        "entities_v3": {},
+        "entities_v3": {t: {} for t in ENTITY_TYPES},
         "relationships": [],
         "foreshadowing": [],
         "protagonist_state": {},
@@ -692,7 +767,7 @@ def rebuild_projections(project_root: Path) -> dict:
         "projection": "state.json",
         "event_count": event_count,
         "chapters_in_state": len(state.get("progress", {}).get("chapter_status", {})),
-        "entities_in_state": len(state.get("entities_v3", {})),
+        "entities_in_state": _count_entities(state),
     }
 
 
@@ -780,16 +855,47 @@ def verify_consistency(project_root: Path) -> list[dict]:
             "detail": f"State has {actual_fs} loops, event log projects {expected_fs}",
         })
 
-    # Compare entities_v3
-    actual_ent = set((actual_state.get("entities_v3") or {}).keys())
-    expected_ent = set((expected.get("entities_v3") or {}).keys())
-    if actual_ent != expected_ent:
+    # Compare entities_v3 —— 必须跨形状比较**实体 id 集合**。
+    #
+    # 两道坑，都会让健康项目恒定误报 drift，而文档给的补救正是 ssot rebuild：
+    #   ① 形状不同：state 侧是权威嵌套 {"角色": {id: {...}}}，旧 rebuild 产物
+    #      是扁平 {id: {...}}。直接比顶层 keys 等于拿「类型名」比「实体 id」，
+    #      恒不相等。
+    #   ② 字段可能被合法移除：StateManager.save_state() 会把 entities_v3 整
+    #      字段 pop 掉（v5.1 起实体存 index.db），所以正常写作流程下 state.json
+    #      里根本没有该键。此时「事件日志有 4 个实体、state 里 0 个」不是漂移，
+    #      而是设计如此——实体真值在 index.db。
+    from .entity_index_utils import flatten_entities
+
+    actual_has_entity_field = "entities_v3" in actual_state
+    actual_ent = set(flatten_entities(actual_state.get("entities_v3")))
+    expected_ent = set(flatten_entities(expected.get("entities_v3")))
+    if not actual_has_entity_field:
+        if expected_ent:
+            drifts.append({
+                "severity": "info",
+                "field": "entities_v3",
+                "expected_count": len(expected_ent),
+                "detail": ("state.json 无 entities_v3（v5.1 起实体存 index.db，"
+                           f"save_state 会移除该字段）；事件日志可回放出 {len(expected_ent)} 个，"
+                           "不视为漂移"),
+            })
+    elif not expected_ent <= actual_ent:
+        # 方向很重要：state 是**超集**是合法的（增量写入的实体可能还没发事件），
+        # 只有「事件日志有、state 缺」才是真漂移——这是 rebuild 要修的那种。
+        missing_ent = expected_ent - actual_ent
+        extra_ent = actual_ent - expected_ent
         drifts.append({
             "severity": "warning",
             "field": "entities_v3",
             "actual_count": len(actual_ent),
             "expected_count": len(expected_ent),
-            "detail": f"Entity key sets differ (state={len(actual_ent)}, log={len(expected_ent)})",
+            "detail": (f"事件日志有 {len(missing_ent)} 个实体未出现在 state.json"
+                       f"（缺失: {', '.join(sorted(missing_ent)[:5])}"
+                       f"{' …' if len(missing_ent) > 5 else ''}；"
+                       f"state={len(actual_ent)}, log={len(expected_ent)}）"),
+            "missing_entities": sorted(missing_ent),
+            "extra_entities": sorted(extra_ent),
         })
 
     # Compare collection counts for fields rebuild_state_json now produces

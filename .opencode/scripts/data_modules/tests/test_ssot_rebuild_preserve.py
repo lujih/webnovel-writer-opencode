@@ -76,7 +76,8 @@ def test_rebuild_advances_event_fields(project_with_events_and_meta):
     # progress.current_chapter 由事件日志推进（原 state 里是 6，事件日志推进到 3）
     assert state["progress"]["current_chapter"] == 3  # 事件日志决定
     # entities_v3 / plot_threads.foreshadowing 由事件日志产生
-    assert "xiao_yan" in state["entities_v3"]
+    # 形状必须是嵌套（类型 → id → 记录），与 StateManager 的读写一致
+    assert "xiao_yan" in state["entities_v3"]["角色"]
     assert state["plot_threads"]["foreshadowing"][0]["content"] == "三年之约"
 
 

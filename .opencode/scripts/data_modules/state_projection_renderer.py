@@ -12,7 +12,18 @@ import json
 from collections.abc import Callable
 from pathlib import Path
 
+from .entity_index_utils import flatten_entities
+
 HEADER = "> 此文件由系统自动生成，请勿手动编辑。数据源: state.json + index.db\n\n"
+
+
+def _entity_view(state: dict) -> dict:
+    """实体的扁平视图 {entity_id: record}。
+
+    `entities_v3` 有两种历史形状（权威嵌套 / 旧 rebuild 扁平产物），
+    渲染只关心「有哪些实体、各自什么状态」，用扁平视图一次抹平。
+    """
+    return flatten_entities(state.get("entities_v3"))
 
 
 def _render_world_state(state: dict, project_root: Path) -> str:
@@ -29,7 +40,7 @@ def _render_world_state(state: dict, project_root: Path) -> str:
             lines.append(f"- **位置**: {loc.get('current', '未知')}")
         lines.append("")
 
-    entities = state.get("entities_v3") or {}
+    entities = _entity_view(state)
     if entities:
         lines.append("## 实体状态\n")
         for eid, info in sorted(entities.items()):
@@ -99,7 +110,7 @@ def _render_character_matrix(state: dict, project_root: Path) -> str:
     """角色关系矩阵。"""
     lines = [HEADER, "# 角色关系矩阵\n"]
     rels = state.get("relationships") or []
-    entities = state.get("entities_v3") or {}
+    entities = _entity_view(state)
 
     # Handle both dict and list formats
     if isinstance(rels, dict):
@@ -136,7 +147,7 @@ def _render_power_system(state: dict, project_root: Path) -> str:
     """力量体系：角色境界 + 世界规则中的力量相关规则。"""
     lines = [HEADER, "# 力量体系\n"]
 
-    entities = state.get("entities_v3") or {}
+    entities = _entity_view(state)
     power_entities = []
     for eid, info in entities.items():
         if not isinstance(info, dict):

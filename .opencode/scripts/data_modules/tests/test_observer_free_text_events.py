@@ -49,7 +49,7 @@ class TestFreeTextEventsNotFabricated:
         }, chapter=3)
 
         st = rebuild_state_json(tmp_path)
-        current = (st.get("entities_v3", {}).get("chen_sheng", {})
+        current = (st.get("entities_v3", {}).get("角色", {}).get("chen_sheng", {})
                    .get("current_state", {}))
         assert current == {}, f"自由文本观察被写成了类型化字段: {current}"
 
@@ -65,7 +65,7 @@ class TestFreeTextEventsNotFabricated:
         }, chapter=3)
 
         st = rebuild_state_json(tmp_path)
-        current = st["entities_v3"]["chen_sheng"]["current_state"]
+        current = st["entities_v3"]["角色"]["chen_sheng"]["current_state"]
         assert current.get("physical_state") == "左眼失能"
 
     def test_state_writer_also_ignores_field_less_event(self, tmp_path):
