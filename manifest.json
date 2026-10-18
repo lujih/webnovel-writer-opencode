@@ -1,17 +1,67 @@
 {
-  "version": "v2.9.2-20261010.1506",
+  "version": "v2.9.2-20261018.0903",
   "tag": "v2.9.2",
-  "updated": "2026-10-10T15:06:33Z",
+  "updated": "2026-10-18T09:03:11Z",
   "changelog": [
     {
-      "hash": "196aa41",
+      "hash": "d3f84cb",
       "type": "fix",
-      "message": "fix: \u79fb\u9664 6 \u4e2a agent frontmatter \u7684 name \u952e\u2014\u2014\u5b83\u8ba9 OpenCode V2 \u628a permissions \u6574\u4e2a\u9519\u4f4d"
+      "message": "fix: manifest \u6309 git \u7d22\u5f15\u53d6\u6587\u4ef6\u96c6\u5e76\u5f52\u4e00\u5316\u884c\u5c3e\uff0c\u53d1\u5e03\u5305\u4e0d\u518d\u6df7\u8fdb\u672c\u5730\u4ea7\u7269"
     },
     {
-      "hash": "853bf48",
+      "hash": "8fe873a",
+      "type": "fix",
+      "message": "fix: \u5b89\u88c5\u5668\u6821\u9a8c sha256\u2014\u2014\u6b64\u524d\u53ea\u6bd4 content-length\uff0c\u6076\u610f\u955c\u50cf\u53ef\u6ce8\u5165 AGENTS.md"
+    },
+    {
+      "hash": "79ba14b",
+      "type": "fix",
+      "message": "fix: dashboard \u6821\u9a8c Host \u5934\u2014\u2014\u5835\u4f4f DNS rebinding \u7684\u8bfb\u53d6\u8def\u5f84"
+    },
+    {
+      "hash": "8a769ff",
+      "type": "docs",
+      "message": "docs: \u4fee\u6389 6 \u5904\u4e0e\u5b9e\u9645\u4ee3\u7801\u4e0d\u7b26\u7684\u6587\u6863\u65ad\u8a00"
+    },
+    {
+      "hash": "1ba1d23",
+      "type": "docs",
+      "message": "docs: README \u7684\u76ee\u5f55\u6811\u6570\u5b57\u8ddf\u4e0a\u5b9e\u9645\uff08\u6a21\u5757 73 / \u6d4b\u8bd5 109 / \u7528\u4f8b 1251\uff09"
+    },
+    {
+      "hash": "dbe1cde",
+      "type": "test",
+      "message": "test: \u4fee\u6389\u5076\u53d1\u7ea2\u7684\u6839\u56e0\u2014\u2014rglob \u626b\u8fdb conftest \u9489\u5728\u4ed3\u5e93\u5185\u7684 .tmp"
+    },
+    {
+      "hash": "3bd091c",
+      "type": "fix",
+      "message": "fix: entities_v3 \u7edf\u4e00\u4e3a\u5d4c\u5957\u5f62\u72b6\u2014\u2014rebuild \u5199\u6241\u5e73\u7684\u9690\u60a3 + \u4e8b\u4ef6\u91cd\u653e\u6309\u6570\u503c\u5e8f"
+    },
+    {
+      "hash": "4331386",
+      "type": "fix",
+      "message": "fix: write-guard \u771f\u6b63\u62e6\u4f4f SSOT \u5199\u5165\u2014\u2014\u8bfb\u9519\u53c2\u6570\u952e\u3001\u6f0f\u4e86 patch\u3001bash \u5199\u610f\u56fe\u4e0d\u5168"
+    },
+    {
+      "hash": "a569861",
+      "type": "fix",
+      "message": "fix: state.json \u635f\u574f\u65f6 fail-closed\uff0c\u4e0d\u518d\u9759\u9ed8\u6e05\u7a7a\u6574\u672c\u5c0f\u8bf4\u7684\u72b6\u6001"
+    },
+    {
+      "hash": "99b11bc",
+      "type": "fix",
+      "message": "fix: npm \u79bb\u7ebf\u5305\u5fc5\u987b\u643a\u5e26 dashboard \u524d\u7aef\u4ea7\u7269\uff08\u6b64\u524d\u53d1\u5e03\u7684\u5305\u6839\u672c\u6ca1\u6709\u524d\u7aef\uff09"
+    },
+    {
+      "hash": "0ec5305",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261009.1614 [skip ci]"
+      "message": "chore: \u6dfb\u52a0 .gitattributes\uff0c\u628a\u884c\u5c3e\u7edf\u4e00\u4e3a LF"
+    },
+    {
+      "hash": "0a99e34",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.2-20261010.1506 [skip ci]"
     }
   ],
   "files": {
