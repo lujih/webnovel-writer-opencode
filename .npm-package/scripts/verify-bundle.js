@@ -22,6 +22,10 @@ try {
     '.opencode/scripts/requirements.txt',
     '.opencode/skills/webnovel-write/SKILL.md',
     '.opencode/agents/context-agent.md',
+    // dashboard 前端产物：`webnovel-dashboard` skill 以它为硬门禁，缺失时
+    // 安装后 skill 第一步就 exit 1。verify 必须与 build 的断言对齐——
+    // 早先两边都没有这条，于是"没有前端的包"一路绿灯发布了出去。
+    '.opencode/dashboard/frontend/dist/index.html',
     // 项目说明必须在 tar 根（与 .opencode/ 平级），OpenCode V2 才发现得到
     'AGENTS.md',
     'CLAUDE.md',

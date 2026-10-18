@@ -140,15 +140,16 @@ async function buildBundle() {
   process.stdout.write(`  源: ${OPC_DIR}\n`);
   process.stdout.write(`  输出: ${OUT_PATH}\n\n`);
 
-  process.stdout.write('收集文件... ');
-  const entries = collectFiles(OPC_DIR, dirname(OPC_DIR));
-  process.stdout.write(`${entries.length} 个条目\n`);
-
   // 项目说明：OpenCode 2.x 只发现环境里的 AGENTS.md（不在 .opencode/ 里），
   // 缺了它整套项目规则对模型不可见。这两份在仓库根、不在 .opencode/ 下，
   // 必须显式追加为 tar 根条目——解压到 cwd 后与 .opencode/ 平级，
   // 正是 AGENTS.md 发现路径能看到的位置。
   // CLAUDE.md 是正本（sync-agents-md 从它镜像），随包提供以便日后重生成。
+  //
+  // 顺序说明：说明文件的门禁**排在**前端产物门禁之前。两者都会拒绝出包，
+  // 但缺说明文件时诊断优先级更高（整套规则对模型不可见），且既有测试
+  // test_missing_agents_md_exits_nonzero 依赖这条顺序。
+  const docEntries = [];
   for (const doc of ['AGENTS.md', 'CLAUDE.md']) {
     const p = join(__pkgRoot, '..', doc);
     let st;
@@ -158,8 +159,47 @@ async function buildBundle() {
       throw new Error(`${doc} 不存在: ${p}（V2 用户需要它，缺失时拒绝出包）`);
     }
     if (!st.isFile()) throw new Error(`${doc} 不是普通文件: ${p}`);
-    entries.push({ name: doc, size: st.size, type: '0', mtime: Math.floor(st.mtimeMs / 1000), path: p });
-    process.stdout.write(`  ✅ 说明文件已入包: ${doc}\n`);
+    docEntries.push({ name: doc, size: st.size, type: '0', mtime: Math.floor(st.mtimeMs / 1000), path: p });
+  }
+
+  // dashboard 前端构建产物：`webnovel-dashboard` skill 的**硬门禁**是
+  //   test -f frontend/dist/index.html || exit 1
+  // 所以 dist 缺失时打出的包，安装后那个 skill 第一步就退出——而且全程静默：
+  // 构建成功、verify 通过、npm 发布成功，用户直到打开面板才发现。
+  // 与 AGENTS.md 同样处理：缺失即拒绝出包，绝不允许产出功能残缺的包。
+  const FRONTEND_DIST = join(OPC_DIR, 'dashboard', 'frontend', 'dist');
+  const FRONTEND_INDEX = join(FRONTEND_DIST, 'index.html');
+  let distStat;
+  try {
+    distStat = statSync(FRONTEND_INDEX);
+  } catch {
+    throw new Error(
+      `前端构建产物不存在: ${FRONTEND_INDEX}\n` +
+        `  该文件是 webnovel-dashboard skill 的硬性前提，缺失时包不可用。\n` +
+        `  请先构建：cd .opencode/dashboard/frontend && npm install && npm run build\n` +
+        `  并确认它已提交进 git（见 .gitignore 里 !.opencode/dashboard/frontend/dist/ 的说明）。`
+    );
+  }
+  if (!distStat.isFile()) throw new Error(`前端产物不是普通文件: ${FRONTEND_INDEX}`);
+
+  process.stdout.write('收集文件... ');
+  const entries = collectFiles(OPC_DIR, dirname(OPC_DIR));
+  process.stdout.write(`${entries.length} 个条目\n`);
+
+  // 兜底：即使 index.html 在，也要确认 dist 整体真的被收进了 entries。
+  // collectFiles 会跳过 SKIP_DIRS，未来若有人把 dist 加进跳过表，这条会响。
+  const distEntries = entries.filter(e => e.name.includes('dashboard/frontend/dist/'));
+  if (distEntries.length === 0) {
+    throw new Error(
+      `dist/index.html 存在，但没有任何 dist 文件被收进打包列表——` +
+        `检查 SKIP_DIRS/SKIP_FILES 是否误排除了它。`
+    );
+  }
+  process.stdout.write(`  ✅ 前端产物已入包: ${distEntries.length} 个文件\n`);
+
+  for (const e of docEntries) {
+    entries.push(e);
+    process.stdout.write(`  ✅ 说明文件已入包: ${e.name}\n`);
   }
 
   // 构建 tar buffer

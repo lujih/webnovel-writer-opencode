@@ -34,8 +34,14 @@ Thumbs.db
 node_modules/
 .npm-cache/
 dist/
-!webnovel-writer/dashboard/frontend/dist/
-!webnovel-writer/dashboard/frontend/dist/**
+# ⚠️ dashboard 前端构建产物**必须进 git**：CI 与用户的 checkout 都来自 git 树，
+# 而 build-bundle.js 遍历的是工作树文件系统——dist 不在 git 里，打出的 npm 包
+# 就没有前端，安装后 /webnovel-dashboard 直接 exit 1（"缺少前端构建产物"）。
+# 下面两条 negation 的路径必须与仓库**实际布局**一致。此前写成
+# `webnovel-writer/dashboard/frontend/dist/` 是早已废弃的旧目录布局，
+# 永不命中，导致 `dist/` 无条件生效、整个前端产物被静默排除在 git 之外。
+!.opencode/dashboard/frontend/dist/
+!.opencode/dashboard/frontend/dist/**
 nul
 .tmp/
 .tmp_*
