@@ -30,12 +30,20 @@ from fastapi.testclient import TestClient  # noqa: E402
 from dashboard.app import create_app  # noqa: E402
 from data_modules.workflow_checkpoint import STAGES, checkpoint  # noqa: E402
 
+# Host 头守卫只放行本机 Host，而 Starlette TestClient 默认发 `Host: testserver`。
+# 把 base_url 钉成回环地址即可，不必给生产白名单开后门。
+_LOCAL_BASE_URL = "http://127.0.0.1:8765"
+
 
 @pytest.fixture
 def client(tmp_path):
     (tmp_path / ".webnovel").mkdir(parents=True)
     (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
-    return TestClient(create_app(project_root=tmp_path), raise_server_exceptions=False)
+    return TestClient(
+        create_app(project_root=tmp_path),
+        base_url=_LOCAL_BASE_URL,
+        raise_server_exceptions=False,
+    )
 
 
 def test_returns_aggregated_summary_not_stage_keyed_map(client, tmp_path):

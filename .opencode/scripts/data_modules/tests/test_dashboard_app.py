@@ -11,6 +11,10 @@ from pathlib import Path
 
 from fastapi.testclient import TestClient
 
+# Host 头守卫只放行本机 Host，而 Starlette TestClient 默认发 `Host: testserver`。
+# 把 base_url 钉成回环地址即可，不必给生产白名单开后门。
+_LOCAL_BASE_URL = "http://127.0.0.1:8765"
+
 from data_modules.config import DataModulesConfig
 from data_modules.index_manager import (
     ChapterMeta,
@@ -44,7 +48,9 @@ def _create_dashboard_client(monkeypatch, project_root: Path) -> TestClient:
 
     module = importlib.import_module("dashboard.app")
     app = module.create_app(project_root)
-    return TestClient(app)
+    # Host 头守卫只放行本机 Host；Starlette TestClient 默认发 `testserver`，
+    # 因此这里把 base_url 钉成回环地址，而不是给生产名单加测试后门。
+    return TestClient(app, base_url=_LOCAL_BASE_URL)
 
 
 def _write_state(project_root: Path) -> None:
@@ -347,7 +353,7 @@ def test_dashboard_app_imports_without_scripts_path(monkeypatch, tmp_path):
 
     module = importlib.import_module("dashboard.app")
     app = module.create_app(project_root)
-    client = TestClient(app)
+    client = TestClient(app, base_url=_LOCAL_BASE_URL)
 
     response = client.get("/api/story-runtime/health")
     assert response.status_code == 200

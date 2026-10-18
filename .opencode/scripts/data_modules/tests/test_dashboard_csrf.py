@@ -27,6 +27,10 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 from dashboard.app import _LOCAL_ORIGINS, create_app  # noqa: E402
 
+# Host 头守卫只放行本机 Host，而 Starlette TestClient 默认发 `Host: testserver`。
+# 把 base_url 钉成回环地址即可，不必给生产白名单开后门。
+_LOCAL_BASE_URL = "http://127.0.0.1:8765"
+
 MUTATING = [
     ("POST", "/api/actions/ssot-verify"),
     ("POST", "/api/actions/ssot-rebuild"),
@@ -40,7 +44,7 @@ def client(tmp_path):
     (tmp_path / ".webnovel").mkdir(parents=True)
     (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
     app = create_app(project_root=tmp_path)
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app, base_url=_LOCAL_BASE_URL, raise_server_exceptions=False)
 
 
 class TestCrossOriginWritesRejected:

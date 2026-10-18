@@ -6,6 +6,7 @@ Webnovel Dashboard - FastAPI 主应用
 
 import asyncio
 import json
+import os
 import re
 import sqlite3
 import subprocess
@@ -36,6 +37,57 @@ _LOCAL_ORIGINS = frozenset({
     "http://127.0.0.1:8765", "http://localhost:8765",
     "http://127.0.0.1:5173", "http://localhost:5173",
 })
+
+# Host 头白名单里除了固定名字，还允许任何 IP 字面量（见 _host_is_local）。
+# 原因：`--host 0.0.0.0` 时用户会用 192.168.x.x 访问，把 IP 写死会误伤；
+# 而 DNS rebinding 的攻击面恰恰要求 Host 是**域名**（攻击者让自己的域名解析到
+# 127.0.0.1），IP 字面量在浏览器里不可能由攻击者指定，因此放行 IP 不削弱防护。
+_ALLOWED_HOSTNAMES = frozenset({"localhost"})
+
+# 反向代理 / 自定义域名的逃生口，逗号分隔。
+_ALLOW_HOSTS_ENV = "WEBNOVEL_DASHBOARD_ALLOW_HOSTS"
+
+_IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
+_LOOPBACK_V6 = frozenset({"::1", "0:0:0:0:0:0:0:1"})
+
+
+def _host_is_local(host_header: str) -> bool:
+    """判断 Host 头是否指向本机。
+
+    DNS rebinding 的攻击链是：受害者浏览器访问 evil.com → 攻击者把该域名
+    解析到 127.0.0.1 → 浏览器带着 `Host: evil.com` 请求本面板。此时 Origin
+    也是 evil.com，会被 _csrf_guard 挡掉**写**操作；但 GET 没有任何守卫，
+    整本小说（state.json / index.db / 正文）会被静默读走。所以必须校验 Host。
+
+    允许：localhost、任何 IPv4 字面量、回环 IPv6、以及
+    WEBNOVEL_DASHBOARD_ALLOW_HOSTS 里显式列出的名字。
+
+    刻意**不**放行 Starlette TestClient 默认的 `testserver`：给安全控制留一个
+    "只是测试用"的例外，迟早会有人拿它当挡箭牌放宽。测试侧改用回环 base_url
+    （见 tests/test_dashboard_host_guard.py），生产名单里不留后门。
+    """
+    host = (host_header or "").strip().lower()
+    if not host:
+        return False
+    if host.startswith("["):
+        end = host.find("]")
+        hostname = host[1:end] if end > 0 else host
+        if hostname in _LOOPBACK_V6:
+            return True
+        if not end > 0:
+            return False
+        rest = host[end + 1:]
+        if rest and not rest.startswith(":"):
+            return False
+    else:
+        hostname = host.rsplit(":", 1)[0] if host.count(":") == 1 else host
+
+    if hostname in _ALLOWED_HOSTNAMES:
+        return True
+    if _IPV4_RE.match(hostname):
+        return True
+    extra = os.environ.get(_ALLOW_HOSTS_ENV, "")
+    return any(hostname == e.strip().lower() for e in extra.split(",") if e.strip())
 
 SCRIPTS_DIR = Path(__file__).resolve().parents[1] / "scripts"
 STATIC_DIR = Path(__file__).parent / "frontend" / "dist"
@@ -300,6 +352,22 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
+
+    @app.middleware("http")
+    async def _host_guard(request, call_next):
+        """校验 Host 头，挡住 DNS rebinding 的**读取**路径。
+
+        _csrf_guard 只保护写方法，而 GET 能读走整本书：rebinding 页面里
+        `fetch('http://evil.com:8765/api/project/info')` 解析到 127.0.0.1、
+        浏览器认为同源（Host 与 Origin 都是 evil.com），响应可读。
+        只放行本机 Host，攻击者的域名一律 400。
+        """
+        if not _host_is_local(request.headers.get("host", "")):
+            return JSONResponse(
+                {"detail": f"拒绝非本机 Host: {request.headers.get('host', '')}"},
+                status_code=400,
+            )
+        return await call_next(request)
 
     @app.middleware("http")
     async def _csrf_guard(request, call_next):
