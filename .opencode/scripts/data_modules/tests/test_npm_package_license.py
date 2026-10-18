@@ -14,12 +14,31 @@
 """
 import hashlib
 import json
+import os
 import re
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
+
+# 仓库级遍历必须在**遍历阶段**剪枝：conftest.py 把 tmp_path 钉在仓库内的
+# `.tmp/pytest/<测试名>_<hash>/`，并行跑测试时目录边建边删，`REPO_ROOT.rglob`
+# 走到已删目录会抛 FileNotFoundError（环境噪声被误报成断言失败）。
+_SKIP_DIRS = frozenset({
+    ".git", ".tmp", "node_modules", "外部参考", "__pycache__",
+    ".pytest_cache", "venv", ".venv", ".npm-cache",
+})
+
+
+def _walk_package_json_files():
+    """遍历仓库里所有 package.json（遍历期剪枝，返回绝对路径）。"""
+    out = []
+    for root, dirs, files in os.walk(REPO_ROOT):
+        dirs[:] = [d for d in dirs if d not in _SKIP_DIRS]
+        if "package.json" in files:
+            out.append(Path(root) / "package.json")
+    return out
 PKG_DIR = REPO_ROOT / ".npm-package"
 PKG_JSON = PKG_DIR / "package.json"
 ROOT_LICENSE = REPO_ROOT / "LICENSE"
@@ -93,8 +112,16 @@ class TestNoStrayMitElsewhere:
 
     def test_no_mit_declarations(self):
         offenders = []
-        for path in REPO_ROOT.rglob("package.json"):
-            if "node_modules" in path.parts or "外部参考" in path.parts:
+        for path in _walk_package_json_files():
+            # ⚠️ 必须排除 `.tmp`：conftest.py 把所有 tmp_path 钉在仓库内的
+            # `.tmp/pytest/<测试名>_<hash>/`。测试运行期间这些目录会被创建又
+            # 删除，rglob 走到一半就可能抛
+            #   FileNotFoundError: ... .tmp/pytest/test_xxx_<hash>
+            # 这不是本测试的断言失败，而是扫描范围错到了临时区。
+            # 同目录的 test_workflow_hygiene.py 扫描 token 时早已排除 `.tmp`，
+            # 此处属于遗漏（2026-10-18 深度审查定位到的偶发红）。
+            if any(part in path.parts for part in
+                   ("node_modules", "外部参考", ".tmp", ".git", "__pycache__")):
                 continue
             try:
                 data = json.loads(path.read_text(encoding="utf-8"))

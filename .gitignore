@@ -30,6 +30,17 @@ Thumbs.db
 .vscode/
 .idea/
 
+# ⚠️ 凭据文件：书项目侧的 `.env` 存 API Key。`config.py` 直接读 CWD 的 `.env`，
+# 而 CWD 常常就是这个工具仓库根目录；工具仓库此前只忽略了 `test_gemini.env`
+# 这一具体文件名，`.env` 本身并未被忽略（实测 `git check-ignore .env` rc=1），
+# 一旦有人把真 Key 写进 `.env`，`git add -A` 会原样提交。
+# 保留 `!.env.example`：示例模板是给人看的，必须能进 git。
+.env
+.env.*
+!.env.example
+!**/.env.example
+
+
 # Workspace artifacts
 node_modules/
 .npm-cache/

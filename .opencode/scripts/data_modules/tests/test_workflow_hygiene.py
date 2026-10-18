@@ -15,13 +15,45 @@
 自身分发与审核，tag 被劫持的风险与第三方不在一个量级（供应链攻击的常规做法
 是抢注同名第三方组织，而非攻破 actions 官方）。
 """
+import os
 import re
+import subprocess
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 WORKFLOWS = sorted((REPO_ROOT / ".github" / "workflows").glob("*.yml"))
+
+# 仓库级遍历时要**在遍历阶段剪枝**的目录。
+#
+# 为什么不能用 `REPO_ROOT.rglob(...)`：conftest.py 把所有临时目录钉在仓库内的
+# `.tmp/pytest/<测试名>_<hash>/`，并行跑测试时这些目录**边建边删**。rglob 属于
+# 惰性遍历，走到一半目录已被删就抛
+#   FileNotFoundError: ... .tmp/pytest/test_xxx_<hash>   (pathlib._iterate_directories)
+# 事后再按 parts 过滤已经来不及——异常在遍历阶段就抛出，整个测试变红，
+# 而这是环境噪声、不是断言失败（2026-10-18 深度审查定位的偶发红根因）。
+# os.walk 允许剪枝 dirs，从根上不进入这些目录。
+_WALK_SKIP_DIRS = frozenset({
+    ".git", ".tmp", "node_modules", "外部参考", "__pycache__",
+    ".pytest_cache", "venv", ".venv", ".npm-cache",
+})
+
+
+def _walk_repo(names=None):
+    """遍历仓库文件，返回相对 POSIX 路径列表（遍历期剪枝，不会踩到已删目录）。
+
+    names: 只收 basename 在该集合内的文件；None 表示全部收。
+    """
+    out = []
+    for root, dirs, files in os.walk(REPO_ROOT):
+        dirs[:] = [d for d in dirs if d not in _WALK_SKIP_DIRS]
+        for name in files:
+            if names is not None and name not in names:
+                continue
+            full = Path(root) / name
+            out.append(full.relative_to(REPO_ROOT).as_posix())
+    return out
 
 # 由 GitHub 官方分发、可跟随 tag 的 action 前缀
 OFFICIAL_PREFIXES = ("actions/", "github/")
@@ -118,12 +150,8 @@ class TestNoSecretsInRepo:
 
     def test_no_hardcoded_tokens_in_tracked_files(self):
         offenders = []
-        for path in REPO_ROOT.rglob("*"):
-            if not path.is_file():
-                continue
-            if any(part in path.parts for part in
-                   (".git", "node_modules", "外部参考", "__pycache__", ".tmp")):
-                continue
+        for rel in _walk_repo():
+            path = REPO_ROOT / rel
             if path.suffix.lower() in (".png", ".jpg", ".gz", ".db", ".pyc"):
                 continue
             try:
@@ -132,13 +160,52 @@ class TestNoSecretsInRepo:
                 continue
             for pat in self.TOKEN_PATTERNS:
                 if pat.search(text):
-                    offenders.append(str(path.relative_to(REPO_ROOT)))
+                    offenders.append(rel)
                     break
         assert not offenders, f"疑似硬编码凭据: {sorted(set(offenders))}"
 
     def test_env_file_not_committed(self):
         """书项目的 .env 含 API Key，必须被忽略。"""
-        tracked = {p.as_posix() for p in REPO_ROOT.rglob(".env")}
-        tracked = {p for p in tracked if ".git" not in p}
+        # ⚠️ 排除 `.tmp`：conftest.py 把 tmp_path 钉在仓库内 `.tmp/pytest/`，
+        # 测试期间目录边建边删，rglob 会在已消失的目录上抛 FileNotFoundError。
+        # 同一类的 token 扫描测试已排除 `.tmp`，此处是遗漏
+        # （2026-10-18 深度审查定位到的偶发红）。
+        tracked = set(_walk_repo(names={".env"}))
         # 仓库根不应有 .env；示例模板可以有
         assert not (REPO_ROOT / ".env").exists(), "仓库根存在 .env（可能含 API Key）"
+
+class TestEnvCredentialsAreIgnored:
+    """`.env` 必须被工具仓库自己的 .gitignore 挡住（P2-3）。
+
+    背景：`config.py` 读的是 **CWD 下的 .env**，而用户/开发者常常就站在这个
+    工具仓库根目录里跑命令。此前 .gitignore 只忽略了 `test_gemini.env` 这个
+    具体文件名，`.env` 本身没有被忽略（`git check-ignore .env` rc=1），
+    一旦有人把真实 API Key 写进 `.env`，`git add -A` 就会原样提交上去。
+    """
+
+    def _check_ignore(self, rel: str) -> bool:
+        """返回 True 表示该路径会被忽略。"""
+        r = subprocess.run(
+            ["git", "check-ignore", "-q", "--", rel],
+            cwd=REPO_ROOT, capture_output=True, text=True, timeout=60,
+        )
+        return r.returncode == 0
+
+    def test_dotenv_is_ignored(self):
+        assert self._check_ignore(".env"), (
+            ".env 没有被忽略！config.py 直接从 CWD 读它，"
+            "误提交会把真实 API Key 推到公开仓库")
+
+    def test_nested_dotenv_is_ignored(self):
+        assert self._check_ignore("somebook/.env"), "子目录里的 .env 也必须被忽略"
+
+    def test_dotenv_example_is_trackable(self):
+        assert not self._check_ignore(".env.example"), (
+            ".env.example 是给人看的模板，必须能进 git；"
+            "用 negation 规则把它放行")
+
+    def test_gitignore_has_env_negation(self):
+        text = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+        assert ".env" in text, ".gitignore 里缺少 .env 规则"
+        assert "!.env.example" in text, (
+            "缺少 !.env.example 放行规则，模板文件会被一起忽略")
