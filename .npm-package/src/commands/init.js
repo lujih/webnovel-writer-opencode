@@ -311,14 +311,10 @@ function writeVersion(cwd, source) {
     source,
     timestamp: new Date().toISOString(),
   };
-  try {
-    const mf = join(cwd, '.opencode', 'manifest.json');
-    if (existsSync(mf)) {
-      const { version, tag } = JSON.parse(readFileSync(mf, 'utf-8'));
-      if (version) info.opencode_version = version;
-      if (tag) info.opencode_tag = tag;
-    }
-  } catch {}
+// 注意：这里曾经尝试读 .opencode/manifest.json 把版本号写进 version.json，
+// 但清单实际在仓库根、且不在发布包里——那个分支永远空跑，
+// opencode_version/opencode_tag 永远是空字符串。已删除，
+// 避免以后有人以为这两个字段有值。
   try {
     writeFileSync(join(cwd, '.opencode', 'version.json'), JSON.stringify(info, null, 2), 'utf-8');
   } catch {}

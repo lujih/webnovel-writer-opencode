@@ -12,6 +12,7 @@
 import { readFileSync, statSync, readdirSync, createWriteStream } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import { createGzip } from 'node:zlib';
 import { writeSha256Sidecar } from '../src/core/integrity.js';
 import { pipeline } from 'node:stream/promises';
@@ -28,6 +29,17 @@ const BLOCK_SIZE = 512;
 const SKIP_DIRS = new Set(['__pycache__', 'node_modules', '.git']);
 const SKIP_EXTS = new Set(['.pyc', '.pyo']);
 const SKIP_FILES = new Set(['.DS_Store']);
+
+// 本地私有产物：装了 git 时由索引过滤，这层是没装 git 时的兜底。
+// 单独列出来而不是信任 SKIP_DIRS，因为它们的危害不是"多占几 KB"——
+// `.webnovel-current-project` 会泄露构建机的绝对路径，
+// `.coverage` 是二进制、会让包内容随谁跑的测试而变，
+// `scripts/.agents/` 是开发者本机装的、与本项目无关的 skill 包。
+// 注意：只能列**完全没有被跟踪文件**的目录。`evals/` 看着像本地产物，
+// 但 `.opencode/evals/evals.json` 和 `.opencode/skills/*/evals/evals.json`
+// 都是跟踪的，按目录名跳过会把真内容一起丢掉。
+const LOCAL_ONLY_DIRS = new Set(['.agents', '.webnovel']);
+const LOCAL_ONLY_FILES = new Set(['.coverage', '.webnovel-current-project']);
 
 // ── UStar header ──────────────────────────────────────────
 
@@ -91,12 +103,42 @@ function padBlock(buf) {
 
 // ── 遍历 ──────────────────────────────────────────────────
 
-function collectFiles(dir, base) {
+/**
+ * 返回 .opencode/ 下被 git 跟踪的文件名集合（相对 OPC_DIR 的父目录，
+ * 即 `.opencode/xxx`）。不在 git 仓库里时返回 null，调用方回退到纯遍历。
+ *
+ * 为什么要按 git 索引过滤：这个脚本遍历的是**工作树文件系统**，
+ * 而发布包的内容必须等于"仓库里有的东西"。不加这层过滤，
+ * 开发者本机任何被 gitignore 的产物都会静默进包——实测曾混进
+ * `.coverage`（二进制）、`.webnovel-current-project`（泄露绝对路径）、
+ * 27 个与本项目无关的本地 skill，共 33 个不该发布的文件。
+ */
+function gitTrackedFiles(dir) {
+  try {
+    const out = execFileSync('git', ['-C', dir, 'ls-files', '-z', '--', '.'], {
+      encoding: 'utf-8',
+      maxBuffer: 64 * 1024 * 1024,
+      stdio: ['ignore', 'pipe', 'ignore'],
+    });
+    const base = dirname(dir);
+    const rels = new Set();
+    for (const rel of out.split('\0')) {
+      if (rel) rels.add(relative(base, join(dir, rel)).replace(/\\/g, '/'));
+    }
+    return rels;
+  } catch {
+    return null;   // 没装 git / 不是仓库：退回遍历，不阻断构建
+  }
+}
+
+function collectFiles(dir, base, tracked = null) {
   const results = [];
   const entries = readdirSync(dir, { withFileTypes: true });
 
   for (const e of entries) {
     if (SKIP_DIRS.has(e.name)) continue;
+    if (LOCAL_ONLY_DIRS.has(e.name)) continue;
+    if (LOCAL_ONLY_FILES.has(e.name)) continue;
     if ([...SKIP_EXTS].some(ext => e.name.endsWith(ext))) continue;
     if (SKIP_FILES.has(e.name)) continue;
 
@@ -104,9 +146,14 @@ function collectFiles(dir, base) {
     const rel = relative(base, full).replace(/\\/g, '/');
 
     if (e.isDirectory()) {
-      results.push({ name: rel + '/', size: 0, type: '5', mtime: 0 });
-      results.push(...collectFiles(full, base));
+      // 目录条目只在真的有内容入包时才保留，避免空目录噪声
+      const children = collectFiles(full, base, tracked);
+      if (children.length > 0) {
+        results.push({ name: rel + '/', size: 0, type: '5', mtime: 0 });
+        results.push(...children);
+      }
     } else if (e.isFile()) {
+      if (tracked && !tracked.has(rel)) continue;   // 未跟踪 = 本地产物，不进发布包
       const st = statSync(full);
       results.push({ name: rel, size: st.size, type: '0', mtime: Math.floor(st.mtimeMs / 1000), path: full });
     }
@@ -184,8 +231,30 @@ async function buildBundle() {
   if (!distStat.isFile()) throw new Error(`前端产物不是普通文件: ${FRONTEND_INDEX}`);
 
   process.stdout.write('收集文件... ');
-  const entries = collectFiles(OPC_DIR, dirname(OPC_DIR));
+  // 优先只收 git 索引里的文件：发布包内容必须等于"仓库里有的东西"。
+  // git 不可用时 tracked=null，退回纯遍历（并靠 LOCAL_ONLY_* 兜底）。
+  const tracked = gitTrackedFiles(OPC_DIR);
+  if (tracked) process.stdout.write(`(git 索引 ${tracked.size} 个) `);
+  else process.stdout.write('(git 不可用，退回遍历) ');
+  const entries = collectFiles(OPC_DIR, dirname(OPC_DIR), tracked);
   process.stdout.write(`${entries.length} 个条目\n`);
+
+  // 未跟踪产物泄漏的哨兵：这些名字一旦出现在包内容里，说明过滤链断了。
+  // 按 basename 精确匹配——用 substring 会让必需的 `.coveragerc` 误报。
+  const LEAK_FILES = new Set(['.coverage', '.webnovel-current-project']);
+  const LEAK_DIRS = ['/.agents/'];
+  const leaked = entries.filter(e => {
+    const base = e.name.split('/').pop();
+    return LEAK_FILES.has(base) || LEAK_DIRS.some(d => e.name.includes(d));
+  });
+  if (leaked.length > 0) {
+    throw new Error(
+      `发布包里混进了本地产物（${leaked.length} 个）:\n` +
+        leaked.slice(0, 10).map(e => `  - ${e.name}`).join('\n') +
+        `\n  这些文件不该发布：.coverage 是二进制、.webnovel-current-project 泄露构建机绝对路径、` +
+        `.agents/ 是开发者本机的 skill 包。检查 LOCAL_ONLY_DIRS/LOCAL_ONLY_FILES 与 git 过滤。`
+    );
+  }
 
   // 兜底：即使 index.html 在，也要确认 dist 整体真的被收进了 entries。
   // collectFiles 会跳过 SKIP_DIRS，未来若有人把 dist 加进跳过表，这条会响。

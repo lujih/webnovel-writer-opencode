@@ -267,12 +267,6 @@ export async function update(options = {}) {
       timestamp: new Date().toISOString(),
     };
     try {
-      const mf = join(dest, 'manifest.json');
-      if (existsSync(mf)) {
-        const { version, tag } = JSON.parse(readFileSync(mf, 'utf-8'));
-        if (version) info.opencode_version = version;
-        if (tag) info.opencode_tag = tag;
-      }
       writeFileSync(join(dest, 'version.json'), JSON.stringify(info, null, 2), 'utf-8');
     } catch {}
 
