@@ -90,3 +90,4 @@ test_gemini_diag.py
 .codegraph/
 外部参考/
 .npm-package/offline/opencode-bundle.tar.gz
+.npm-package/offline/opencode-bundle.tar.gz.sha256

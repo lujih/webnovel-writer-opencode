@@ -85,6 +85,11 @@ class TestBuildFailsLoudlyWhenDocsMissing:
         (repo / ".opencode").mkdir()
         shutil.copy(NPM_DIR / "scripts" / "build-bundle.js",
                     repo / ".npm-package" / "scripts" / "build-bundle.js")
+        # build-bundle 顶层 import 了 ../src/core/integrity.js，假仓库缺它会在
+        # 加载阶段 ERR_MODULE_NOT_FOUND，测不到"缺 AGENTS.md"这条门禁。
+        (repo / ".npm-package" / "src" / "core").mkdir(parents=True)
+        shutil.copy(NPM_DIR / "src" / "core" / "integrity.js",
+                    repo / ".npm-package" / "src" / "core" / "integrity.js")
         shutil.copy(REPO_ROOT / "LICENSE", repo / "LICENSE")
 
         r = _run([NODE, str(repo / ".npm-package" / "scripts" / "build-bundle.js")],
@@ -154,9 +159,10 @@ class TestCallersExtractDocsBeforeDeletingTmp:
         text = (NPM_DIR / "src" / "commands" / cmd).read_text(encoding="utf-8")
         assert "extractRootDocs(" in text, f"{cmd} 没有抽取根说明文件"
         call_at = text.index("extractRootDocs(")
-        # 存在一次 unlink(tmp) 发生在调用之后（init 里有两条路径，取最后一次无关，
-        # 关键是第一次 unlink 不得早于调用）
-        unlink_at = text.index("unlinkSync(tmp)")
+        # 关键的是**成功路径**上那次清理必须晚于抽取。错误分支里本来就有更早的
+        # unlink（下载失败 / 校验不匹配时要先删掉坏包），所以不能取第一个匹配：
+        # 取最后一个，它是成功路径收尾的那次。
+        unlink_at = text.rindex("unlinkSync(tmp)")
         assert call_at < unlink_at, (
             f"{cmd}: extractRootDocs 在 unlinkSync(tmp) 之后——tarball 已删，说明文件抽不到")
 

@@ -26,6 +26,7 @@ function parseArgs(args) {
     mirror: null,
     skipPip: false,
     quiet: false,
+    sha256: null,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -38,6 +39,14 @@ function parseArgs(args) {
           options.mirror = args[++i].replace(/\/?$/, '/');
         } else {
           process.stderr.write('错误: --mirror 需要 URL 参数\n');
+          process.exit(1);
+        }
+        break;
+      case '--sha256':
+        if (args[i + 1] && !args[i + 1].startsWith('--')) {
+          options.sha256 = args[++i];
+        } else {
+          process.stderr.write('错误: --sha256 需要 64 位十六进制哈希\n');
           process.exit(1);
         }
         break;
@@ -75,6 +84,7 @@ Webnovel Writer OpenCode Edition — 网文 AI 写作工具链
 init 选项:
   --offline       仅使用离线包，不联网
   --mirror URL    指定下载镜像地址
+  --sha256 HEX    校验下载包的 sha256（供应链审计/钉死）
   --no-pip        跳过 Python 依赖安装
   --quiet, -q     跳过欢迎界面
 

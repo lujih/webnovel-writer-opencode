@@ -145,6 +145,12 @@ class TestBuildRequiresFrontendDist:
         (repo / ".opencode").mkdir()
         shutil.copy(NPM_DIR / "scripts" / "build-bundle.js",
                     repo / ".npm-package" / "scripts" / "build-bundle.js")
+        # build-bundle 现在顶层 import 了 ../src/core/integrity.js（写 sha256
+        # sidecar 用），假仓库缺它会在加载阶段就 ERR_MODULE_NOT_FOUND，
+        # 于是测不到"dist 缺失"这条门禁——必须一并复制。
+        (repo / ".npm-package" / "src" / "core").mkdir(parents=True)
+        shutil.copy(NPM_DIR / "src" / "core" / "integrity.js",
+                    repo / ".npm-package" / "src" / "core" / "integrity.js")
         shutil.copy(REPO_ROOT / "LICENSE", repo / "LICENSE")
         for doc in ("AGENTS.md", "CLAUDE.md"):
             shutil.copy(REPO_ROOT / doc, repo / doc)

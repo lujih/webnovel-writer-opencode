@@ -13,6 +13,7 @@ import { readFileSync, statSync, readdirSync, createWriteStream } from 'node:fs'
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGzip } from 'node:zlib';
+import { writeSha256Sidecar } from '../src/core/integrity.js';
 import { pipeline } from 'node:stream/promises';
 import { Readable } from 'node:stream';
 
@@ -229,7 +230,16 @@ async function buildBundle() {
   const finalSize = (statSync(OUT_PATH).size / 1024 / 1024).toFixed(1);
   process.stdout.write(`${finalSize} MB\n`);
 
-  process.stdout.write(`\n  ✅ 离线包已构建: ${OUT_PATH} (${finalSize} MB)\n\n`);
+  // 写 sha256 sidecar：安装器解压离线包前会强制比对它。
+  // 缺 sidecar 时安装器降级为"警告继续"（兼容旧版本包），
+  // 所以这里一旦能写就必须写——否则新包反而享受不到强制校验。
+  process.stdout.write('生成 sha256 sidecar... ');
+  const hex = await writeSha256Sidecar(OUT_PATH);
+  process.stdout.write(`${hex.slice(0, 16)}…\n`);
+
+  process.stdout.write(`\n  ✅ 离线包已构建: ${OUT_PATH} (${finalSize} MB)\n`);
+  process.stdout.write(`  🔐 sha256: ${hex}\n`);
+  process.stdout.write(`  校验文件: ${OUT_PATH}.sha256\n\n`);
 }
 
 buildBundle().catch((e) => {

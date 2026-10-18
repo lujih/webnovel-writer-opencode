@@ -1,7 +1,7 @@
 /**
  * init 命令 — 部署 .opencode/ 写作工具链
  *
- * npx @cszx/webnovel-writer-opencode init [--offline] [--mirror URL] [--no-pip] [--quiet]
+ * npx @cszx/webnovel-writer-opencode init [--offline] [--mirror URL] [--sha256 HEX] [--no-pip] [--quiet]
  */
 
 import { existsSync, mkdirSync, unlinkSync, createWriteStream, readFileSync, writeFileSync, rmSync } from 'node:fs';
@@ -20,6 +20,12 @@ import {
 } from '../core/ui.js';
 import { extractTarGz, extractRootDocs } from '../core/extract.js';
 import { detectPython } from '../core/python.js';
+import {
+  verifyFileSha256,
+  readSha256Sidecar,
+  sha256File,
+  looksLikeSha256,
+} from '../core/integrity.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __pkgRoot = dirname(dirname(dirname(__filename))); // .npm-package/
@@ -145,6 +151,28 @@ async function deployOpencode(cwd, options) {
   // 1) 离线包（tar 内已含 .opencode/ 目录，解压到 cwd 即得 cwd/.opencode/）
   const offlinePath = join(__pkgRoot, 'offline', 'opencode-bundle.tar.gz');
   if (!options.mirror && existsSync(offlinePath)) {
+    // 完整性校验必须发生在解压之前：离线包随 npm 包发布、内容固定，
+    // 是本安装器唯一能强制校验的载荷。npm tarball 若被替换，sha256
+    // sidecar 也会一起被换掉——那属于 npm 生态自身的信任根，本节不管。
+    // 但网络镜像路径（下面 step 2）没有预置哈希可用，所以两级不同：
+    // 这里强制，那里只打印供审计。
+    const expected = readSha256Sidecar(`${offlinePath}.sha256`);
+    if (expected) {
+      const { ok, actual } = await verifyFileSha256(offlinePath, expected);
+      if (!ok) {
+        error(
+          `离线包完整性校验失败，已拒绝解压。\n` +
+          `  期望 sha256: ${expected}\n` +
+          `  实际 sha256: ${actual}\n` +
+          `这通常意味着 npm 包在下载/缓存过程中被改动过。请清除 npm 缓存后重装：\n` +
+          `  npm cache clean --force && npx @cszx/webnovel-writer-opencode init`
+        );
+      }
+      info(`离线包完整性校验通过 (sha256 ${expected.slice(0, 16)}…)`);
+    } else {
+      warn('离线包缺少 .sha256 校验文件（旧版本包），跳过完整性校验');
+    }
+
     const s = createSpinner('从离线包解压 .opencode/');
     s.start();
     try {
@@ -173,6 +201,25 @@ async function deployOpencode(cwd, options) {
     error('请检查网络连接，或通过 --mirror 指定镜像地址。');
   }
   s.stop('下载完成');
+
+  // 分支 tarball 内容随时变（refs/heads/master 可变），没有可预置的哈希，
+  // 因此这里只计算并打印供审计；关心供应链的用户可用 --sha256 钉死。
+  const netSha = await sha256File(tmp);
+  info(`下载包 sha256: ${netSha}`);
+  if (options.sha256) {
+    if (!looksLikeSha256(options.sha256)) {
+      error(`--sha256 不是合法的 sha256 hex: ${options.sha256}`);
+    }
+    if (netSha !== String(options.sha256).trim().toLowerCase()) {
+      try { unlinkSync(tmp); } catch {}
+      error(
+        `下载包与 --sha256 不匹配，已中止。\n` +
+        `  期望: ${String(options.sha256).trim().toLowerCase()}\n` +
+        `  实际: ${netSha}`
+      );
+    }
+    info('下载包与 --sha256 一致');
+  }
 
   const es = createSpinner('解压 .opencode/');
   es.start();

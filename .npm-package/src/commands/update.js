@@ -15,9 +15,15 @@ import { get as httpsGet } from 'node:https';
 import { get as httpGet } from 'node:http';
 import { spawn } from 'node:child_process';
 
-import { step, stepOk, info, warn, createSpinner, confirm, success } from '../core/ui.js';
+import { step, stepOk, info, warn, error, createSpinner, confirm, success } from '../core/ui.js';
 import { extractTarGz, extractRootDocs } from '../core/extract.js';
 import { detectPython } from '../core/python.js';
+import {
+  verifyFileSha256,
+  readSha256Sidecar,
+  sha256File,
+  looksLikeSha256,
+} from '../core/integrity.js';
 
 const __pkgRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
@@ -151,6 +157,23 @@ export async function update(options = {}) {
     const offline = join(__pkgRoot, 'offline', 'opencode-bundle.tar.gz');
     if (existsSync(offline)) {
       step(1, 2, '从内置离线包更新');
+      // 与 init 同一策略：离线包内容固定，是唯一能强制校验的载荷；
+      // 校验必须发生在解压之前（解压即覆盖用户文件，无回滚）。
+      const expected = readSha256Sidecar(`${offline}.sha256`);
+      if (expected) {
+        const { ok, actual } = await verifyFileSha256(offline, expected);
+        if (!ok) {
+          error(
+            `离线包完整性校验失败，已拒绝更新。\n` +
+            `  期望 sha256: ${expected}\n` +
+            `  实际 sha256: ${actual}\n` +
+            `请清除 npm 缓存后重装：npm cache clean --force && npx @cszx/webnovel-writer-opencode init`
+          );
+        }
+        info(`离线包完整性校验通过 (sha256 ${expected.slice(0, 16)}…)`);
+      } else {
+        warn('离线包缺少 .sha256 校验文件（旧版本包），跳过完整性校验');
+      }
       const s = createSpinner('解压中');
       s.start();
       try {
@@ -181,6 +204,25 @@ export async function update(options = {}) {
       }
       s.stop('下载完成');
       stepOk(1, 3, '下载完成');
+
+      // 分支 tarball 内容可变，没有可预置的哈希：只审计，不阻断。
+      const netSha = await sha256File(tmp);
+      info(`下载包 sha256: ${netSha}`);
+      if (options.sha256) {
+        if (!looksLikeSha256(options.sha256)) {
+          try { unlinkSync(tmp); } catch {}
+          error(`--sha256 不是合法的 sha256 hex: ${options.sha256}`);
+        }
+        if (netSha !== String(options.sha256).trim().toLowerCase()) {
+          try { unlinkSync(tmp); } catch {}
+          error(
+            `下载包与 --sha256 不匹配，已中止。\n` +
+            `  期望: ${String(options.sha256).trim().toLowerCase()}\n` +
+            `  实际: ${netSha}`
+          );
+        }
+        info('下载包与 --sha256 一致');
+      }
 
       step(2, 3, '解压更新');
       const es = createSpinner('解压中');

@@ -1,36 +1,37 @@
-{
-  "name": "@cszx/webnovel-writer-opencode",
-  "version": "2.9.2",
-  "description": "Webnovel Writer OpenCode Edition — 网文 AI 写作工具链安装器 (lujih 分支)",
-  "bin": {
-    "webnovel-writer-opencode": "bin/webnovel-writer.js"
-  },
-  "engines": {
-    "node": ">=22"
-  },
-  "type": "module",
-  "files": [
-    "bin/",
-    "src/",
+{
+  "name": "@cszx/webnovel-writer-opencode",
+  "version": "2.9.2",
+  "description": "Webnovel Writer OpenCode Edition — 网文 AI 写作工具链安装器 (lujih 分支)",
+  "bin": {
+    "webnovel-writer-opencode": "bin/webnovel-writer.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "type": "module",
+  "files": [
+    "bin/",
+    "src/",
     "offline/opencode-bundle.tar.gz",
-    "README.md",
-    "LICENSE"
-  ],
-  "scripts": {
-    "build:bundle": "node scripts/build-bundle.js",
-    "prepublishOnly": "node scripts/build-bundle.js"
-  },
-  "keywords": [
-    "webnovel",
-    "novel",
-    "writing",
-    "ai",
-    "opencode",
-    "chinese"
-  ],
-  "license": "GPL-3.0-only",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lujih/webnovel-writer-opencode.git"
-  }
-}
+    "offline/opencode-bundle.tar.gz.sha256",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build:bundle": "node scripts/build-bundle.js",
+    "prepublishOnly": "node scripts/build-bundle.js"
+  },
+  "keywords": [
+    "webnovel",
+    "novel",
+    "writing",
+    "ai",
+    "opencode",
+    "chinese"
+  ],
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lujih/webnovel-writer-opencode.git"
+  }
+}
