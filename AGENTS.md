@@ -23,7 +23,7 @@ python -m pytest .opencode/scripts/data_modules/tests/test_config.py -q -p no:co
 python -m pytest .opencode/scripts/data_modules/tests/test_config.py::test_load_env -q -p no:cov -o "addopts="
 ```
 
-Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` enables `pytest-cov` by default — use `-p no:cov -o "addopts="` to disable. `conftest.py` patches `tempfile.mkdtemp` **与 `tempfile.TemporaryDirectory`（包装类 `_SafeTemporaryDirectory`，同时把临时目录钉进仓库 `.tmp/pytest`）**并 sets `sqlite3` journal mode for test safety；它还会把 `WEBNOVEL_OPENCODE_HOME` 指向临时目录并在会话结束时还原工作区指针，**测试不会改写开发者的项目绑定**。⚠️ `_SafeTemporaryDirectory` 转发 `delete=` 关键字参数**必须带 `_TEMPDIR_ACCEPTS_DELETE` 守卫**——`delete` 是 Python 3.14 才有的参数，无条件转发会让 CI（test.yml 跑 **Python 3.11**）在**收集阶段**全灭（filelock 导入期探测是第一个触发者；2026-10-09 时 Test 自 10/01 起**已连红 12+ 次**，本机只有 3.14 所以一直全绿）。`test_conftest_py_compat.py` 钉住。**连环根因第②环**：`export_manager/parser.py` 与 `formats/docx.py` 顶层 `import mistune`/`docx` 未在 requirements 声明——本地装过、干净 CI 必崩；已补进 `.opencode/scripts/requirements.txt`（ebooklib/Pillow 一并，weasyprint/playwright 为可选+优雅降级、写在注释里），`test_dep_declarations.py` 静态比对 import 与 requirements（顶层必须必装、惰性必须留痕），防止复发。当前计数以 README 目录树为准（`test_readme_accuracy` 强制与实际一致）；历史里程碑：第4轮审查后 884 passed 零排除，publisher 子系统重新获得覆盖、`test_rag_adapter.py` 的 17 例纳入。
+Tests live in `.opencode/scripts/data_modules/tests/`. `pytest.ini` 的 `addopts` **不含任何 `--cov`**，`-p no:cov` 只是防御性禁用插件（`pytest-cov` 装在 `requirements-dev.txt`、`.coveragerc` 存在，但默认不测量覆盖率）——本文件此前写「`pytest.ini` enables `pytest-cov` by default」是错的。真正**必须**带的是 `-o "addopts="`：它会清掉 `addopts` 里的 `-p no:asyncio`；而 `-p no:asyncio` 生效时 `pytest-asyncio` 插件被禁，`test_api_client.py` 与 `test_rag_adapter.py` 的 async 用例会整批失败。 `conftest.py` patches `tempfile.mkdtemp` **与 `tempfile.TemporaryDirectory`（包装类 `_SafeTemporaryDirectory`，同时把临时目录钉进仓库 `.tmp/pytest`）**并 sets `sqlite3` journal mode for test safety；它还会把 `WEBNOVEL_OPENCODE_HOME` 指向临时目录并在会话结束时还原工作区指针，**测试不会改写开发者的项目绑定**。⚠️ `_SafeTemporaryDirectory` 转发 `delete=` 关键字参数**必须带 `_TEMPDIR_ACCEPTS_DELETE` 守卫**——`delete` 是 Python 3.14 才有的参数，无条件转发会让 CI（test.yml 跑 **Python 3.11**）在**收集阶段**全灭（filelock 导入期探测是第一个触发者；2026-10-09 时 Test 自 10/01 起**已连红 12+ 次**，本机只有 3.14 所以一直全绿）。`test_conftest_py_compat.py` 钉住。**连环根因第②环**：`export_manager/parser.py` 与 `formats/docx.py` 顶层 `import mistune`/`docx` 未在 requirements 声明——本地装过、干净 CI 必崩；已补进 `.opencode/scripts/requirements.txt`（ebooklib/Pillow 一并，weasyprint/playwright 为可选+优雅降级、写在注释里），`test_dep_declarations.py` 静态比对 import 与 requirements（顶层必须必装、惰性必须留痕），防止复发。当前计数以 README 目录树为准（`test_readme_accuracy` 强制与实际一致）；历史里程碑：第4轮审查后 884 passed 零排除，publisher 子系统重新获得覆盖、`test_rag_adapter.py` 的 17 例纳入。
 
 ### CLI
 
@@ -111,9 +111,9 @@ Code is organized as a pipeline — each layer feeds the next:
 
 **Memory System** — Three tiers: working (short-term), **episodic** (mid-term), semantic (long-term). 预算比例见 `memory/budget.py`（`working_ratio` / `episodic_ratio` / `semantic_ratio`，按 write/review/query 三种任务分别配比）。Modules in `data_modules/memory/`: orchestrator, compactor, store, writer, schema, bootstrap, budget.
 
-**Chase Debt / 追读债** — `index_debt_mixin.py`（mixin 进 `index_manager.py`）维护 `chase_debt` 数值表（金额/利息/到期章节，`create_debt`），以及 `create_override_contract` 的版本化合同。与伏笔（`open_loop_created/closed`）是**两套独立机制**。上下文侧的硬约束是 `context_manager._load_debt_override_hints` 的 `if shown >= 3: break` 上限——注意它读的是 `override_contracts` 而非 `chase_debt`。**文档此前描述的「DebtTracker 类 / 活跃债 > 2 触发 15% token 预算」在代码中并不存在**（`DebtTracker` 这个名字只出现在本文件里），已删除该表述。
+**Chase Debt / 追读债** — `index_debt_mixin.py`（mixin 进 `index_manager.py`）维护 `chase_debt` 数值表（金额/利息/到期章节，`create_debt`），以及 `create_override_contract` 的版本化合同。与伏笔（`open_loop_created/closed`）**存储上是两套机制**（`chase_debt` 表 vs `plot_threads.foreshadowing`），但**事件上是耦合的**：`chapter_commit_service._sync_foreshadowing()`（`chapter_commit_service.py:119`）在 `open_loop_created` 时 `create_simple_debt(debt_type="foreshadowing")` 建债、在 `open_loop_closed`/`promise_paid_off` 时 `resolve_debt_by_subject()` 销债，两侧 note 都走 `foreshadowing_utils.coerce_loop_content` 归一（否则建债与销债的键会分叉、伏笔债永不闭合）。上下文侧的硬约束是 `context_manager._load_debt_override_hints` 的 `if shown >= 3: break` 上限——注意它读的是 `override_contracts` 而非 `chase_debt`。**文档此前描述的「DebtTracker 类 / 活跃债 > 2 触发 15% token 预算」在代码中并不存在**——`grep -rn "class DebtTracker"` 零命中。真实入口是 `index_debt_mixin.py` 的 `create_debt`/`create_simple_debt`/`pay_debt`/`accrue_interest`；上下文侧只通过 `context_manager.build_analysis_signal()` 的 `signal["debt_summary"] = self.index_manager.get_debt_summary()`（`context_manager.py:412`）注入一段摘要，**没有 2 条阈值、也没有 15% token 预算**。
 
-**Review Pipeline** — Two layers: Code Checkers (deterministic, run before LLM, block critical issues) → LLM reviewer checking **6 dimensions**（`reviewer.md`: setting / timeline / continuity / character / logic / rules）。**ai_flavor、pacing、毒点不由 reviewer 检查**，由 polish 阶段处理（`reviewer.md:39,43,95` 三处明确排除）——此前本文件写的「13 维」不存在。结构化检查清单强制逐项输出 pass/问题结论. Reviewer output processed via `.opencode/scripts/review_pipeline.py`, schema in `data_modules/review_schema.py`. **审查载荷形状异常（`issues` 非数组、顶层非对象）一律 fail-closed**——合成 critical 阻断项转人工，因为「无法判断有没有问题」不等于「没有问题」，静默丢弃会让被否章节以满分通过进 SSOT。JSON 解析含中文引号安全处理（`_sanitize_json_text`）. 写-修循环上限**只存在于 prompt 文本**（`webnovel-write/SKILL.md` 写 2 轮，与 `webnovel-write-batch/SKILL.md` 一致；本文件此前写 3 轮，与 skill 矛盾），代码中无计数器或轮次参数。
+**Review Pipeline** — Two layers: Code Checkers (deterministic, run before LLM, block critical issues) → LLM reviewer checking **6 dimensions**（`reviewer.md`: setting / timeline / continuity / character / logic / rules）。**ai_flavor、pacing、毒点不由 reviewer 检查**，由 polish 阶段处理（`reviewer.md:79,83,135` 三处明确排除）——此前本文件写的「13 维」不存在。结构化检查清单强制逐项输出 pass/问题结论. Reviewer output processed via `.opencode/scripts/review_pipeline.py`, schema in `data_modules/review_schema.py`. **审查载荷形状异常（`issues` 非数组、顶层非对象）一律 fail-closed**——合成 critical 阻断项转人工，因为「无法判断有没有问题」不等于「没有问题」，静默丢弃会让被否章节以满分通过进 SSOT。JSON 解析含中文引号安全处理（`_sanitize_json_text`）. 写-修循环上限**只存在于 prompt 文本**（`webnovel-write/SKILL.md` 写 2 轮，与 `webnovel-write-batch/SKILL.md` 一致；本文件此前写 3 轮，与 skill 矛盾），代码中无计数器或轮次参数。
 
 **Markdown Projection Renderer** (v2.8) — Renders 5 human-readable markdown files from `state.json` + `index.db` into `story/` directory. Triggered after `chapter-commit` and `ssot rebuild`. File: `state_projection_renderer.py`. 兼容 `relationships` 字段的 dict 和 list 两种格式，`entities_v3` 值类型防御.
 
@@ -237,9 +237,10 @@ git commit -m "feat!: drop Python 3.9 support"    # → v3.0.0
 
 ### 注意
 
-- 不要在提交里手动改 `manifest.json` 版本号——CI 自动处理
-- 多个提交一起 push → CI 取最高优先级的 bump
-- `docs:`/`ci:`/`chore:`/`simplify:`/`test:` 不触发版本变更，可放心多用
+- **不要**在提交里手动改 `manifest.json` 版本号：`manifest.yml` 的 `update-manifest` job 在 push 到分支时会覆写它
+- 但上表的「版本影响」**不是自动化行为**——`manifest.yml` 不做 semver 运算、也不打 tag，`version` 仍是 `v2.9.2-<UTC时间戳>`，真正的发版要**人工推 tag**
+- 因此「多个提交一起 push → CI 取最高优先级的 bump」**并不存在**，别依赖它
+- `docs:`/`ci:`/`chore:`/`simplify:`/`test:` 仍建议照上表选择，但它只影响 `manifest.json` 的 changelog，不影响版本号
 
 ## Guidelines
 

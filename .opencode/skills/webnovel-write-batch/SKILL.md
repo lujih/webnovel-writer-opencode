@@ -581,7 +581,7 @@ print(f'✅ batch_state 已验证 ({done}/{total_in_batch} 章已记录)')
 | chapter-writer-agent 失败 | 重试1次→停止 | 阻断 |
 | 字数不足 | 重试 chapter-writer-agent | 章内 |
 | reviewer blocking(1-2轮) | 提取反馈→回传 chapter-writer-agent→重审 | 章内 |
-| reviewer blocking(3轮) | 标记failed→继续 | 否 |
+| reviewer blocking(超 2 轮) | 标记failed→继续 | 否 |
 | data-agent 失败 | 重试1次→标记failed并停止 | 阻断 |
 | chapter-commit 失败 | 修复→重试(3次)→停止 | 阻断 |
 | projection 失败 | 只补跑失败项 | 章内 |

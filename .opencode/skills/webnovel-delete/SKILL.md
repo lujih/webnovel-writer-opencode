@@ -58,6 +58,6 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" \
 ## 注意事项
 
 - index.db 不会自动清理，需后续运行 `webnovel index process-chapter` 手动重建
-- 若有活跃伏笔（open_loop）植根于被删章节，DebtTracker 不会自动调整——需在重写时手动处理
+- 若有活跃伏笔（open_loop）植根于被删章节，`chase_debt` 表中的伏笔债**不会自动调整**（`chapter_delete_service.py` 只清理 state.json / memory，不碰 `chase_debt`）——需在重写时手动处理，或用 `webnovel.py index repair-foreshadowing-debts` 清理重复债
 - 删除后 `progress.chapter_status` 可能不连续，这是预期行为
 - workflow checkpoints 中的已删除章节记录仍保留（便于追溯）

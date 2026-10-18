@@ -15,7 +15,7 @@
 
 | 困境 | 表现 | 本项目的应对 |
 |------|------|-------------|
-| **遗忘** | AI 忘记前文设定、角色关系、已埋伏笔 | 三层 RAG 上下文 + 故事合约引擎 + DebtTracker 伏笔追踪 |
+| **遗忘** | AI 忘记前文设定、角色关系、已埋伏笔 | 三层 RAG 上下文 + 故事合约引擎 + SSOT 事件溯源（伏笔/实体/世界规则全投影） |
 | **幻觉** | AI 凭空编造设定、前后矛盾 | Graph-RAG 实体关系图谱 + Code Checker 硬约束阻断 |
 | **风格漂移** | 长篇连载中写作风格逐渐偏离初始设定 | MASTER_SETTING 合约 + OOC 审查器 + 题材模板约束 |
 
@@ -222,7 +222,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   └── scripts/                  # Python 核心脚本
 │       ├── webnovel.py           # CLI 统一入口（38 个子命令）
 │       ├── data_modules/         # 核心数据模块（73 个）
-│       └── tests/                # 测试（109 个测试文件，1251 用例）
+│       └── tests/                # 测试（109 个测试文件，1258 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构
@@ -261,7 +261,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 | **记忆系统** | `memory/orchestrator.py` | 三层记忆（工作/情节/语义）+ 压缩编排 |
 | **审查管线** | `review_pipeline.py` | Code Checker 预处理 → 6 维度结构化审查（写-修循环最多 2 轮） |
 | **Graph-RAG** | `entity_linker.py` | 实体关系图谱 + SQLite 持久化 |
-| **DebtTracker** | `index_debt_mixin.py` | 伏笔创建 → 偿还 → 硬约束阻塞 |
+| **追读债 / Override 合约** | `index_debt_mixin.py` | `chase_debt` 数值表（金额/利息/到期）+ 版本化世界规则合同；伏笔事件经 `_sync_foreshadowing` 自动建/销债 |
 | **发布模块** | `.opencode/scripts/publisher/` | Playwright 浏览器自动化（番茄 / 七猫适配器） |
 
 ## 5. 贡献指南

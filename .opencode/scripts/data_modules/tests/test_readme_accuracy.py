@@ -216,3 +216,143 @@ class TestV2AssetsAreAdvertised:
     def test_lists_diagnostic_commands(self, readme):
         for name in ("/wn-status", "/wn-doctor", "/wn-ssot-verify", "/wn-where"):
             assert name in readme, f"README 未列出诊断命令 {name}"
+
+class TestDebtTrackerIsNotPhantom:
+    """`DebtTracker` 类在代码里根本不存在。
+
+    README 曾在特性表与子系统表各写一次，`webnovel-delete/SKILL.md`
+    也把它当成会"自动调整"的东西来警告。真实实现是
+    `index_debt_mixin.py` 的 `create_debt`/`create_simple_debt`/`pay_debt`/
+    `accrue_interest`，没有名为 DebtTracker 的类。
+
+    文档漂移不会让任何测试失败，所以在此钉住。
+    """
+
+    def test_class_does_not_exist_in_code(self):
+        hits = [
+            str(p.relative_to(REPO_ROOT))
+            for p in SCRIPTS.rglob("*.py")
+            if "tests" not in p.parts
+            and re.search(r"^\s*class\s+DebtTracker\b",
+                          p.read_text(encoding="utf-8"), re.M)
+        ]
+        assert not hits, (
+            "DebtTracker 类现在真的存在了——若如此，请更新 README 的说明"
+            f"（本测试假定它不存在）: {hits}"
+        )
+
+    def test_no_doc_advertises_it(self):
+        docs = [README, REPO_ROOT / "AGENTS.md", REPO_ROOT / "CLAUDE.md",
+                REPO_ROOT / ".npm-package" / "README.md"]
+        docs += list((OPENCODE / "skills").rglob("SKILL.md"))
+        offenders = []
+        for path in docs:
+            if not path.is_file():
+                continue
+            for i, line in enumerate(
+                    path.read_text(encoding="utf-8").splitlines(), 1):
+                if "DebtTracker" not in line:
+                    continue
+                # 允许"此前描述过、但已删除"的纠正性说明
+                if any(m in line for m in ("并不存在", "此前", "零命中", "不存在")):
+                    continue
+                offenders.append(f"{path.relative_to(REPO_ROOT)}:{i}")
+        assert not offenders, (
+            f"这些文档仍把 DebtTracker 当现有机制描述（代码里没有该类）: {offenders}"
+        )
+
+
+class TestVersioningClaimsMatchCi:
+    """AGENTS.md 的发版段落曾自相矛盾：正文说"不 bump"，注意段说"CI 取最高优先级 bump"。"""
+
+    @pytest.fixture(scope="class")
+    @classmethod
+    def workflow(cls):
+        wf = REPO_ROOT / ".github" / "workflows" / "manifest.yml"
+        assert wf.is_file(), "manifest.yml 不存在——发版说明需要重写"
+        return wf.read_text(encoding="utf-8")
+
+    def test_ci_does_no_semver_math(self, workflow):
+        """断言的前提：CI 真的不做 semver 运算、也不打 tag。"""
+        assert "git tag" not in workflow, (
+            "manifest.yml 现在会打 tag 了——请更新 AGENTS.md 的发版说明"
+        )
+        for marker in ("major", "minor", "patch"):
+            assert marker not in workflow.lower(), (
+                f"manifest.yml 出现 semver 关键词 {marker}，发版说明需重写"
+            )
+
+    # 同一行内出现这些词，说明这句话是在"否定"它，而不是在推荐它。
+    NEGATIONS = ("并不存在", "不存在", "别依赖", "未实现", "没有实现")
+    CLAIM = "CI 取最高优先级的 bump"
+
+    def test_agents_md_does_not_claim_auto_bump(self):
+        """判定必须**行级**：早先写成 `CLAIM not in text or "并不存在" in text`，
+        结果任何一段带"并不存在"的纠正性说明（如 DebtTracker 段落）都会让整篇
+        豁免，把没改的 HEAD 文本也判绿。只有承载这句话的那一行自己带否定词才算。
+        """
+        for name in ("AGENTS.md", "CLAUDE.md"):
+            text = (REPO_ROOT / name).read_text(encoding="utf-8")
+            for i, line in enumerate(text.splitlines(), 1):
+                if self.CLAIM not in line:
+                    continue
+                assert any(n in line for n in self.NEGATIONS), (
+                    f"{name}:{i} 仍把「{self.CLAIM}」当真（该行没有否定词）: {line.strip()}"
+                )
+
+
+class TestReviewerLineAnchorsPointAtExclusion:
+    """AGENTS.md 用 reviewer.md 的行号当作"这些维度被排除"的证据。
+
+    行号会随正文增删漂移，而漂移后句子仍然读起来通顺——所以必须校验
+    被引用的那几行真的在讲排除。
+    """
+
+    ANCHOR_RE = re.compile(r"reviewer\.md:([\d,]+)")
+
+    def test_anchors_are_accurate(self):
+        agents = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+        m = self.ANCHOR_RE.search(agents)
+        assert m, "AGENTS.md 不再用 reviewer.md 行号作证据——若改为不用行号，删掉本测试"
+        lineno_list = [int(x) for x in m.group(1).split(",") if x.strip()]
+
+        lines = (AGENTS_DIR / "reviewer.md").read_text(
+            encoding="utf-8").splitlines()
+        bad = []
+        for n in lineno_list:
+            if n > len(lines):
+                bad.append(f":{n} 超出文件长度 {len(lines)}")
+                continue
+            text = lines[n - 1]
+            if not any(k in text for k in ("不检查", "不在", "由 polish", "排除")):
+                bad.append(f":{n} = {text.strip()[:40]!r}")
+        assert not bad, (
+            f"AGENTS.md 引用的 reviewer.md 行号未指向排除说明: {bad}"
+        )
+
+
+class TestBatchSkillRoundLimitConsistent:
+    """write 与 write-batch 的写-修轮次上限必须一致。
+
+    曾出现 SKILL.md 正文写"最多 2 轮"、同文件表格写"3 轮"、
+    AGENTS.md 又写 3 轮的三方矛盾。代码里没有计数器，唯一事实源是 prompt。
+    """
+
+    def _limits(self, path):
+        return set(re.findall(r"最多\s*(\d+)\s*轮", path.read_text(encoding="utf-8")))
+
+    def test_single_and_batch_agree(self):
+        single = self._limits(OPENCODE / "skills" / "webnovel-write" / "SKILL.md")
+        batch = self._limits(OPENCODE / "skills" / "webnovel-write-batch" / "SKILL.md")
+        assert single and batch, f"轮次表述消失了: single={single} batch={batch}"
+        assert single == batch, (
+            f"单章写成 {single} 轮、批量写成 {batch} 轮——必须一致"
+        )
+        assert len(single) == 1, f"同一文件内轮次自相矛盾: {single}"
+
+    def test_batch_table_has_no_contradicting_row(self):
+        text = (OPENCODE / "skills" / "webnovel-write-batch" / "SKILL.md"
+                ).read_text(encoding="utf-8")
+        assert "blocking(3轮)" not in text, (
+            "批量表格仍写 3 轮，与正文的最多 2 轮矛盾"
+        )
