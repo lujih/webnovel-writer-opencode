@@ -62,6 +62,28 @@ const ALLOWED_MARKERS = [
 
 export const PLUGIN_ID = 'webnovel.write-guard'
 
+/**
+ * 会写文件的工具名。
+ *
+ * ⚠️ `patch` 是**内置工具**，不是第三方扩展：官方工具列表里它与 write/edit 并列，
+ * 文档明写「`patch` 工具由 `edit` 权限控制，该权限涵盖所有文件修改操作
+ * （`edit`、`write`、`patch`）」。旧实现只匹配 `write`/`edit`，于是
+ * 「用 patch 改 state.json」整条路径不经过任何判定。
+ */
+const FILE_WRITE_TOOLS = new Set([
+  'write', 'edit', 'patch', 'multiedit', 'apply_patch', 'str_replace_editor',
+])
+
+/**
+ * 路径参数可能落在这些键上，**不同宿主/版本不一致**。
+ *
+ * 官方 plugins 文档里 `.env` 保护示例用的是 `output.args.filePath`（大驼峰）；
+ * 本仓库的测试一直只喂 `path` / `file_path`。旧实现只读后两个，等于对
+ * `filePath` 完全失明——而它很可能是真实宿主传的那个。
+ * 多个都读是**单调收紧**：多读一个键只会多拦，不会放过原本拦得住的。
+ */
+const PATH_KEYS = ['filePath', 'file_path', 'path', 'filepath', 'filename', 'fileName']
+
 function isDisabled() {
   return (
     process.env.WEBNOVEL_DISABLE_WRITE_GUARD === '1' ||
@@ -75,10 +97,117 @@ function isProtected(filePath) {
   return PROTECTED_SUFFIXES.some(suffix => normalized.includes(suffix))
 }
 
+/**
+ * 从工具参数里抽出**目标路径**候选（不含正文）。
+ *
+ * 判据是「这个字符串描述的是要写到哪，而不是要写什么」：
+ *
+ * - 已知路径键（PATH_KEYS）——直接采纳；
+ * - `patch` 的补丁正文（`patchText` / `patch` / `diff`）——虽然整体是正文，
+ *   但补丁头 `*** Update File: <path>` / `--- a/<path>` / `+++ b/<path>`
+ *   明确指定目标，必须解析出来，否则 patch 完全绕过守卫；
+ * - 其余键一律**不扫**。早先的实现把所有字符串都当候选，结果「写一个正文里
+ *   提到 `.webnovel/state.json` 的文档」会被误拦——那是误杀，用户会干脆
+ *   设 WEBNOVEL_DISABLE_WRITE_GUARD=1 把整层保护关掉，比漏拦更糟。
+ *
+ * 取舍：宁可漏掉形态完全未知的写工具，也不误伤正常写作与改文档。
+ */
+const CONTENT_KEYS = new Set([
+  'content', 'newString', 'new_string', 'oldString', 'old_string',
+  'text', 'body', 'message', 'description', 'reason', 'prompt',
+])
+
+const PATCH_KEYS = ['patchText', 'patch', 'diff', 'patch_text']
+
+// 补丁头里提取目标路径：*** Update File: /a/b、--- a/b、+++ b/c
+const PATCH_HEADER_RE = /(?:^\*\*\* (?:Update|Add|Delete) File:\s*|\+\+\+\s+(?:b\/)?|---\s+(?:a\/)?)(\S+)/gm
+
+function extractPatchTargets(patchText) {
+  const out = []
+  if (typeof patchText !== 'string') return out
+  let m
+  PATCH_HEADER_RE.lastIndex = 0
+  while ((m = PATCH_HEADER_RE.exec(patchText)) !== null) {
+    if (m[1]) out.push(m[1])
+  }
+  return out
+}
+
+function collectPathCandidates(args, depth = 0) {
+  const out = []
+  if (!args || typeof args !== 'object' || depth > 4) return out
+
+  for (const key of PATH_KEYS) {
+    const v = args[key]
+    if (typeof v === 'string' && v) out.push(v)
+  }
+  for (const key of PATCH_KEYS) {
+    const v = args[key]
+    if (typeof v === 'string' && v) out.push(...extractPatchTargets(v))
+  }
+  for (const [key, value] of Object.entries(args)) {
+    if (PATH_KEYS.includes(key) || PATCH_KEYS.includes(key)) continue
+    if (CONTENT_KEYS.has(key)) continue // 正文不是目标，别误伤
+    if (value && typeof value === 'object') {
+      // 嵌套载荷（multiedit 的 edits[] 等）继续找路径键
+      out.push(...collectPathCandidates(value, depth + 1))
+    }
+  }
+  return out
+}
+
 function hasAllowedMarker(command) {
   if (!command) return false
   const lower = command.toLowerCase()
   return ALLOWED_MARKERS.some(marker => lower.includes(marker))
+}
+
+/**
+ * 判断一条 shell 命令是否**有写入意图**（传进来的已是小写）。
+ *
+ * 旧实现只有 `>` 与 `\b(write|tee|mv|cp|rm|del|erase|rename)\b`，实测漏掉：
+ *   - PowerShell `Set-Content` / `Out-File` / `Add-Content`
+ *   - 解释器内写文件 `node -e "require('fs').writeFileSync(...)"`、`python -c "...open(...,'w')"`
+ *   - `sed -i` / `perl -pi` / `truncate` / `dd of=`
+ * 判据只在**命中受保护路径之后**才被执行，所以宽松一点不会误伤正常写作命令。
+ */
+function hasWriteIntent(lower) {
+  if (!lower) return false
+  if (lower.includes('>')) return true // 重定向 / >> / PowerShell 也用它
+  if (/\b(write|tee|mv|cp|rm|del|erase|rename|move|copy)\b/.test(lower)) return true
+  // PowerShell cmdlet
+  if (/\b(set-content|add-content|out-file|clear-content|new-item|remove-item|rename-item|move-item|copy-item)\b/.test(lower)) return true
+  // 解释器内写盘：writeFileSync / writeFile / appendFile / createWriteStream / fs.write
+  if (/(writefilesync|writefile|appendfile|createwritestream|fs\.write|open\([^)]*['"][wa])/.test(lower)) return true
+  // 就地编辑 / 截断 / dd
+  if (/\b(sed\s+-i|perl\s+-pi|truncate)\b/.test(lower)) return true
+  // `dd ... of=` 的末尾是 `=`，后面跟非单词字符时 `\b` 不成立，不能加尾锚点
+  if (/\bdd\s+[^|]*\bof=/.test(lower)) return true
+  return false
+}
+
+/**
+ * 诊断开关：把本次工具调用的参数**键名**打到 stderr。
+ *
+ * 之所以需要它：`filePath` vs `path` 这个键名决定守卫是否真正生效，
+ * 但只有**真实宿主**能给出最终答案（本仓库没有可运行的 OpenCode 二进制）。
+ * 在真机上设 WEBNOVEL_WRITE_GUARD_DEBUG=1 跑一次 Edit，看 stderr 打印的键名
+ * 即可确证。不设该变量时零输出、零开销。
+ */
+function debugLog(tool, args) {
+  if (process.env.WEBNOVEL_WRITE_GUARD_DEBUG !== '1') return
+  let keys = []
+  try {
+    keys = args && typeof args === 'object' ? Object.keys(args) : []
+  } catch {
+    keys = ['<unreadable>']
+  }
+  try {
+    process.stderr.write(
+      `[write-guard] tool=${JSON.stringify(tool)} argKeys=${JSON.stringify(keys)}\n`)
+  } catch {
+    // stderr 不可写时不能让守卫失效
+  }
 }
 
 /**
@@ -92,12 +221,15 @@ export function guard(tool, args) {
   const name = String(tool || '').toLowerCase()
   const a = args || {}
 
-  // 拦截 Write/Edit 工具
-  if (name === 'write' || name === 'edit') {
-    const path = a.path || a.file_path || ''
-    if (isProtected(path)) {
+  debugLog(tool, a)
+
+  // 拦截所有会写文件的工具（write / edit / patch / ...）
+  if (FILE_WRITE_TOOLS.has(name)) {
+    const candidates = collectPathCandidates(a)
+    const hit = candidates.find(p => isProtected(p))
+    if (hit) {
       throw new Error(
-        `🚫 禁止直接写入 ${path}。` +
+        `🚫 禁止直接写入 ${hit}。` +
         `这些文件只能通过 CLI 命令写入：\n` +
         `  python webnovel.py chapter-commit\n` +
         `  python webnovel.py state set-chapter-status\n` +
@@ -120,8 +252,7 @@ export function guard(tool, args) {
     for (const suffix of PROTECTED_SUFFIXES) {
       const normalizedSuffix = suffix.replace(/\\/g, '/').toLowerCase()
       if (lower.includes(normalizedSuffix)) {
-        // 写操作意图：重定向(>/>>) 或 常见写命令
-        if (lower.includes('>') || /\b(write|tee|mv|cp|rm|del|erase|rename)\b/.test(lower)) {
+        if (hasWriteIntent(lower)) {
           writesProtected = true
         }
         break

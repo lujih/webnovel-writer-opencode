@@ -145,3 +145,216 @@ class TestProtectedPathsStillProtected:
                            capture_output=True, text=True, encoding="utf-8", timeout=60)
         assert r.returncode == 0, r.stderr
         assert r.stdout.strip().endswith("blocked"), f"{path} 未被保护"
+
+
+class TestArgKeyCoverage:
+    """守卫必须认识**真实宿主**可能传的路径键名。
+
+    回归背景（2026-10-18 深度审查，P0）：旧实现只读 `path`/`file_path`，
+    而 OpenCode 官方 plugins 文档里 `.env` 保护示例用的是 `filePath`（大驼峰）。
+    旧测试恰好只用 `path`/`file_path` 构造用例——即"用实现读的键去测实现"，
+    循环自证，永远发现不了键名不匹配。这里显式钉住每种键名都必须拦得住。
+    """
+
+    @pytest.mark.parametrize("key", [
+        "filePath", "file_path", "path", "filepath", "fileName", "filename",
+    ])
+    def test_every_path_key_is_guarded(self, key):
+        script = textwrap.dedent(f"""
+        import {{ pathToFileURL }} from 'node:url'
+        const mod = await import(pathToFileURL({json.dumps(str(PLUGIN))}).href)
+        try {{
+          mod.guard('write', {{ {json.dumps(key)}: '/book/.webnovel/state.json' }});
+          console.log('allowed')
+        }} catch {{ console.log('blocked') }}
+        """)
+        r = subprocess.run(["node", "--input-type=module", "-e", script],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout.strip().endswith("blocked"), (
+            f"键名 `{key}` 没有被识别——真实宿主若用它传路径，守卫完全失明")
+
+    def test_nested_payload_is_guarded(self):
+        """multiedit 之类把目标放在嵌套数组里。"""
+        script = textwrap.dedent(f"""
+        import {{ pathToFileURL }} from 'node:url'
+        const mod = await import(pathToFileURL({json.dumps(str(PLUGIN))}).href)
+        try {{
+          mod.guard('multiedit', {{ edits: [{{ filePath: '.webnovel/state.json' }}] }});
+          console.log('allowed')
+        }} catch {{ console.log('blocked') }}
+        """)
+        r = subprocess.run(["node", "--input-type=module", "-e", script],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout.strip().endswith("blocked"), "嵌套载荷里的路径未被识别"
+
+
+class TestPatchToolIsGuarded:
+    """`patch` 是内置工具，必须与 write/edit 同等对待。
+
+    官方工具列表：bash/edit/write/read/grep/glob/lsp/**patch**/skill/...
+    文档明写「`patch` 工具由 `edit` 权限控制，该权限涵盖所有文件修改操作」。
+    旧实现只匹配 write/edit，用 patch 改 state.json 不触发任何判定。
+    """
+
+    @pytest.mark.parametrize("tool", ["patch", "multiedit", "apply_patch"])
+    def test_write_tools_are_guarded(self, tool):
+        script = textwrap.dedent(f"""
+        import {{ pathToFileURL }} from 'node:url'
+        const mod = await import(pathToFileURL({json.dumps(str(PLUGIN))}).href)
+        try {{
+          mod.guard({json.dumps(tool)}, {{ filePath: '/book/.webnovel/state.json' }});
+          console.log('allowed')
+        }} catch {{ console.log('blocked') }}
+        """)
+        r = subprocess.run(["node", "--input-type=module", "-e", script],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout.strip().endswith("blocked"), f"工具 `{tool}` 未受守卫"
+
+    def test_patch_body_target_is_guarded(self):
+        """patch 的目标写在补丁头的 `*** Update File:` 行，而非 path 字段。"""
+        patch_text = (
+            "*** Begin Patch\n"
+            "*** Update File: /book/.webnovel/state.json\n"
+            "@@ -1,3 +1,3 @@\n"
+            '-{"progress": {}}\n'
+            '+{"progress": {"current_chapter": 99}}\n'
+            "*** End Patch\n"
+        )
+        script = textwrap.dedent(f"""
+        import {{ pathToFileURL }} from 'node:url'
+        const mod = await import(pathToFileURL({json.dumps(str(PLUGIN))}).href)
+        try {{
+          mod.guard('patch', {{ patchText: {json.dumps(patch_text)} }});
+          console.log('allowed')
+        }} catch {{ console.log('blocked') }}
+        """)
+        r = subprocess.run(["node", "--input-type=module", "-e", script],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout.strip().endswith("blocked"), (
+            "补丁头里的目标路径未被解析——patch 可绕过整个守卫")
+
+
+class TestNoFalsePositivesOnContent:
+    """正文里**提到**受保护路径不得被误拦。
+
+    早先的实现把所有字符串参数都当路径候选，结果「写一个正文里提到
+    `.webnovel/state.json` 的文档」会被拦下。这类误杀会让用户干脆设
+    WEBNOVEL_DISABLE_WRITE_GUARD=1 把整层保护关掉——比漏拦更糟。
+    """
+
+    @pytest.mark.parametrize("tool,args", [
+        ("write", {"filePath": "/book/正文/第1卷/第0001章.md",
+                   "content": "他看向 .webnovel/state.json 这个文件。"}),
+        ("edit", {"filePath": "/book/AGENTS.md",
+                  "oldString": "写入 .webnovel/state.json 会被拦",
+                  "newString": "写入 .webnovel/state.json 仍会被拦"}),
+        ("write", {"filePath": "/book/tests/test_x.py",
+                   "content": "assert p == '.webnovel/state.json'"}),
+        ("write", {"path": "/book/.opencode/scripts/foo.py",
+                   "content": "# 不要直接改 .story-system/events/ 里的文件"}),
+    ])
+    def test_content_mention_is_allowed(self, tool, args):
+        script = textwrap.dedent(f"""
+        import {{ pathToFileURL }} from 'node:url'
+        const mod = await import(pathToFileURL({json.dumps(str(PLUGIN))}).href)
+        try {{
+          mod.guard({json.dumps(tool)}, {json.dumps(args)});
+          console.log('allowed')
+        }} catch {{
+          console.log('blocked')
+        }}
+        """)
+        r = subprocess.run(["node", "--input-type=module", "-e", script],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+        assert r.returncode == 0, r.stderr
+        assert r.stdout.strip().endswith("allowed"), (
+            f"正文提到受保护路径被误拦（tool={tool}）——"
+            f"误杀会逼用户关掉整层保护")
+
+
+class TestDebugSwitch:
+    def test_debug_env_prints_arg_keys(self):
+        """给真机取证用的开关：打印参数键名，便于确证宿主传的是哪个键。"""
+        script = textwrap.dedent(f"""
+        process.env.WEBNOVEL_WRITE_GUARD_DEBUG = '1'
+        import {{ pathToFileURL }} from 'node:url'
+        const mod = await import(pathToFileURL({json.dumps(str(PLUGIN))}).href)
+        try {{ mod.guard('edit', {{ filePath: '/book/x.md' }}) }} catch {{}}
+        """)
+        r = subprocess.run(["node", "--input-type=module", "-e", script],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+        assert r.returncode == 0, r.stderr
+        assert "argKeys" in r.stderr and "filePath" in r.stderr, (
+            f"诊断开关没输出键名，真机取证时无法判断宿主传的是哪个键：{r.stderr}")
+
+
+class TestBashWriteIntent:
+    """Bash 分支的写入意图判定必须覆盖各平台的写盘手段。
+
+    回归背景（2026-10-18 深度审查，P0）：旧判定只有
+    `>` 与 `\b(write|tee|mv|cp|rm|del|erase|rename)\b`，实测以下命令
+    **全部放行**，等于 bash 通道对受保护文件零防护：
+      - PowerShell `Set-Content .webnovel/state.json x`
+      - `node -e "require('fs').writeFileSync('.webnovel/state.json','x')"`
+    """
+
+    # (命令, 期望是否拦截)
+    CASES = [
+        # 重定向（旧已覆盖，防回归）
+        ("python webnovel.py status > .webnovel/state.json", True),
+        ("cat x >> .story-system/events/0001.event.json", True),
+        # 旧已覆盖的写命令
+        ("rm -rf .story-system/events/", True),
+        ("mv /tmp/a.json .webnovel/state.json", True),
+        ("cp /tmp/a.json .webnovel/state.json", True),
+        ("tee .webnovel/state.json", True),
+        # PowerShell cmdlet（旧实现全部漏过）
+        ("Set-Content .webnovel/state.json x", True),
+        ("Add-Content -Path .webnovel/state.json -Value x", True),
+        ("Out-File -FilePath .webnovel/state.json", True),
+        ("Clear-Content .webnovel/state.json", True),
+        ("Remove-Item .webnovel/state.json", True),
+        ("Copy-Item /tmp/a.json .webnovel/state.json", True),
+        # 解释器内写盘（旧实现全部漏过）
+        ("node -e \"require('fs').writeFileSync('.webnovel/state.json','x')\"", True),
+        ("python -c \"open('.webnovel/state.json','w').write('{}')\"", True),
+        ("node -e \"fs.createWriteStream('.webnovel/state.json')\"", True),
+        # 就地编辑 / 截断 / dd（旧实现全部漏过）
+        ("sed -i s/a/b/ .webnovel/state.json", True),
+        ("perl -pi -e s/a/b/ .webnovel/state.json", True),
+        ("truncate -s 0 .webnovel/state.json", True),
+        ("dd if=/dev/zero of=.webnovel/state.json", True),
+        # 只读命令必须放行（误杀会逼用户关掉整层保护）
+        ("python webnovel.py status", False),
+        ("python .opencode/scripts/webnovel.py ssot verify", False),
+        ("python webnovel.py status | grep state", False),
+        ("Get-Content .webnovel/state.json", False),
+        ("cat .webnovel/state.json", False),
+        ("grep state .webnovel/state.json", False),
+        ("ls -l .webnovel/", False),
+        # 提到受保护路径但目标是别处
+        ("echo .webnovel/state.json", False),
+    ]
+
+    @pytest.mark.parametrize("command,should_block", CASES)
+    def test_bash_write_intent(self, command, should_block):
+        script = textwrap.dedent(f"""
+        import {{ pathToFileURL }} from 'node:url'
+        const mod = await import(pathToFileURL({json.dumps(str(PLUGIN))}).href)
+        try {{
+          mod.guard('bash', {{ command: {json.dumps(command)} }});
+          console.log('allowed')
+        }} catch {{ console.log('blocked') }}
+        """)
+        r = subprocess.run(["node", "--input-type=module", "-e", script],
+                           capture_output=True, text=True, encoding="utf-8", timeout=60)
+        assert r.returncode == 0, r.stderr
+        got = "blocked" if r.stdout.strip().endswith("blocked") else "allowed"
+        want = "blocked" if should_block else "allowed"
+        assert got == want, (
+            f"命令 `{command}` 判定为 {got}，应为 {want}——"
+            f"{'受保护文件可被改写' if should_block else '只读命令被误杀，用户会关掉整层保护'}")
