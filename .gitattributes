@@ -1,0 +1,34 @@
+# 统一行尾：git 里的 blob 一律存 LF，检出到工作区时按平台还原。
+#
+# 为什么必须有这个文件：本仓库的 blob **本来就是全部 LF**
+# （`git ls-files --eol` = 598 个 i/lf / 0 个 i/crlf），但仓库与系统都没有
+# 设置 core.autocrlf，于是 Windows 工作区（如 VSCode 默认换行设置、或任何
+# 写文件时用 \r\n 的工具）产生的 CRLF 会**原样进入 blob**：
+#   - `git status` 常年显示 500+ 个"已修改"文件，真实 diff 被淹没
+#   - 一次只改了 6 行的提交，会在 diff 里显示成 156 行增删
+#   - review 时无法分辨"逻辑改动"与"换行符抖动"
+#
+# eol=lf 的作用：无论工作区是什么换行，入库一律规范化成 LF，
+# 与现有 blob 的既有事实一致 —— 不会产生一次性的大规模"改写"提交。
+* text=auto eol=lf
+
+# 显式声明为二进制，避免 Git 尝试做行尾转换或文本 diff。
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.zip binary
+*.gz binary
+*.tgz binary
+*.tar binary
+*.pdf binary
+*.db binary
+*.sqlite binary
+*.pyc binary
