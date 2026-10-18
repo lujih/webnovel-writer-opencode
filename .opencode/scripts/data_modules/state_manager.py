@@ -35,10 +35,85 @@ logger = logging.getLogger(__name__)
 
 try:
     # 当 scripts 目录在 sys.path 中（常见：从 scripts/ 运行）
-    from security_utils import atomic_write_json, read_json_safe
+    from security_utils import atomic_write_json
 except ImportError:  # pragma: no cover
     # 当以 `python -m scripts.data_modules...` 从仓库根目录运行
-    from scripts.security_utils import atomic_write_json, read_json_safe
+    from scripts.security_utils import atomic_write_json
+
+
+class CorruptStateError(RuntimeError):
+    """state.json 存在但无法解析。
+
+    刻意继承 RuntimeError 而非静默降级：这是**写路径**，把损坏状态当成 `{}`
+    会让下一次 save_state() 用空骨架覆盖掉整本小说的进度、实体、伏笔。
+    宁可让命令失败并告诉用户去哪抢救，也不能产出静默的数据丢失。
+    """
+
+
+def _read_state_strict(path: Path) -> Dict[str, Any]:
+    """读取 state.json，解析失败时**抛错**而不是回退空字典。
+
+    与 `read_json_safe(default={})` 的区别只在"文件存在但损坏"这一分支：
+
+    | 情况             | read_json_safe      | 本函数                  |
+    |------------------|---------------------|-------------------------|
+    | 文件不存在       | 返回 {}             | 返回 {}（正常首次运行） |
+    | 文件存在、可解析 | 返回内容            | 返回内容                |
+    | 文件存在、损坏   | 返回 {}（静默）     | **抛 CorruptStateError** |
+
+    只读路径（context 装配、健康检查、publisher 等）继续用 read_json_safe：
+    它们损坏时降级为 {} 只会让本次输出缺失，不会写回磁盘。**写路径**必须严格。
+
+    为什么先重试再抛：Windows 上确实出现过瞬时读到 0 字节/半截文件的情况
+    （VSCode file watcher、杀软、同步盘瞬时占用，见 `atomic_write_json` 的
+    WinError 5 退避注释）。把它当真损坏会让一次偶发占用直接中止整章提交。
+    退避窗口与 `atomic_write_json` 同量级（20ms→500ms），穷尽后仍失败才算
+    真损坏——此时文件确实没人能解开，继续写只会覆盖掉唯一的一份数据。
+    """
+    if not path.exists():
+        return {}
+
+    _DELAYS = (0.02, 0.05, 0.1, 0.2, 0.5)
+    last_error: Optional[BaseException] = None
+
+    for attempt in range(len(_DELAYS) + 1):
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            last_error = e
+            if attempt < len(_DELAYS):
+                time.sleep(_DELAYS[attempt])
+                continue
+            break
+        else:
+            if not isinstance(data, dict):
+                raise CorruptStateError(
+                    f"state.json 的顶层必须是 JSON 对象，实际是 {type(data).__name__}。\n"
+                    f"  文件：{path}\n"
+                    f"  为避免覆盖，本次写入已中止。"
+                )
+            return data
+
+    # 走到这里说明重试穷尽仍无法解析：留一份现场再抛，避免用户修好后才发现
+    # 原始字节已被后续写入覆盖。
+    try:
+        stamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        corrupt = path.with_name(f"{path.stem}.corrupt_{stamp}{path.suffix}")
+        corrupt.write_bytes(path.read_bytes())
+        hint = f"损坏文件的副本已保存到：{corrupt}"
+    except Exception:  # pragma: no cover - 备份失败不应掩盖原始错误
+        hint = "（损坏文件备份失败，请先手工复制该文件）"
+
+    raise CorruptStateError(
+        f"state.json 已损坏，无法解析：{last_error}\n"
+        f"  文件：{path}\n"
+        f"  {hint}\n"
+        f"  为避免用空状态覆盖整本小说的进度与设定，本次写入已中止。\n"
+        f"  抢救方式：用上述副本或 .webnovel/state.json.bak 手工修复后重试；\n"
+        f"  确认状态无法恢复时，删掉 state.json 再从事件日志重建：\n"
+        f"    python .opencode/scripts/webnovel.py ssot rebuild"
+    ) from last_error
 
 
 @dataclass
@@ -219,12 +294,13 @@ class StateManager:
         return state
 
     def _load_state(self):
-        """加载状态文件"""
-        if self.config.state_file.exists():
-            self._state = read_json_safe(self.config.state_file, default={})
-            self._state = self._ensure_state_schema(self._state)
-        else:
-            self._state = self._ensure_state_schema({})
+        """加载状态文件。
+
+        损坏时抛 CorruptStateError（fail-closed）——见 `_read_state_strict`。
+        """
+        self._state = self._ensure_state_schema(
+            _read_state_strict(self.config.state_file)
+        )
 
     def save_state(self):
         """
@@ -259,7 +335,11 @@ class StateManager:
         lock = filelock.FileLock(str(self._lock_path), timeout=10)
         try:
             with lock:
-                disk_state = read_json_safe(self.config.state_file, default={})
+                # 锁内重读必须严格：这里读到的 disk_state 马上会被
+                # _ensure_state_schema 补齐默认值后 atomic_write_json 写回磁盘。
+                # 若在损坏时降级成 {}，等于用空骨架覆盖整本小说的进度/实体/伏笔
+                # ——一次静默的数据丢失。宁可直接失败。
+                disk_state = _read_state_strict(self.config.state_file)
                 disk_state = self._ensure_state_schema(disk_state)
 
                 # progress（合并为 max(chapter) + words_delta 累加）
@@ -1333,6 +1413,26 @@ class StateManager:
 # ==================== CLI 接口 ====================
 
 def main():
+    """CLI 入口。
+
+    `CorruptStateError` 可能从任何一次重读状态的地方抛出（构造、`_load_state`、
+    `save_state` 的锁内重读），所以统一在最外层兜一次：打印可操作的抢救步骤并
+    以非零退出，而不是让 traceback 淹没关键信息（用户只需要知道去哪拿备份）。
+    """
+    from .cli_output import print_error
+
+    try:
+        _main_impl()
+    except CorruptStateError as exc:
+        print_error(
+            "STATE_CORRUPT",
+            str(exc),
+            suggestion="修复或重建 state.json 后重试；也可运行 ssot rebuild 从事件日志重建投影。",
+        )
+        raise SystemExit(1) from exc
+
+
+def _main_impl():
     import argparse
     import sys
     from pydantic import ValidationError
