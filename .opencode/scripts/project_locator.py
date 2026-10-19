@@ -463,9 +463,9 @@ def resolve_project_root(explicit_project_root: Optional[str] = None, *, cwd: Op
         return reg_root
 
     raise FileNotFoundError(
-        "Unable to locate webnovel project root. Expected `.webnovel/state.json` under the current directory, "
-        "a parent directory, or `webnovel-project/`. Run /webnovel-init first or pass --project-root / set "
-        "WEBNOVEL_PROJECT_ROOT."
+        "找不到书项目（当前目录及其父目录下都没有 .webnovel/state.json）。\n"
+        "       下一步：运行 /webnovel-init 初始化，或显式指定 "
+        "--project-root <书目录>，或设置环境变量 WEBNOVEL_PROJECT_ROOT。"
     )
 
 

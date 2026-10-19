@@ -152,13 +152,34 @@ class StatusReporter:
         return ""
 
     def load_state(self) -> bool:
-        """加载 state.json"""
+        """加载 state.json。
+
+        返回 False 表示「读不到可用状态」，由调用方决定如何降级——这是本方法
+        既有的契约（签名就是 `-> bool`，`main()` 里
+        `if not reporter.load_state(): return 1`）。
+
+        此前 `json.load` 没有保护：state.json 损坏时抛 `JSONDecodeError`
+        **穿透**这个 bool 契约，用户看到的是栈帧而不是「你的状态文件坏了」。
+        这与 `state_manager._read_state_strict` 的 fail-closed 处理不一致——
+        那边会备份损坏文件并抛带修复建议的 `CorruptStateError`。
+        """
         if not self.state_file.exists():
             print(f"❌ 状态文件不存在: {self.state_file}")
             return False
 
-        with open(self.state_file, 'r', encoding='utf-8') as f:
-            self.state = json.load(f)
+        try:
+            with open(self.state_file, 'r', encoding='utf-8') as f:
+                self.state = json.load(f)
+        except (json.JSONDecodeError, OSError) as exc:
+            print(
+                f"❌ 状态文件无法解析: {self.state_file}\n"
+                f"   原因: {exc}\n"
+                f"   修复: 确认文件是合法 JSON（常见于手工编辑或写入中断），\n"
+                f"         或从 .webnovel/state.json.bak 恢复，\n"
+                f"         再运行 `ssot rebuild` 从事件日志重建投影。",
+                file=sys.stderr,
+            )
+            return False
 
         if isinstance(self.state, dict):
             self.state = normalize_state_runtime_sections(self.state)
