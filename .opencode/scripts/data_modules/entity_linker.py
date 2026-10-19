@@ -14,7 +14,7 @@ v5.1 变更（v5.4 沿用）:
 - 移除对 state.json 的直接操作
 """
 
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 from dataclasses import dataclass, field
 
 from .config import get_config
@@ -49,18 +49,73 @@ class EntityLinker:
         return self._index_manager.register_alias(alias, entity_id, entity_type)
 
     def lookup_alias(self, mention: str, entity_type: str = None) -> Optional[str]:
-        """查找别名对应的实体ID（返回第一个匹配，可选按类型过滤）"""
+        """查找别名对应的实体 ID（返回**排序后的第一个**匹配，可选按类型过滤）。
+
+        注意：本方法不区分「唯一匹配」与「同类型多匹配」。若需要知道是否
+        存在歧义，用 `lookup_alias_detailed()`。
+
+        返回顺序由 `get_entities_by_alias` 的 `ORDER BY` 保证（归档靠后、
+        主角优先、tier 排序），因此结果可复现。
+        """
+        detail = self.lookup_alias_detailed(mention, entity_type=entity_type)
+        return detail["entity_id"]
+
+    def lookup_alias_detailed(
+        self, mention: str, entity_type: str = None
+    ) -> Dict[str, Any]:
+        """带歧义标记的别名查询。
+
+        为什么需要它：`aliases` 表的主键是 `(alias, entity_id, entity_type)`，
+        允许**同一别名映射多个实体**——跨类型同名是设计支持的
+        （如「天云宗」既是地点又是势力）。但**同一类型内**的同名不是正常
+        情况，那是真歧义：两个都是「角色」时，到底指谁？
+
+        此前唯一的查询入口 `lookup_alias()` 对这种情况静默取第一条。用户
+        从未被告知存在歧义，等于被分配了「tier 排序靠前的那个实体」。
+        这与本项目在别处的 fail-closed 取向不一致（`review_pipeline` 对
+        形状异常载荷合成 critical 阻断项，理由是「无法判断有没有问题 ≠
+        没有问题」）。
+
+        本方法把选择与判断分开：
+        - `entity_id`：仍是排序后的第一个（保持既有调用方行为不变）
+        - `ambiguous`：同类型命中 > 1 时为 True
+        - `candidates`：同类型下的全部候选 ID（多于一个才非空）
+
+        Returns:
+            {"entity_id": Optional[str], "ambiguous": bool,
+             "candidates": List[str], "entity_type": Optional[str],
+             "matches": int}
+        """
         entries = self._index_manager.get_entities_by_alias(mention)
+        result: Dict[str, Any] = {
+            "entity_id": None,
+            "ambiguous": False,
+            "candidates": [],
+            "entity_type": entity_type,
+            "matches": len(entries),
+        }
         if not entries:
-            return None
+            return result
 
         if entity_type:
-            for entry in entries:
-                if entry.get("type") == entity_type:
-                    return entry.get("id")
-            return None
+            pool = [e for e in entries if e.get("type") == entity_type]
         else:
-            return entries[0].get("id") if entries else None
+            pool = entries
+
+        if not pool:
+            return result
+
+        result["entity_id"] = pool[0].get("id")
+
+        # 同类型歧义：把「类型与首选相同」的其他候选列出来
+        chosen_type = pool[0].get("type")
+        same_type = [e for e in pool if e.get("type") == chosen_type]
+        if len(same_type) > 1:
+            result["ambiguous"] = True
+            result["candidates"] = [
+                str(e.get("id")) for e in same_type if e.get("id")
+            ]
+        return result
 
     def lookup_alias_all(self, mention: str) -> List[Dict]:
         """查找别名对应的所有实体（一对多）"""
