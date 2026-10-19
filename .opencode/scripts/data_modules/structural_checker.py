@@ -11,7 +11,22 @@ from typing import Any
 
 def run_checks(project_root: Path, chapter: int, intended_strand: str = "") -> dict[str, Any]:
     checks = []
-    state = _load_state(project_root)
+    state, load_error = _load_state(project_root)
+
+    # state.json 读不出来时，先报一条 blocking——「无法判断」不等于「通过」。
+    # 这一步放在最前面，是为了让报告的第一条就说明原因，而不是让下面 6 条
+    # 检查各自基于空 state 得出"看起来正常"的结论。
+    if load_error is not None:
+        checks.append({
+            "name": "state_readable",
+            "passed": False,
+            "severity": "blocking",
+            "detail": (
+                f"state.json 无法读取（{load_error}）。"
+                f"结构性检查无法进行——请先修复或从 .bak 恢复，"
+                f"再运行 `ssot rebuild` 重建投影。"
+            ),
+        })
 
     checks.append(_check_strand_balance(state, chapter, intended_strand))
     checks.append(_check_entity_freshness(state, chapter))
@@ -21,14 +36,32 @@ def run_checks(project_root: Path, chapter: int, intended_strand: str = "") -> d
     checks.append(_check_entity_name_consistency(state))
 
     passed = not any(c["severity"] == "blocking" and not c["passed"] for c in checks)
-    return {"chapter": chapter, "passed": passed, "checks": checks}
+    result: dict[str, Any] = {"chapter": chapter, "passed": passed, "checks": checks}
+    if load_error is not None:
+        result["state_error"] = str(load_error)
+    return result
 
 
-def _load_state(project_root: Path) -> dict:
+def _load_state(project_root: Path) -> tuple[dict, Exception | None]:
+    """读取 state.json，返回 ``(state, error)``。
+
+    为什么不再直接抛：本模块是 LLM 审查之前的确定性检查层，结论直接决定
+    `blocking` 与 `passed`。自己崩掉会让整条审查链路以 traceback 中断，
+    而正确语义是「报一条 blocking 检查未通过」。
+
+    用 `utf-8-sig` 读取：Windows 记事本 / VS Code 的「UTF-8 with BOM」是
+    中文作者的默认保存格式，BOM 会让 `json.loads` 报
+    "Unexpected UTF-8 BOM"——合法文件被误判成损坏。仓库里 7 处已用
+    `utf-8-sig`（chapter_commit / review_pipeline / skill_runner /
+    story_system_engine …），此处同样对齐。
+    """
     state_file = project_root / ".webnovel" / "state.json"
-    if state_file.is_file():
-        return json.loads(state_file.read_text(encoding="utf-8"))
-    return {}
+    if not state_file.is_file():
+        return {}, None
+    try:
+        return json.loads(state_file.read_text(encoding="utf-8-sig")), None
+    except (OSError, ValueError) as exc:
+        return {}, exc
 
 
 def _check_strand_balance(state: dict, chapter: int, intended_strand: str = "") -> dict:
