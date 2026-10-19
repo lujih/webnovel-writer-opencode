@@ -325,6 +325,29 @@ class ChapterCommitService:
         except Exception as exc:
             logger.warning("Markdown projection render failed: %s", exc)
 
+        # 追读债计息：accepted 章节推进后自动按章节数复利。
+        #
+        # 位置说明：放在投影循环与 _sync_foreshadowing 之后——此时本章的
+        # 建债/销债都已落库，计息看到的是本章最终的债务集合。
+        #
+        # 为什么必须在这里触发：`accrue_interest()` 此前只有一条手工 CLI
+        # （index_manager.py 的 accrue-interest），从未接入提交链路。作者不
+        # 主动跑命令，追读债就永远不产生利息、`get_overdue_debts()` 永远是
+        # 空的——这套机制在默认使用路径上等于不存在。
+        #
+        # 失败不阻断：提交本身已成功，计息是附带动作。记 warning 即可。
+        # 幂等性由 accrue_interest 内部按 debt_events 的 MAX(chapter) 保证。
+        if status == "accepted":
+            try:
+                manager = IndexManager(
+                    DataModulesConfig.from_project_root(self.project_root))
+                accrual = manager.accrue_interest(chapter)
+                payload.setdefault("debt_accrual", accrual)
+            except Exception as exc:
+                logger.warning(
+                    "追读债计息失败（第 %s 章）：%s——不影响提交，"
+                    "可稍后手工运行 `index accrue-interest` 补算", chapter, exc)
+
         # postcommit gate：投影完整性核验。
         # 提交已落盘，失败不回滚（回滚会把已写的 commit 也弄丢），
         # 但必须让调用方看见——否则「投影 3/5 失败」会以 return payload
