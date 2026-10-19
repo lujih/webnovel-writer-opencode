@@ -22,8 +22,22 @@ from .override_ledger_service import (
 )
 from .review_schema import parse_review_output
 from .ssot_enforcer import publish_event, read_events
+from .write_gates import run_write_gate
 
 logger = logging.getLogger(__name__)
+
+
+class WriteGateRejected(RuntimeError):
+    """precommit gate 拒绝提交。
+
+    单独一个异常类型而不是 ValueError：调用方（CLI / memory_contract_adapter）
+    需要区分「门禁拦下」与「代码 bug」，前者应原样转达给用户并附修复建议，
+    后者应进日志排查。
+    """
+
+    def __init__(self, message: str, gate: dict | None = None):
+        super().__init__(message)
+        self.gate = gate or {}
 
 # 伏笔默认偿还章数：创建债务时默认要求 10 章内偿还
 _FORESHADOW_DUE_OFFSET = 10
@@ -110,6 +124,32 @@ class ChapterCommitService:
         }
 
     def persist_commit(self, payload: Dict[str, Any]) -> Path:
+        # precommit gate：畸形产物不得落盘进 commits/。
+        #
+        # 位置说明：`data_modules/write_gates/` 早已实现（3 个阶段 + 一份设计
+        # 文档），但此前**从未被生产代码调用**——门禁是死代码，测试全绿而
+        # 真实流程毫无防护。接入点选 persist_commit 而不是 build_commit：
+        # build_commit 是纯函数（只按入参拼 payload），往里加入磁盘检查会让
+        # 它不再可独立测试；而 persist_commit 是 **commit 的唯一写入点**
+        # （chapter_commit.py 与 apply_projections 都经过它），与本仓库
+        # 「publish_event 是 SSOT 唯一写路径」的约定一致。
+        #
+        # 只对 accepted 生效：rejected 章节的产物本就可能是残缺的（那正是被
+        # 否的原因），拦它没有意义，而且 rejected 记录本身要留存备查。
+        if str((payload.get("meta") or {}).get("status") or "") == "accepted":
+            chapter_no = int((payload.get("meta") or {}).get("chapter") or 0)
+            gate = run_write_gate("precommit", self.project_root, chapter_no)
+            if not gate.get("ok"):
+                payload.setdefault("write_gates", {})["precommit"] = gate
+                raise WriteGateRejected(
+                    f"precommit gate 阻断第 {chapter_no} 章提交："
+                    + "; ".join(
+                        f"[{e.get('code')}] {e.get('message')}"
+                        for e in (gate.get("errors") or [])
+                    ),
+                    gate=gate,
+                )
+
         target = self.project_root / ".story-system" / "commits"
         target.mkdir(parents=True, exist_ok=True)
         path = target / f"chapter_{int(payload['meta']['chapter']):03d}.commit.json"
@@ -170,6 +210,7 @@ class ChapterCommitService:
         if chapter <= 0:
             logger.warning("apply_projections: chapter fell back to %s (meta=%s)",
                            chapter, payload.get("meta"))
+
 
         # 只有 accepted 章节才写入事件日志和 SSOT
         ssot_publish_failures = 0
@@ -283,5 +324,19 @@ class ChapterCommitService:
             render_all_projections(self.project_root)
         except Exception as exc:
             logger.warning("Markdown projection render failed: %s", exc)
+
+        # postcommit gate：投影完整性核验。
+        # 提交已落盘，失败不回滚（回滚会把已写的 commit 也弄丢），
+        # 但必须让调用方看见——否则「投影 3/5 失败」会以 return payload
+        # 的正常路径静默流过去，直到 dashboard 显示空白才被发现。
+        post = run_write_gate("postcommit", self.project_root, chapter)
+        payload.setdefault("write_gates", {})["postcommit"] = post
+        if not post.get("ok"):
+            logger.error(
+                "postcommit gate 未通过（第 %s 章）：%s",
+                chapter,
+                "; ".join(f"[{e.get('code')}] {e.get('message')}"
+                          for e in (post.get("errors") or [])),
+            )
 
         return payload

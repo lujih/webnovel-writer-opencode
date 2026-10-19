@@ -36,6 +36,40 @@ def _make_project(tmp_path: Path) -> DataModulesConfig:
     return DataModulesConfig.from_project_root(tmp_path)
 
 
+def _make_submittable(tmp_path: Path, chapter: int) -> None:
+    """把项目补到「能通过 precommit gate」的程度。
+
+    只给真正走提交链路的用例用。`_make_project` 保持最小——几十个读取类
+    测试依赖它便宜；而提交路径现在要过 gate（init 脚手架 + 4 个产物 +
+    章节正文），这是 gate 接入生产代码后暴露的前提差异。
+    """
+    import json as _json
+
+    from data_modules.artifact_validator import ARTIFACT_FILES
+    from data_modules.project_phase import INIT_REQUIRED_DIRS, INIT_REQUIRED_FILES
+
+    for rel in INIT_REQUIRED_DIRS:
+        (tmp_path / rel).mkdir(parents=True, exist_ok=True)
+    for rel in INIT_REQUIRED_FILES:
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text("{}" if rel.endswith(".json") else "placeholder\n",
+                            encoding="utf-8")
+    artifact_payload = _json.dumps({
+        "planned_nodes": [], "covered_nodes": [], "missed_nodes": [], "extra_nodes": [],
+        "pending": [], "blocking_count": 0, "issues": [],
+        "state_deltas": [], "entity_deltas": [], "accepted_events": [],
+    }, ensure_ascii=False)
+    for filename in ARTIFACT_FILES.values():
+        artifact = tmp_path / ".webnovel" / "tmp" / filename
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        artifact.write_text(artifact_payload, encoding="utf-8")
+    chapters_dir = tmp_path / "正文"
+    chapters_dir.mkdir(parents=True, exist_ok=True)
+    (chapters_dir / f"第{chapter:04d}章.md").write_text("正文占位。" * 40, encoding="utf-8")
+
+
 class TestAdapterSatisfiesProtocol:
     def test_isinstance_check(self, tmp_path):
         cfg = _make_project(tmp_path)
@@ -355,6 +389,7 @@ class TestCommitChapter:
 
     def test_commit_chapter_delegates_to_chapter_commit_mainline(self, tmp_path):
         cfg = _make_project(tmp_path)
+        _make_submittable(tmp_path, 3)
         adapter = MemoryContractAdapter(cfg)
 
         result = adapter.commit_chapter(

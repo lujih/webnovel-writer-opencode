@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import json
+from pathlib import Path
 
 from data_modules.chapter_commit_service import ChapterCommitService
 from data_modules.config import DataModulesConfig
@@ -11,6 +12,40 @@ from data_modules.index_projection_writer import IndexProjectionWriter
 from data_modules.memory_projection_writer import MemoryProjectionWriter
 from data_modules.state_projection_writer import StateProjectionWriter
 from data_modules.summary_projection_writer import SummaryProjectionWriter
+
+
+def _make_submittable(project_root: Path) -> None:
+    """补齐 precommit gate 要求的项目前提。
+
+    gate 此前从未接入生产代码，所以这些用例只要 `.webnovel/state.json` 就
+    能跑通。接上以后，`init_scaffolded` 阶段与缺失的 4 个 commit 产物都会
+    阻断——fixture 必须造出真正的提交前提。
+    """
+    import json as _json
+
+    from data_modules.artifact_validator import ARTIFACT_FILES
+    from data_modules.project_phase import INIT_REQUIRED_DIRS, INIT_REQUIRED_FILES
+
+    for rel in INIT_REQUIRED_DIRS:
+        (project_root / rel).mkdir(parents=True, exist_ok=True)
+    for rel in INIT_REQUIRED_FILES:
+        path = project_root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text(
+                _json.dumps({"progress": {"current_chapter": 0, "total_words": 0}})
+                if rel.endswith(".json") else "placeholder\n",
+                encoding="utf-8",
+            )
+    payload = _json.dumps({
+        "planned_nodes": [], "covered_nodes": [], "missed_nodes": [], "extra_nodes": [],
+        "pending": [], "blocking_count": 0, "issues": [],
+        "state_deltas": [], "entity_deltas": [], "accepted_events": [],
+    }, ensure_ascii=False)
+    for filename in ARTIFACT_FILES.values():
+        artifact = project_root / ".webnovel" / "tmp" / filename
+        artifact.parent.mkdir(parents=True, exist_ok=True)
+        artifact.write_text(payload, encoding="utf-8")
 
 
 def test_state_projection_writer_handles_rejected_commit(tmp_path):
@@ -52,8 +87,9 @@ def test_accepted_chapter_commits_advance_progress_and_word_count(tmp_path):
     )
     chapters_dir = tmp_path / "正文"
     chapters_dir.mkdir(parents=True, exist_ok=True)
-    (chapters_dir / "第0001章.md").write_text("第一章正文内容", encoding="utf-8")
-    (chapters_dir / "第0002章.md").write_text("第二章正文内容更多", encoding="utf-8")
+    (chapters_dir / "第0001章.md").write_text("第一章正文内容" * 20, encoding="utf-8")
+    (chapters_dir / "第0002章.md").write_text("第二章正文内容更多" * 20, encoding="utf-8")
+    _make_submittable(tmp_path)
 
     service = ChapterCommitService(tmp_path)
     for chapter in (1, 2):
@@ -361,7 +397,8 @@ def test_accepted_commit_writes_chapter_index_tables(tmp_path):
     (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
     chapters_dir = tmp_path / "正文"
     chapters_dir.mkdir(parents=True, exist_ok=True)
-    (chapters_dir / "第0003章.md").write_text("第三章正文内容", encoding="utf-8")
+    (chapters_dir / "第0003章.md").write_text("第三章正文内容" * 20, encoding="utf-8")
+    _make_submittable(tmp_path)
 
     service = ChapterCommitService(tmp_path)
     payload = service.build_commit(

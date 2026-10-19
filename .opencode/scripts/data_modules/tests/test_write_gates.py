@@ -9,12 +9,32 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
+from data_modules.project_phase import INIT_REQUIRED_DIRS, INIT_REQUIRED_FILES
 from data_modules.write_gates import (
     format_gate_report,
     gate_report,
     issue,
     run_write_gate,
 )
+
+
+def _make_init_ready(project_root: Path) -> None:
+    """建出 ``init`` 阶段要求的最小脚手架。
+
+    prewrite 的 ``_check_project_phase`` 会对照 INIT_REQUIRED_DIRS/FILES 判
+    ``init_scaffolded`` 并阻断。此前该检查每次都抛 TypeError 又被
+    ``except Exception: pass`` 吞掉，所以下面这些 fixture 只造了 state.json
+    也照样"通过"——测的一直只是合同检查那一条。修好 fail-closed 之后，
+    这些 fixture 必须真的满足 init 阶段，否则测的就不是「合同齐全」。
+    """
+    for rel in INIT_REQUIRED_DIRS:
+        (project_root / rel).mkdir(parents=True, exist_ok=True)
+    for rel in INIT_REQUIRED_FILES:
+        path = project_root / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text("{}" if rel.endswith(".json") else "placeholder\n",
+                            encoding="utf-8")
 
 
 class TestIssue:
@@ -84,20 +104,15 @@ class TestRunWriteGate:
 
     def test_prewrite_missing_contracts(self, tmp_path):
         """项目存在但缺少合同时应报 missing_master_setting 错误。"""
-        # 创建最小项目结构（通过 phase 检查）
-        webnovel = tmp_path / ".webnovel"
-        webnovel.mkdir()
-        (webnovel / "state.json").write_text("{}", encoding="utf-8")
-        # 缺少合同文件
+        # 建出 init 脚手架（phase 检查才放行），但**不**建合同文件
+        _make_init_ready(tmp_path)
         result = run_write_gate("prewrite", tmp_path, 1)
         assert result["ok"] is False
         assert any(e["code"] == "missing_master_setting" for e in result["errors"])
 
     def test_prewrite_with_contracts(self, tmp_path):
-        # 创建最小项目结构 + 合同
-        webnovel = tmp_path / ".webnovel"
-        webnovel.mkdir()
-        (webnovel / "state.json").write_text("{}", encoding="utf-8")
+        # init 脚手架 + 合同齐全
+        _make_init_ready(tmp_path)
         story_dir = tmp_path / ".story-system"
         story_dir.mkdir()
         (story_dir / "MASTER_SETTING.json").write_text("{}", encoding="utf-8")

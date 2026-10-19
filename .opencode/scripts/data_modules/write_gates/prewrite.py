@@ -42,8 +42,16 @@ def _check_project_phase(project_root: Path) -> List[Dict[str, Any]]:
                 repair="运行 webnovel-init 补齐缺失文件",
                 missing=missing,
             ))
-    except Exception:
-        pass  # 模块不可用时跳过
+    except Exception as exc:
+        # fail-closed：门禁无法完成检查时不能「当作没问题」。
+        # 这与 precommit._check_chapter_file 的处理一致——那里早就这么做了，
+        # 说明作者知道正确做法，这几处只是漏改。
+        errors.append(issue(
+            "phase_check_failed",
+            "error",
+            f"项目阶段检查失败: {exc}",
+            repair="排查 project_phase 模块或项目元数据损坏",
+        ))
     return errors
 
 
@@ -96,7 +104,10 @@ def _check_chapter_file(project_root: Path, chapter: int) -> List[Dict[str, Any]
     errors = []
     # 通过 chapter_paths 查找
     try:
-        from ..chapter_paths import find_chapter_file
+        try:
+            from chapter_paths import find_chapter_file
+        except ImportError:  # pragma: no cover
+            from scripts.chapter_paths import find_chapter_file
         chapter_file = find_chapter_file(project_root, chapter)
         if chapter_file and chapter_file.is_file():
             content = chapter_file.read_text(encoding="utf-8")
@@ -106,8 +117,15 @@ def _check_chapter_file(project_root: Path, chapter: int) -> List[Dict[str, Any]
                     "warning",
                     f"章节文件内容过短（{len(content.strip())} 字符）",
                 ))
-    except Exception:
-        pass  # chapter file 不存在是正常的（还没写）
+    except FileNotFoundError:
+        pass  # 还没写——写作前检查的正常情况
+    except Exception as exc:
+        errors.append(issue(
+            "chapter_file_check_failed",
+            "error",
+            f"章节文件检查失败: {exc}",
+            repair="排查正文目录权限或文件名编码",
+        ))
 
     return errors
 
@@ -129,8 +147,13 @@ def _check_disambiguation(project_root: Path) -> List[Dict[str, Any]]:
                     impact="写作时实体引用可能不准确",
                     repair="运行 data-agent 完成消歧",
                 ))
-        except Exception:
-            pass
+        except Exception as exc:
+            errors.append(issue(
+                "disambiguation_check_failed",
+                "error",
+                f"消歧结果解析失败: {exc}",
+                repair="删除损坏的 .webnovel/tmp/disambiguation_result.json 后重跑 data-agent",
+            ))
     return errors
 
 

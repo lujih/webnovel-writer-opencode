@@ -57,16 +57,25 @@ def _check_commit_file(project_root: Path, chapter: int) -> Dict[str, Any]:
     return {"ok": len(errors) == 0, "errors": errors, "commit": commit}
 
 
-def _get_projection_status(project_root: Path, chapter: int, commit: Dict[str, Any]) -> Dict[str, str]:
-    """获取投影状态。优先从 projection_log 读取（权威记录），fallback 到 commit 文件。"""
+def _get_projection_status(
+    project_root: Path, chapter: int, commit: Dict[str, Any]
+) -> tuple[Dict[str, str], Exception | None]:
+    """获取投影状态。优先从 projection_log 读取（权威记录），fallback 到 commit 文件。
+
+    返回 ``(状态字典, 读取异常或 None)``。第二个返回值让调用方能区分
+    「日志说没有 pending」与「日志根本读不到」——前者是健康，后者是盲区。
+    不吞异常，也不引入模块级可变状态（并发下会串台）。
+    """
     # 优先从 projection_log 读取
     logged_status: Dict[str, str] = {}
+    log_error: Exception | None = None
     try:
         from ..projection_log import latest_projection_run, projection_status_from_run
         latest_run = latest_projection_run(project_root, chapter=chapter)
         logged_status = projection_status_from_run(latest_run) or {}
-    except Exception:
-        pass
+    except Exception as exc:
+        # 读不到权威记录不等于「投影没问题」——把原因交给调用方上报。
+        log_error = exc
 
     # 从 commit 文件读取
     raw = commit.get("projection_status")
@@ -76,20 +85,28 @@ def _get_projection_status(project_root: Path, chapter: int, commit: Dict[str, A
 
     # 如果 log 有非 pending 数据，优先使用（权威记录）
     if logged_status and any(v != "pending" for v in logged_status.values()):
-        return logged_status
+        return logged_status, log_error
 
     # 如果 commit 有非 pending 数据，使用 commit（投影完成后 commit 也会更新）
     if commit_status and any(v != "pending" for v in commit_status.values()):
-        return commit_status
+        return commit_status, log_error
 
     # 都是 pending 或缺失，返回 commit 状态（或空）
-    return commit_status
+    return commit_status, log_error
 
 
 def _check_projections(project_root: Path, chapter: int, commit: Dict[str, Any]) -> List[Dict[str, Any]]:
     """检查投影完整性。"""
     errors = []
-    projection_status = _get_projection_status(project_root, chapter, commit)
+    projection_status, log_error = _get_projection_status(project_root, chapter, commit)
+    if log_error is not None:
+        errors.append(issue(
+            "projection_log_unreadable",
+            "warning",
+            f"投影日志读取失败，已退回 commit 文件的 projection_status: {log_error}",
+            impact="投影状态可能不是最新权威记录",
+            repair="排查 .webnovel/ 下 projection 日志是否损坏",
+        ))
 
     # 检查每个必需的 writer
     for writer in REQUIRED_PROJECTION_WRITERS:
@@ -169,8 +186,15 @@ def run_postcommit_gate(project_root: Path, chapter: int) -> Dict[str, Any]:
             "blocking": list(snapshot.blocking or []),
             "warnings": list(snapshot.warnings or []),
         }
-    except Exception:
-        pass
+    except Exception as exc:
+        # fail-closed：阶段未知时不能当成健康。postcommit 失败只降级为
+        # warning（提交已落盘，不该回滚），但必须让操作者看见。
+        warnings.append(issue(
+            "phase_check_failed",
+            "warning",
+            f"项目阶段检查失败: {exc}",
+            repair="排查 project_phase 模块或项目元数据损坏",
+        ))
 
     # commit 文件检查
     commit_check = _check_commit_file(project_root, chapter)

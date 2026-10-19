@@ -1,5 +1,15 @@
 # Plugin Runtime Hardening — 合并计划
 
+> **实现状态（2026-10-19）**：`data_modules/write_gates/` 三个阶段门禁
+> （prewrite / precommit / postcommit）已实现并**已接入生产代码**——
+> `ChapterCommitService.persist_commit()` 在落盘前跑 precommit，
+> `apply_projections()` 收尾跑 postcommit。门禁自身 fail-closed
+> （检查器异常 → 转 issue，不吞）。
+>
+> 本文档第 4–7 节保留的是**原始合并计划**，其中的清单勾选框描述的是
+> 当时的验收思路，不是当前待办。若要判断现状请读代码与
+> `tests/test_write_gates_wiring.py`（钉住接线、fail-closed、死代码检测）。
+
 ## 1. 背景
 
 原项目 `9c4419c` 提交了 "harden webnovel plugin runtime"（7570 行新增），引入了写入门禁、诊断工具、产物验证等运行时防护机制。

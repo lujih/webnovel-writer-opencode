@@ -129,7 +129,11 @@ class MemoryContractAdapter:
             disambiguation_result=result.get("disambiguation_result", {}) or {},
             extraction_result=result.get("extraction_result", {}) or {},
         )
-        service.persist_commit(payload)
+        # 不在这里单独 persist_commit：apply_projections 内部已会写（同一个
+        # 唯一写入点）。提前写会留下一份 projection_status 全 pending 的
+        # 中间态 commit，precommit gate 扫到便误判「上一章投影未完成」，
+        # 把合法提交拦掉——接 gate 后暴露的顺序缺陷，与 chapter_commit.py
+        # 同一处问题。
         if payload["meta"]["status"] == "accepted":
             payload = service.apply_projections(payload)
 

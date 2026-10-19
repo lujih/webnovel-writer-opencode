@@ -10,7 +10,7 @@ from pathlib import Path
 
 from runtime_compat import enable_windows_utf8_stdio
 
-from data_modules.chapter_commit_service import ChapterCommitService
+from data_modules.chapter_commit_service import ChapterCommitService, WriteGateRejected
 from data_modules.cli_output import print_json
 
 logger = logging.getLogger(__name__)
@@ -47,8 +47,22 @@ def main() -> None:
     if args.dry_run:
         print_json(payload)
         return
-    service.persist_commit(payload)
-    payload = service.apply_projections(payload)
+    # 不在这里单独 persist_commit：apply_projections 内部已会写（且是同一个
+    # 唯一写入点），提前写一次只会留下一份 projection_status 全是 pending 的
+    # 中间态 commit 文件。precommit gate 会扫描 commits/，读到它便误判
+    # 「上一章投影未完成」，把本来合法的提交拦掉——这是门禁接入后暴露出的
+    # 真实顺序缺陷。
+    try:
+        payload = service.apply_projections(payload)
+    except WriteGateRejected as exc:
+        # 门禁拦下要给用户可执行的修复建议，不是抛栈。
+        print(json.dumps({
+            "status": "blocked",
+            "reason": str(exc),
+            "gate": "precommit",
+            "errors": (exc.gate or {}).get("errors", []),
+        }, ensure_ascii=False), file=sys.stderr)
+        sys.exit(1)
     # Record workflow checkpoint for accepted chapters
     if payload["meta"]["status"] == "accepted":
         try:

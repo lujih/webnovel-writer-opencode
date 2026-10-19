@@ -20,9 +20,19 @@ def issue(
     message: str,
     impact: str = "",
     repair: str = "",
+    **extra: Any,
 ) -> Dict[str, Any]:
-    """标准化错误/警告对象。"""
-    result = {
+    """标准化错误/警告对象。
+
+    ``**extra`` 允许调用方附带诊断上下文（如 ``missing=[...]``、
+    ``blocking=[...]``、``phase="..."``），原样并入结果对象。
+
+    此前本函数不接受扩展字段，而 `prewrite._check_project_phase` 传了
+    ``missing=``、`precommit._check_project_phase` 传了 ``blocking=`` 与
+    ``phase=``。两处都在 ``except Exception: pass`` 里，于是每次都抛
+    TypeError 又被静默吞掉——那两条检查**从未真正执行过**。
+    """
+    result: Dict[str, Any] = {
         "code": code,
         "severity": severity,
         "message": message,
@@ -31,6 +41,8 @@ def issue(
         result["impact"] = impact
     if repair:
         result["repair"] = repair
+    for key, value in extra.items():
+        result[key] = value
     return result
 
 

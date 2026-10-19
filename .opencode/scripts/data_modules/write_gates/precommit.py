@@ -39,8 +39,15 @@ def _check_project_phase(project_root: Path) -> List[Dict[str, Any]]:
                 phase=snapshot.phase,
                 blocking=blocking_info,
             ))
-    except Exception:
-        pass  # 模块不可用时跳过
+    except Exception as exc:
+        # fail-closed：阶段未知时不能当成可提交。
+        # 下方 _check_chapter_file 已是这个模式，此处对齐。
+        errors.append(issue(
+            "phase_check_failed",
+            "error",
+            f"项目阶段检查失败: {exc}",
+            repair="排查 project_phase 模块或项目元数据损坏",
+        ))
     return errors
 
 
@@ -48,7 +55,7 @@ def _check_chapter_file(project_root: Path, chapter: int) -> List[Dict[str, Any]
     """检查 chapter file 存在且非空。"""
     errors = []
     try:
-        from ..chapter_paths import find_chapter_file
+        from chapter_paths import find_chapter_file
         chapter_file = find_chapter_file(project_root, chapter)
         if not chapter_file or not chapter_file.is_file():
             errors.append(issue(

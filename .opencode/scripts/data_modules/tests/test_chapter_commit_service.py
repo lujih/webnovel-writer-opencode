@@ -7,17 +7,52 @@ from pathlib import Path
 
 import pytest
 
+from data_modules.artifact_validator import ARTIFACT_FILES
 from data_modules.chapter_commit_service import ChapterCommitService
 from data_modules.config import DataModulesConfig
 from data_modules.index_manager import IndexManager
+from data_modules.project_phase import INIT_REQUIRED_DIRS, INIT_REQUIRED_FILES
+
+
+def _write_min_artifact(path: Path) -> None:
+    """写一份能过 schema 的最小产物。"""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "planned_nodes": [], "covered_nodes": [], "missed_nodes": [], "extra_nodes": [],
+        "pending": [],
+        "blocking_count": 0, "issues": [],
+        "state_deltas": [], "entity_deltas": [], "accepted_events": [],
+    }, ensure_ascii=False), encoding="utf-8")
 
 
 @pytest.fixture
 def project_root(tmp_path):
-    """Create minimal project root with required state.json."""
-    webnovel = tmp_path / ".webnovel"
-    webnovel.mkdir()
-    (webnovel / "state.json").write_text(json.dumps({"schema_version": "5.1", "progress": {}}))
+    """建出**真的可提交**的项目根。
+
+    此前这里只建 `.webnovel/state.json`，因为 precommit gate 从未接入生产
+    代码——apply_projections 根本不做阶段/产物检查，残缺项目照样提交。
+    门禁接上之后，`init_scaffolded` 阶段与缺失的 4 个 commit 产物都会阻断，
+    所以 fixture 必须补齐。这不是"为了过测试而放宽"，而是把 fixture 从
+    "只要能跑"改成"符合提交前提"。
+    """
+    for rel in INIT_REQUIRED_DIRS:
+        (tmp_path / rel).mkdir(parents=True, exist_ok=True)
+    for rel in INIT_REQUIRED_FILES:
+        path = tmp_path / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_text(
+                json.dumps({"schema_version": "5.1", "progress": {}})
+                if rel.endswith(".json") else "placeholder\n",
+                encoding="utf-8",
+            )
+    for filename in ARTIFACT_FILES.values():
+        _write_min_artifact(tmp_path / ".webnovel" / "tmp" / filename)
+    # precommit 还会要求目标章节文件存在且非空（≥100 字符）。
+    # 这些用例提交第 3 章，故备好第 3 章的正文。
+    chapters_dir = tmp_path / "正文"
+    chapters_dir.mkdir(parents=True, exist_ok=True)
+    (chapters_dir / "第0003章.md").write_text("正文占位。" * 40, encoding="utf-8")
     return tmp_path
 
 
