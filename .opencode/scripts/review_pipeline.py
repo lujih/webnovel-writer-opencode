@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import re
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
 from runtime_compat import enable_windows_utf8_stdio
+
+logger = logging.getLogger(__name__)
 
 
 def _ensure_scripts_path() -> None:
@@ -208,7 +211,35 @@ def build_review_artifacts(
     report_file: str = "",
 ) -> Dict[str, Any]:
     raw_text = review_results_path.read_text(encoding="utf-8-sig")
-    raw = clean_reviewer_output(raw_text)
+
+    # 不可解析的审查输出必须走 **fail-closed**，与「JSON 畸形」同一条路径。
+    #
+    # 此前 clean_reviewer_output 抛 ValueError 就一路冒到调用方：审查流程
+    # 中断、不产出 review_result，而下游 chapter-commit 需要它——整章卡死，
+    # 用户看到的是 "no valid JSON found in reviewer output" 这种内部术语。
+    #
+    # 这与本仓库已确立的立场不一致。`review_schema._shape_issue` 的 docstring
+    # 写得很清楚：「形状异常意味着『无法判断这一章有没有问题』，而不是
+    # 『没有问题』……合成一条 critical + blocking 的问题，把判定交回人工/
+    # 修复循环」。非 JSON 输出是同一问题的更极端版本——模型可能回了散文、
+    # 可能被截断、可能忘了给 JSON，这些在真实使用里都很常见。
+    try:
+        raw = clean_reviewer_output(raw_text)
+    except ValueError as exc:
+        logger.warning("reviewer output 不可解析（chapter %s）：%s", chapter, exc)
+        raw = {
+            "issues": [{
+                "severity": "critical",
+                "category": "review_output_malformed",
+                "description": (
+                    f"审查输出无法解析为 JSON，无法判断本章是否存在问题：{exc}。"
+                    f"已按阻断处理，请人工复核或重新运行审查。"
+                ),
+                "blocking": True,
+            }],
+            "summary": "审查输出不可解析，已阻断提交。",
+        }
+
     result = parse_review_output(chapter=chapter, raw=raw)
     anti_patterns_added = append_ai_flavor_anti_patterns(project_root, result)
     metrics = result.to_metrics_dict(report_file=report_file)
