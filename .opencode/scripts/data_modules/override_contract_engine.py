@@ -67,10 +67,6 @@ def add_override(project_root: Path, constraint_id: str,
 
     version = len(chain) + 1
 
-    # Mark previous version as superseded
-    if chain:
-        chain[-1]["status"] = "superseded"
-
     record = {
         "constraint_id": constraint_id,
         "version": version,
@@ -82,6 +78,24 @@ def add_override(project_root: Path, constraint_id: str,
         "status": "active",
         "created_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
     }
+
+    # ── 顺序说明（别改回去）──────────────────────────────────────
+    # 事件必须**先**写成功，override_contracts.json 才能落盘。
+    #
+    # 旧顺序是「chain 里标 superseded → 写文件 → 发事件」。事件写失败时
+    # 文件已经写好：新版本 active、旧版本已被标成 superseded，而事件日志
+    # 里没有 override_rule_added。`rebuild_state_json` 消费该事件重放
+    # override_rules，于是下次 rebuild 之后这个覆盖**消失**，旧规则回来
+    # ——用户看到设定"自己变回去了"。
+    #
+    # 还有一个次要但同样真实的后果：失败的那次已经把版本号吃掉了，
+    # 重试会从 v2 开始（版本链出现空洞）。
+    #
+    # 事件日志是 SSOT 的事实来源，让它先落盘；失败则 store 完全不改。
+    publish_event(project_root, "override_rule_added", record, chapter=chapter)
+
+    if chain:
+        chain[-1]["status"] = "superseded"
     chain.append(record)
     store.setdefault("history", []).append({
         "constraint_id": constraint_id,
@@ -92,9 +106,6 @@ def add_override(project_root: Path, constraint_id: str,
     })
 
     _write_overrides(project_root, store)
-
-    # Publish to event log for SSOT consistency
-    publish_event(project_root, "override_rule_added", record, chapter=chapter)
 
     return record
 
