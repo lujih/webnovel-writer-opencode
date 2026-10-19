@@ -120,10 +120,21 @@ function buildGanttOption(rows, currentChapter) {
                     },
                     label: {
                         formatter: `当前 ${currentChapter} 章`,
-                        position: 'end',
+                        // 这条 markLine 是**竖线**，ECharts 默认让标签沿线的
+                        // 方向旋转 90°，于是"当前120章"变成竖排挤在 x 轴附近，
+                        // 还和刻度文字「第120章」重叠（2026-10 实测）。
+                        // 必须显式 rotate:0 摆平，并挪到线的顶端（start）。
+                        // position 用 'insideEndTop' 而**不是** 'end'：竖线的
+                        // 'end' 落在 x 轴刻度带上，正好压住「第120章」。
+                        // insideEndTop 把它收进绘图区顶部，rotate:0 阻止竖排。
+                        position: 'insideEndTop',
+                        rotate: 0,
+                        distance: 8,
                         color: '#26a8ff',
                         fontSize: 11,
                         fontWeight: 700,
+                        backgroundColor: 'rgba(255, 253, 246, 0.9)',
+                        padding: [2, 4],
                     },
                     data: [{ xAxis: currentChapter }],
                 },

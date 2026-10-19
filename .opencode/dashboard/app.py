@@ -1,7 +1,19 @@
 """
 Webnovel Dashboard - FastAPI 主应用
 
-仅提供 GET 接口（严格只读）；所有文件读取经过 path_guard 防穿越校验。
+接口分两类，安全边界不同：
+
+* **只读（绝大多数）**：GET 端点，查询 state.json / index.db / 合同树 / runtime
+  产物，不做任何写入。文件读取一律经 path_guard.safe_resolve 校验，且只放行
+  正文/大纲/设定集 三个目录。
+* **写（少数，需显式放行）**：文风约束编辑（master-setting / anti-patterns /
+  prompts）、单文件保存（/api/files/write）、运维操作（/api/actions/*）与
+  批量写删（/api/batch/*）。写路径受三层保护：
+    1. Host 守卫——拒绝非本机 Host，堵 DNS rebinding 的读取面；
+    2. CSRF 守卫——带 Origin 的写请求必须来自允许源，且允许源**跟随实际端口**
+       （create_app(port=...)），否则 --port 换端口后面板会静默变只读；
+    3. path_guard——文件写只允许落在三个内容目录内，SSOT 与 .story-system
+       一律不可写。
 """
 
 import asyncio

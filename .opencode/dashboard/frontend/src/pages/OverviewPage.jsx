@@ -590,33 +590,58 @@ export default function OverviewPage() {
                     </div>
                     <DataTable
                         columns={[
-                            { key: 'content', label: '内容' },
+                            // 这张表在 overview 的**半栏**里（约 600px），放不下 5 列。
+                            // 实测：加 minWidth 会把「紧急度」整列挤出卡片右边界，
+                            // 读者完全看不到——比原来的换行更糟。
+                            //
+                            // 因此把它压到 4 列：把「紧急度」并入「状态」列。
+                            // 二者本来就是同一件事的两种表述（statusText 是给人看的
+                            // 中文，urgencyText 是分档键），并排显示信息增量接近零。
+                            // 内容列允许截断，悬停看全文。
+                            {
+                                key: 'content',
+                                label: '内容',
+                                // 不设 maxWidth/ellipsis：.data-table 自带 min-width:580px，
+                                // 半栏里溢出的是**整张表**而非某一格，截断救不了。
+                                // 让内容自然换行、其余列 nowrap，表格就能压进容器。
+                                render: row => (
+                                    <span title={row.content} style={{ wordBreak: 'break-word' }}>
+                                        {row.content}
+                                    </span>
+                                ),
+                            },
                             {
                                 key: 'statusText',
                                 label: '状态',
-                                render: row => <Badge tone={toneForForeshadowing(row.level)}>{row.statusText}</Badge>,
+                                style: { whiteSpace: 'nowrap' },
+                                render: row => (
+                                    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                                        <Badge tone={toneForForeshadowing(row.level)}>{row.statusText}</Badge>
+                                        <Badge tone={toneForUrgencyBadge(row.urgencyText)}>{row.urgencyText}</Badge>
+                                    </span>
+                                ),
                             },
+                            // 埋设章 + 目标章合成一列「章节区间」。半栏宽度下
+                            // 两列各自占约 70px，加在一起就把表顶出卡片——而
+                            // "第15章 → 第45章" 本来就该连着读。
                             {
-                                key: 'plantedChapter',
-                                label: '埋设章',
-                                render: row => formatChapterLabel(row.plantedChapter),
-                            },
-                            {
-                                key: 'targetChapter',
-                                label: '目标章',
-                                render: row => formatChapterLabel(row.targetChapter),
-                            },
-                            {
-                                key: 'urgencyText',
-                                label: '紧急度',
-                                render: row => <Badge tone={toneForUrgencyBadge(row.urgencyText)}>{row.urgencyText}</Badge>,
+                                key: 'chapters',
+                                label: '章节',
+                                style: { whiteSpace: 'nowrap' },
+                                render: row => (
+                                    `${formatChapterLabel(row.plantedChapter)} → ${formatChapterLabel(row.targetChapter)}`
+                                ),
                             },
                         ]}
                         rows={urgentRows}
                         rowKey="id"
                         pageSize={5}
                         emptyText="暂无伏笔数据"
-                        minWidth={680}
+                        // DataTable 默认 minWidth=640，而这张表所在的半栏
+                        // 实际只有 ~528px（实测 clientWidth=528 / scrollWidth=640，
+                        // 溢出 112px 且滚动条在卡片里不可见）。
+                        // 显式压到 480，让 4 列能完整落在容器内。
+                        minWidth={480}
                     />
                 </article>
 

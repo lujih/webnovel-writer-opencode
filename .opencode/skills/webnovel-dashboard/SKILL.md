@@ -19,7 +19,8 @@ compatibility: opencode
 | 角色图鉴 | `/characters` | 实体列表、关系图谱、**时间线（状态变化+出场记录+异常检测）** |
 | 审查分析 | `/review` | 维度雷达图、严重程度分布、趋势折线图、Critical Issues |
 | 节奏雷达 | `/pacing` | 钩子强度、strand 分布、字数箱线图 |
-| 伏笔追踪 | `/foreshadowing` | 伏笔甘特图、债务表 |
+| 伏笔追踪 | `/foreshadowing` | 伏笔甘特图（当前章竖线）、完整伏笔列表 |
+| **追读债** | `/debts` | **追读债总览：笔数/余额/超期数、滚存倍数、点击展开事件时间线** |
 | 文档浏览 | `/files` | 文件树、正文预览 |
 | **文风约束** | `/style` | **编辑文风约束（6 Tab：自定义文风+全局+禁止+技法+合同+审查维度）** |
 | 系统状态 | `/system` | 合同树、提交历史、RAG 环境、运维操作、**批量操作** |
@@ -34,7 +35,7 @@ compatibility: opencode
 
 ## API 参考
 
-写入 API（8 个）、只读 API（6 个）、配置说明见 `references/dashboard-api.md`。
+写入 API（9 个）、只读 API（含追读债两个端点）、安全边界（Host/CSRF 双守卫、允许源跟随端口）与配置说明见 `references/dashboard-api.md`。
 
 ## 环境设置
 

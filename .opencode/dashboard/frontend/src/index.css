@@ -854,6 +854,28 @@ pre {
   align-items: start;
 }
 
+/* 两栏布局的左右槽位。列宽由 .split-layout 的 grid-template-columns 决定，
+   这里只需保证内容不会被长表格撑破（min-width:0 是 grid 子项收缩的前提，
+   缺了它表格会把整栏推到溢出）。 */
+.split-main,
+.split-side {
+  min-width: 0;
+}
+
+/* 实体表：列多且名称长短不一，给名称列一个下限，避免"林长青"被折成两行 */
+.entity-table th:first-child,
+.entity-table td:first-child {
+  min-width: 96px;
+}
+
+/* 图标按钮：只放一个图标时去掉文字按钮的横向 padding 差 */
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
 .sticky-card {
   position: sticky;
   top: 22px;

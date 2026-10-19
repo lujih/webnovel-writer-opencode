@@ -177,14 +177,20 @@
 
 ## 导航
 
-| 图标 | 标签 | 路由 |
-|------|------|------|
-| 📊 | 总览 | `/` |
-| 👤 | 角色图鉴 | `/characters` |
-| 📈 | 节奏雷达 | `/pacing` |
-| 🔖 | 伏笔追踪 | `/foreshadowing` |
-| 📁 | 文档浏览 | `/files` |
-| ⚙️ | 系统状态 | `/system` |
+实际顺序以 `src/App.jsx` 的 `NAV_ITEMS` 为准（共 10 项）：
+
+| 标签 | 路由 | 图标组件 |
+|------|------|----------|
+| 总览 | `/` | `ChartBarIcon` |
+| 上下文健康 | `/context` | `LayersIcon` |
+| 角色图鉴 | `/characters` | `UsersIcon` |
+| 审查分析 | `/review` | `ClipboardIcon` |
+| 节奏雷达 | `/pacing` | `TrendingUpIcon` |
+| 伏笔追踪 | `/foreshadowing` | `BookmarkIcon` |
+| 追读债 | `/debts` | `CoinsIcon` |
+| 文档浏览 | `/files` | `FolderIcon` |
+| 文风约束 | `/style` | `PenIcon` |
+| 系统状态 | `/system` | `SlidersIcon` |
 
 ## 大数据量适配
 
@@ -195,23 +201,32 @@
 
 ## 图标
 
-使用 [Pixelarticons](https://pixelarticons.com/)（`pixelarticons` npm 包）。
+图标是**手写 SVG**，定义在 `src/icons.jsx`，**不依赖 `pixelarticons` npm 包**。
 
-- 24×24 网格，无抗锯齿，纯像素风
+> 本节此前写「使用 pixelarticons 包」，与实现不符：`package.json` 里没有该依赖，
+> `icons.jsx` 用的是自绘 `<rect>` + `IconBase` 外壳。手写的原因是可以精确控制
+> 每个图标的像素块（比如"追读债"要画成硬币堆而不是复用书签），代价是新增图标
+> 要自己画。
+
+- 24×24 网格，无抗锯齿，纯像素风（`shapeRendering="crispEdges"`）
 - SVG `fill="currentColor"`，颜色继承父元素，天然适配色板
-- React 组件导入，tree-shakeable
 - 尺寸用 24px 的整数倍（24/48）保持像素对齐
+- 新增图标：在 `icons.jsx` 里写一个函数，返回 `<IconBase>` 包裹的 `<rect>` 组合
 
 ### 导航图标映射
 
-| 页面 | 图标名 | 组件 |
-|------|--------|------|
-| 总览 | `chart-bar` | `<ChartBar />` |
-| 角色图鉴 | `users` | `<Users />` |
-| 节奏雷达 | `trending-up` | `<TrendingUp />` |
-| 伏笔追踪 | `bookmark` | `<Bookmark />` |
-| 文档浏览 | `folder` | `<Folder />` |
-| 系统状态 | `sliders` | `<Sliders />` |
+| 页面 | 组件 | 说明 |
+|------|------|------|
+| 总览 | `<ChartBarIcon />` | 三根递增柱 |
+| 上下文健康 | `<LayersIcon />` | 堆叠层 |
+| 角色图鉴 | `<UsersIcon />` | 双人剪影 |
+| 审查分析 | `<ClipboardIcon />` | 带勾选清单 |
+| 节奏雷达 | `<TrendingUpIcon />` | 上升折线 |
+| 伏笔追踪 | `<BookmarkIcon />` | 书签 |
+| 追读债 | `<CoinsIcon />` | 三层硬币堆（**不要**复用 Bookmark，两项相邻会点错） |
+| 文档浏览 | `<FolderIcon />` | 文件夹 |
+| 文风约束 | `<PenIcon />` | 笔 |
+| 系统状态 | `<SlidersIcon />` | 推子 |
 
 ### 其他常用图标
 
@@ -230,5 +245,5 @@
 - 不用渐变背景（进度条除外）
 - 不用 soft shadow
 - 不用 glassmorphism / neumorphism
-- 不用 emoji 做图标——用 Pixelarticons
+- 不用 emoji 做图标——用 `icons.jsx` 里的手写像素 SVG
 - 不用 3D 图表（原 react-force-graph-3d 替换为 ECharts 2D graph）

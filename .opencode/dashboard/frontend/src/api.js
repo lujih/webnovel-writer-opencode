@@ -1,5 +1,27 @@
 const BASE = ''
 
+/**
+ * 带 HTTP 状态码的错误。
+ *
+ * 页面需要区分「这个资源本来就没有」（404，属于正常状态，该给引导文案）
+ * 与「服务真的坏了」（5xx / 网络错误，该给红色报错）。此前一律抛
+ * `new Error("404 Not Found")`，调用方只能拿字符串比对，于是上下文健康页
+ * 把"还没生成快照"渲染成了"加载失败"。
+ */
+export class HttpError extends Error {
+    constructor(status, statusText, detail) {
+        super(detail || `${status} ${statusText}`)
+        this.name = 'HttpError'
+        this.status = status
+        this.statusText = statusText
+        this.detail = detail || ''
+    }
+
+    get isNotFound() {
+        return this.status === 404
+    }
+}
+
 export async function fetchJSON(path, params = {}) {
     const url = new URL(`${BASE}${path}`, window.location.origin)
     for (const [key, value] of Object.entries(params)) {
@@ -10,7 +32,14 @@ export async function fetchJSON(path, params = {}) {
 
     const response = await fetch(url.toString())
     if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`)
+        // FastAPI 的错误体形如 {"detail": "..."}，能读到就用它，
+        // 读不到（HTML 错误页）就退回状态文本。
+        let detail = ''
+        try {
+            const body = await response.json()
+            detail = typeof body?.detail === 'string' ? body.detail : ''
+        } catch { /* 非 JSON 响应，忽略 */ }
+        throw new HttpError(response.status, response.statusText, detail)
     }
     return response.json()
 }

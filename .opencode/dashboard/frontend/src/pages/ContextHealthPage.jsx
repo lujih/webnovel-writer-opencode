@@ -144,6 +144,9 @@ export default function ContextHealthPage() {
     const [history, setHistory] = useState({ items: [] })
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    // missing 与 error 是两种不同状态：缺快照是正常现象（该给引导），
+    // error 才是真的坏了（该报红）。混在一起会把新项目的首次预览吓到。
+    const [missing, setMissing] = useState(false)
 
     const currentChapter = Number(projectInfo?.progress?.current_chapter || 0)
     const [selectedChapter, setSelectedChapter] = useState(currentChapter)
@@ -176,17 +179,26 @@ export default function ContextHealthPage() {
         if (selectedChapter <= 0) return undefined
         setLoading(true)
         setError(null)
+        setMissing(false)
         let cancelled = false
         fetchContextHealth(selectedChapter)
             .then(data => {
                 if (cancelled) return
                 setHealth(data)
-                if (!data) setError('暂无上下文数据')
+                if (!data) setMissing(true)
             })
-            .catch(() => {
+            .catch(err => {
                 if (cancelled) return
                 setHealth(null)
-                setError('暂无上下文数据')
+                // 404 = 这一章还没有 context 快照（新项目/刚写完未提交），
+                // 属于**正常状态**，不该显示成红色"加载失败"。真正的问题
+                // （5xx / 网络断开）才走 error 分支。
+                if (err?.isNotFound) {
+                    setMissing(true)
+                } else {
+                    setMissing(false)
+                    setError(err?.message || '网络错误')
+                }
             })
             .finally(() => { if (!cancelled) setLoading(false) })
         return () => { cancelled = true }
@@ -233,7 +245,17 @@ export default function ContextHealthPage() {
             </div>
 
             {loading && <div className="empty-state">加载中...</div>}
-            {error && <div className="empty-state" style={{ color: 'var(--accent-red)' }}>加载失败: {error}</div>}
+            {error && <div className="empty-state" style={{ color: 'var(--accent-red)' }}>加载失败：{error}</div>}
+
+            {!loading && !error && missing && (
+                <div className="empty-state">
+                    <p>第 {selectedChapter} 章还没有上下文快照。</p>
+                    <p className="empty-hint">
+                        快照在 <code>chapter-commit</code> 组装上下文时写入
+                        <code>.webnovel/runtime/</code>。先写完并提交一章，再回来查看本页。
+                    </p>
+                </div>
+            )}
 
             {!loading && !error && health && (
                 <>
