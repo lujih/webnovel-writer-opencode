@@ -774,6 +774,25 @@ pre {
   min-height: 90px;
 }
 
+/* 空态里的补充说明：比正文更弱，用于「为什么这里是空的、该怎么办」 */
+.empty-hint {
+  margin: 6px 0 0;
+  color: var(--text-mute);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+/* 卡片内的键值摘要行（债务明细等） */
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 22px;
+  padding: 10px 2px 14px;
+  color: var(--text-sub);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .summary-card-list {
   display: grid;
   gap: 10px;

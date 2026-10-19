@@ -378,10 +378,35 @@ def generate_index_db(project_root: Path) -> None:
         )
 
     # 扩展表 (空表，防止 _fetchall_safe 报错)
+    #
+    # ⚠️ chase_debt / debt_events 必须与 index_manager 里的真实 DDL 对齐。
+    # 此前它们被简化成 `(id, status, updated_at)`，于是 demo 上任何读债务
+    # 字段的代码都会 `no such column: debt_type`——而 `_fetchall_safe` 会把
+    # 这个错误当成"旧库缺表"静默返回空列表，缺口因此一直不可见。
     for table_sql in [
         "CREATE TABLE IF NOT EXISTS override_contracts (id INTEGER PRIMARY KEY AUTOINCREMENT, chapter INTEGER, status TEXT, record_type TEXT, description TEXT)",
-        "CREATE TABLE IF NOT EXISTS chase_debt (id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT, updated_at TEXT)",
-        "CREATE TABLE IF NOT EXISTS debt_events (id INTEGER PRIMARY KEY AUTOINCREMENT, debt_id INTEGER, chapter INTEGER)",
+        """CREATE TABLE IF NOT EXISTS chase_debt (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            debt_type TEXT NOT NULL,
+            original_amount REAL DEFAULT 1.0,
+            current_amount REAL DEFAULT 1.0,
+            interest_rate REAL DEFAULT 0.1,
+            source_chapter INTEGER NOT NULL,
+            due_chapter INTEGER NOT NULL,
+            override_contract_id INTEGER,
+            status TEXT DEFAULT 'active',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS debt_events (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            debt_id INTEGER NOT NULL,
+            event_type TEXT NOT NULL,
+            amount REAL NOT NULL,
+            chapter INTEGER NOT NULL,
+            note TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
         "CREATE TABLE IF NOT EXISTS invalid_facts (id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT, marked_at TEXT)",
         "CREATE TABLE IF NOT EXISTS rag_query_log (id INTEGER PRIMARY KEY AUTOINCREMENT, query_type TEXT, created_at TEXT)",
         "CREATE TABLE IF NOT EXISTS tool_call_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, tool_name TEXT, created_at TEXT)",
@@ -389,6 +414,37 @@ def generate_index_db(project_root: Path) -> None:
         "CREATE TABLE IF NOT EXISTS story_events (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, chapter INTEGER, event_type TEXT, subject TEXT, payload_json TEXT, created_at TEXT)",
     ]:
         cursor.execute(table_sql)
+
+    # 追读债示例数据：让 /debts 页在 demo 上有东西可看，也覆盖三种到期状态
+    # （已超期 / 临近 / 尚远），便于肉眼核对排序与徽章配色。
+    demo_debts = [
+        ("foreshadowing", 1.0, 2.46, 0.10, 15, 45),    # 远早于当前章 → 已超期
+        ("foreshadowing", 1.0, 1.77, 0.10, 28, 80),    # 已过 → 已超期
+        ("reader_promise", 2.0, 2.20, 0.05, 60, 118),  # 临近当前章
+        ("foreshadowing", 1.0, 3.10, 0.12, 90, 140),   # 尚远
+        ("pacing_debt", 1.5, 1.62, 0.08, 110, 175),    # 尚远
+    ]
+    for dtype, original, current, rate, src_ch, due_ch in demo_debts:
+        cursor.execute(
+            """INSERT INTO chase_debt
+               (debt_type, original_amount, current_amount, interest_rate,
+                source_chapter, due_chapter, status)
+               VALUES (?,?,?,?,?,?,?)""",
+            (dtype, original, current, rate, src_ch, due_ch, "active"),
+        )
+        debt_id = cursor.lastrowid
+        cursor.execute(
+            """INSERT INTO debt_events (debt_id, event_type, amount, chapter, note)
+               VALUES (?,?,?,?,?)""",
+            (debt_id, "create", original, src_ch, "伏笔埋设生成债务"),
+        )
+        if abs(current - original) > 1e-9:
+            cursor.execute(
+                """INSERT INTO debt_events (debt_id, event_type, amount, chapter, note)
+                   VALUES (?,?,?,?,?)""",
+                (debt_id, "accrue", round(current - original, 4),
+                 min(due_ch, src_ch + 20), "按章节复利计息"),
+            )
 
     # scenes
     cursor.execute("""

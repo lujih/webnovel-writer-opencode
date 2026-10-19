@@ -55,6 +55,18 @@ export function BookmarkIcon(props) {
     )
 }
 
+// 追读债：硬币堆。刻意不用 Bookmark（那是伏笔），两者在侧边栏相邻，
+// 图标重复会让作者点错。
+export function CoinsIcon(props) {
+    return (
+        <IconBase {...props}>
+            <rect x="4" y="15" width="16" height="5" />
+            <rect x="5" y="9" width="14" height="5" />
+            <rect x="6" y="3" width="12" height="5" />
+        </IconBase>
+    )
+}
+
 export function FolderIcon(props) {
     return (
         <IconBase {...props}>

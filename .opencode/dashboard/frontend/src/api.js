@@ -191,6 +191,16 @@ export function fetchForeshadowingReminders(threshold = 5) {
     return fetchJSON('/api/foreshadowing/reminders', { threshold })
 }
 
+// --- 追读债 ---
+
+export function fetchDebtsSummary(limit = 50) {
+    return fetchJSON('/api/debts/summary', { limit })
+}
+
+export function fetchDebtDetail(debtId) {
+    return fetchJSON(`/api/debts/${encodeURIComponent(debtId)}`)
+}
+
 export function runBatchAction(action, chapters, confirm = false) {
     return apiPost(`/api/batch/${action}`, { chapters, confirm })
 }

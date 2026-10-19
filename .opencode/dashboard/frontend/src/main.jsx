@@ -34,6 +34,7 @@ const OverviewPage = lazy(() => import('./pages/OverviewPage.jsx'))
 const CharactersPage = lazy(() => import('./pages/CharactersPage.jsx'))
 const PacingPage = lazy(() => import('./pages/PacingPage.jsx'))
 const ForeshadowingPage = lazy(() => import('./pages/ForeshadowingPage.jsx'))
+const DebtPage = lazy(() => import('./pages/DebtPage.jsx'))
 const FilesPage = lazy(() => import('./pages/FilesPage.jsx'))
 const SystemPage = lazy(() => import('./pages/SystemPage.jsx'))
 const StyleEditorPage = lazy(() => import('./pages/StyleEditorPage.jsx'))
@@ -62,6 +63,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                         <Route path="characters" element={<CharactersPage />} />
                         <Route path="pacing" element={<PacingPage />} />
                         <Route path="foreshadowing" element={<ForeshadowingPage />} />
+                        <Route path="debts" element={<DebtPage />} />
                         <Route path="files" element={<FilesPage />} />
                         <Route path="system" element={<SystemPage />} />
                         <Route path="style" element={<StyleEditorPage />} />

@@ -895,6 +895,18 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
                 (limit,),
             )
 
+    def _to_int(value) -> int:
+        """把可能为 None / 字符串 / 浮点的 DB 值安全转成 int。
+
+        定义必须在使用它的端点之前：这些端点是**闭包**，虽然 Python 在调用时
+        才解析名字，能容忍后置定义，但后置会让"这个函数哪来的"变成每次读代码
+        都要往回翻的问题。
+        """
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return 0
+
     @app.get("/api/debts")
     def list_debts(status: Optional[str] = None, limit: int = 100):
         with closing(_get_db()) as conn:
@@ -909,6 +921,123 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
                 "SELECT * FROM chase_debt ORDER BY updated_at DESC LIMIT ?",
                 (limit,),
             )
+
+    @app.get("/api/debts/summary")
+    def debts_summary(limit: int = Query(50, ge=1, le=500)):
+        """追读债总览：统计 + 明细，供 /debts 页面一次拿全。
+
+        追读债子系统（`chase_debt` / `debt_events` / 章节复利计息）在此前
+        完全没有 UI 入口——表建了、事件写了、`chapter-commit` 也接了，
+        但作者在面板上看不到任何一笔债。本端点补齐这块。
+
+        `overdue` 由**当前章**推算而非读 status 字段：`status` 依赖
+        `accrue_interest` 被调用过，若作者很久没跑章节提交，库里的
+        status 会停留在 'active' 而实际早已过期。两者都返回，让前端可以
+        在「库里的状态」与「真实到期情况」不一致时给出提示。
+        """
+        state = _load_state_payload()
+        current_chapter = int((state.get("progress") or {}).get("current_chapter") or 0)
+
+        with closing(_get_db()) as conn:
+            rows = _fetchall_safe(
+                conn,
+                """
+                SELECT id, debt_type, original_amount, current_amount, interest_rate,
+                       source_chapter, due_chapter, status, created_at, updated_at
+                FROM chase_debt
+                ORDER BY
+                    CASE status WHEN 'overdue' THEN 0 WHEN 'active' THEN 1 ELSE 2 END,
+                    due_chapter ASC,
+                    id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+
+        items = []
+        by_type: dict[str, dict] = {}
+        by_status: dict[str, int] = {}
+        total_balance = 0.0
+        overdue_count = 0
+
+        for row in rows:
+            status = str(row.get("status") or "active")
+            due = _to_int(row.get("due_chapter"))
+            balance = float(row.get("current_amount") or 0.0)
+            original = float(row.get("original_amount") or 0.0)
+
+            # 真实到期判定：当前章已越过 due_chapter 且债仍未结
+            is_overdue = status in ("active", "overdue") and due > 0 and current_chapter > due
+            if is_overdue:
+                overdue_count += 1
+
+            by_status[status] = by_status.get(status, 0) + 1
+            dtype = str(row.get("debt_type") or "unknown")
+            bucket = by_type.setdefault(dtype, {"count": 0, "total": 0.0})
+            bucket["count"] += 1
+            bucket["total"] = round(bucket["total"] + balance, 4)
+
+            if status in ("active", "overdue"):
+                total_balance += balance
+
+            items.append({
+                "id": row.get("id"),
+                "debt_type": dtype,
+                "original_amount": round(original, 4),
+                "current_amount": round(balance, 4),
+                # 复利累积倍数：让作者一眼看出"这笔债滚了多少"
+                "growth": round(balance / original, 3) if original > 0 else None,
+                "interest_rate": float(row.get("interest_rate") or 0.0),
+                "source_chapter": _to_int(row.get("source_chapter")),
+                "due_chapter": due,
+                "chapters_left": (due - current_chapter) if due > 0 else None,
+                "status": status,
+                "is_overdue": is_overdue,
+                "created_at": row.get("created_at"),
+                "updated_at": row.get("updated_at"),
+            })
+
+        return {
+            "items": items,
+            "current_chapter": current_chapter,
+            "totals": {
+                "count": len(items),
+                "balance": round(total_balance, 4),
+                "overdue": overdue_count,
+            },
+            "by_status": by_status,
+            "by_type": by_type,
+            "limit": limit,
+        }
+
+    @app.get("/api/debts/{debt_id}")
+    def debt_detail(debt_id: int):
+        """单笔债务 + 其事件时间线（建债/计息/偿还的全部记录）。"""
+        with closing(_get_db()) as conn:
+            rows = _fetchall_safe(
+                conn, "SELECT * FROM chase_debt WHERE id = ?", (debt_id,)
+            )
+            if not rows:
+                raise HTTPException(404, f"债务不存在: {debt_id}")
+            debt = rows[0]
+            events = _fetchall_safe(
+                conn,
+                "SELECT * FROM debt_events WHERE debt_id = ? ORDER BY chapter ASC, id ASC",
+                (debt_id,),
+            )
+
+        state = _load_state_payload()
+        current_chapter = int((state.get("progress") or {}).get("current_chapter") or 0)
+        due = _to_int(debt.get("due_chapter"))
+
+        return {
+            "debt": debt,
+            "events": events,
+            "current_chapter": current_chapter,
+            "chapters_left": (due - current_chapter) if due > 0 else None,
+            "is_overdue": due > 0 and current_chapter > due,
+        }
+
 
     @app.get("/api/debt-events")
     def list_debt_events(debt_id: Optional[int] = None, limit: int = 200):
@@ -966,12 +1095,6 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
         reminders = due_soon + active_no_deadline
         return {"reminders": reminders, "current_chapter": current_chapter, "total": len(items)}
 
-
-    def _to_int(value) -> int:
-        try:
-            return int(value)
-        except (TypeError, ValueError):
-            return 0
 
     @app.get("/api/invalid-facts")
     def list_invalid_facts(status: Optional[str] = None, limit: int = 100):
