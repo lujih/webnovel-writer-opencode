@@ -143,35 +143,56 @@ def cmd_delete_chapters(args) -> int:
     if dry_run:
         print()
 
-    for num, path in found.items():
-        if dry_run:
+    if dry_run:
+        for num, path in found.items():
             print(f"{label}  Would delete: {path.relative_to(project_root)}")
-        else:
-            try:
-                path.unlink()
-                print(f"  Deleted: {path.relative_to(project_root)}")
-            except OSError as e:
-                print(f"  FAILED: {path.relative_to(project_root)} — {e}")
+        # dry-run 也要展示 state/memory 会被怎么改
+        for msg in _clean_state_json(project_root, chapters, True):
+            print(f"{label}  {msg}")
+        for msg in _clean_memory(project_root, chapters, True):
+            print(f"{label}  {msg}")
+        print("\nDry run complete. Run without --dry-run to apply.")
+        return 0
 
-    if not dry_run:
-        print()
-
-    for msg in _clean_state_json(project_root, chapters, dry_run):
-        print(f"{label}  {msg}")
-
-    for msg in _clean_memory(project_root, chapters, dry_run):
-        print(f"{label}  {msg}")
-
-    if not dry_run and publish_event is not None:
+    # ── 顺序说明（别改回去）──────────────────────────────────────
+    # 事件必须**先**写成功，state.json 才能改。
+    #
+    # 旧顺序是「改 state → 发事件（失败就 pass 吞掉）」。事件写失败时
+    # state.json 已经删掉了章节，而事件日志里没有 chapter_deleted——
+    # 下一次 `ssot rebuild` 按事件重放，会把已删除的章节**复活**。
+    # 更糟的是那个 `except: pass`：命令照样打印 "Deleted N chapter(s)"
+    # 并返回 0，调用它的 skill 以为删干净了。
+    #
+    # 事件日志是 SSOT 的事实来源，所以让它先落盘：失败就中止，state 不动，
+    # 章节文件也不删（宁可不删，也不要删成两套说法不一致的状态）。
+    if publish_event is not None:
         try:
             publish_event(project_root, "chapter_deleted", {"chapters": list(chapters)})
-        except Exception:
-            pass
+        except Exception as exc:
+            print(
+                f"ERROR: 无法写入 chapter_deleted 事件（{exc}）。\n"
+                f"       已中止，未删除任何章节、未修改 state.json。\n"
+                f"       原因多为 .story-system/events 不可写或事件锁超时。",
+                file=sys.stderr,
+            )
+            return 1
 
-    if dry_run:
-        print(f"\nDry run complete. Run without --dry-run to apply.")
-    else:
-        print(f"\nDeleted {len(found)} chapter(s). index.db cleanup requires manual rebuild: webnovel index process-chapter")
+    for num, path in found.items():
+        try:
+            path.unlink()
+            print(f"  Deleted: {path.relative_to(project_root)}")
+        except OSError as e:
+            print(f"  FAILED: {path.relative_to(project_root)} — {e}")
+
+    print()
+
+    for msg in _clean_state_json(project_root, chapters, False):
+        print(f"  {msg}")
+
+    for msg in _clean_memory(project_root, chapters, False):
+        print(f"  {msg}")
+
+    print(f"\nDeleted {len(found)} chapter(s). index.db cleanup requires manual rebuild: webnovel index process-chapter")
     return 0
 
 
