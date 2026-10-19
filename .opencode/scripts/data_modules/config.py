@@ -20,6 +20,45 @@ from .context_weights import TEMPLATE_WEIGHTS_DYNAMIC_DEFAULT
 from project_locator import _get_user_config_root
 
 
+def _parse_dotenv_value(raw: str) -> str:
+    """把 `.env` 一行里 `=` 右侧的原文解析成真正的值。
+
+    需要处理三种 dotenv 生态里常见、而本项目原先不支持的写法：
+
+    1. **引号包裹**：`KEY="sk-abc"` / `KEY='sk-abc'`。
+       原实现原样保留引号，于是 `api_client.py` 拼出的请求头变成
+       `Authorization: Bearer "sk-abc"`，服务端 401。报错只说鉴权失败，
+       不会提示"你的 .env 多了两个引号"——排查成本很高。
+       本项目自己生成的 `.env.example` 不带引号，但用户常从教程复制、
+       或被编辑器插件自动加引号（值含空格/`#` 时尤其常见）。
+
+    2. **行内注释**：`KEY=value  # 说明`。原实现把注释拼进了值。
+
+    3. 引号**内部**的 `#` 是值的一部分（如 `pass#word`），不能当注释切。
+
+    引号不配对时按原样返回（多半是值本身含引号，不该瞎剥）。
+    """
+    value = raw.strip()
+
+    # 引号包裹：成对的单/双引号才剥，剥完保留内部的一切（含 `#`）
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        quote = value[0]
+        inner = value[1:-1]
+        # 双引号内允许转义引号；单引号按字面处理（与 dotenv 语义一致）
+        if quote == '"':
+            inner = inner.replace('\\"', '"').replace("\\\\", "\\")
+        return inner
+
+    # 未被引号包裹：`#` 起行内注释，但要求 `#` 前是空白——
+    # 否则 `URL=https://x/y#frag` 里的片段标识会被误切。
+    for idx, ch in enumerate(value):
+        if ch == "#" and idx > 0 and value[idx - 1] in (" ", "\t"):
+            value = value[:idx]
+            break
+
+    return value.strip()
+
+
 def _load_dotenv_file(env_path: Path, *, override: bool = False) -> bool:
     if not env_path.exists():
         return False
@@ -30,7 +69,7 @@ def _load_dotenv_file(env_path: Path, *, override: bool = False) -> bool:
                 if line and not line.startswith("#") and "=" in line:
                     key, _, value = line.partition("=")
                     key = key.strip()
-                    value = value.strip()
+                    value = _parse_dotenv_value(value)
                     if not key:
                         continue
                     # 默认不覆盖已有环境变量（保持“显式 > .env”优先级）
@@ -39,6 +78,7 @@ def _load_dotenv_file(env_path: Path, *, override: bool = False) -> bool:
         return True
     except Exception:
         return False
+
 
 
 def _load_dotenv():
