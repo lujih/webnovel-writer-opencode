@@ -127,7 +127,7 @@ class ProjectPhaseSnapshot:
 
 def _read_json_object(path: Path) -> tuple[dict[str, Any], str]:
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload = json.loads(path.read_text(encoding="utf-8-sig"))
     except FileNotFoundError:
         return {}, "missing"
     except json.JSONDecodeError as exc:

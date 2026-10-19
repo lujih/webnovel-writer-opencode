@@ -825,7 +825,9 @@ def rebuild_projections(project_root: Path) -> dict:
     # P0：保留既有 state.json 的非事件顶层字段（仅补缺，事件字段以重建为准）
     try:
         if state_path.is_file():
-            existing = json.loads(state_path.read_text(encoding="utf-8"))
+            # utf-8-sig：BOM 会让 json.loads 失败，从而跳过「保留非事件字段」
+            # 的合并——用户手工编辑过的 project_info 等会被 rebuild 擦掉。
+            existing = json.loads(state_path.read_text(encoding="utf-8-sig"))
             state = _merge_non_event_fields(existing, state)
     except (OSError, ValueError) as exc:
         logger.warning("ssot rebuild: 无法读取既有 state.json 合并非事件字段: %s", exc)
@@ -869,7 +871,8 @@ def verify_consistency(project_root: Path) -> list[dict]:
 
     state_path = project_root / ".webnovel" / "state.json"
     try:
-        actual_state = json.loads(state_path.read_text(encoding="utf-8"))
+        # utf-8-sig：BOM 不该被当成「state.json unreadable」
+        actual_state = json.loads(state_path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return [{"severity": "error", "detail": "state.json missing or unreadable"}]
 

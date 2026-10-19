@@ -89,7 +89,7 @@ def _json_checks(project_root: Path) -> List[Dict[str, Any]]:
     state_path = project_root / ".webnovel" / "state.json"
     if state_path.is_file():
         try:
-            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state = json.loads(state_path.read_text(encoding="utf-8-sig"))
             required_keys = ["project_info", "progress"]
             missing_keys = [k for k in required_keys if k not in state]
             if missing_keys:
@@ -114,7 +114,7 @@ def _json_checks(project_root: Path) -> List[Dict[str, Any]]:
     master_path = project_root / ".story-system" / "MASTER_SETTING.json"
     if master_path.is_file():
         try:
-            master = json.loads(master_path.read_text(encoding="utf-8"))
+            master = json.loads(master_path.read_text(encoding="utf-8-sig"))
             if "master_constraints" not in master:
                 checks.append(_check(
                     "MASTER_SETTING 结构",
@@ -234,7 +234,7 @@ def _projection_checks(project_root: Path) -> List[Dict[str, Any]]:
     state_path = webnovel_dir / "state.json"
     if state_path.is_file():
         try:
-            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state = json.loads(state_path.read_text(encoding="utf-8-sig"))
             progress = state.get("progress") or {}
             chapter_status = progress.get("chapter_status") or {}
 

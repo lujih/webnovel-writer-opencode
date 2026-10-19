@@ -40,7 +40,7 @@ def _override_path(project_root: Path) -> Path:
 def _read_overrides(project_root: Path) -> dict:
     path = _override_path(project_root)
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return json.loads(path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return {"contracts": {}, "history": []}
 
