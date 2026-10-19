@@ -9,10 +9,17 @@ Triggered after chapter-commit, ssot rebuild, or manually via CLI.
 from __future__ import annotations
 
 import json
+import logging
 from collections.abc import Callable
 from pathlib import Path
+from typing import Optional
 
-from .entity_index_utils import flatten_entities
+try:  # 包内导入
+    from .entity_index_utils import flatten_entities
+except ImportError:  # __main__ / sys.path 直跑（CLI 独立脚本模式）
+    from entity_index_utils import flatten_entities
+
+logger = logging.getLogger(__name__)
 
 HEADER = "> 此文件由系统自动生成，请勿手动编辑。数据源: state.json + index.db\n\n"
 
@@ -206,13 +213,56 @@ def _render_chapter_index(state: dict, project_root: Path) -> str:
     return "\n".join(lines)
 
 
+def render_error_detail(project_root: Path) -> Optional[str]:
+    """探测 state.json 是否可读；不可读时返回可读原因，否则 None。
+
+    与 `render_all_projections()` 分开提供，是为了避免用模块级全局变量传递
+    错误（那会被并发与连续调用串扰）。调用方按需再探一次——成本只是一次
+    `read_text`，而 state.json 本来就在页缓存里。
+    """
+    state_path = project_root / ".webnovel" / "state.json"
+    if not state_path.is_file():
+        return None
+    try:
+        json.loads(state_path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        return (
+            f"无法读取 state.json（{state_path}）：{exc}。"
+            f"markdown 投影未更新——请先修复或从 .bak 恢复，"
+            f"再运行 `ssot rebuild`。"
+        )
+    return None
+
+
 def render_all_projections(project_root: Path) -> dict[str, Path]:
-    """从结构化数据渲染所有 markdown 投影。"""
+    """从结构化数据渲染所有 markdown 投影。
+
+    state.json 读不出来时返回 ``{}`` 且**不抛异常**：
+
+    渲染器是**派生输出**（story/ 下的 5 个 markdown），失败不影响 SSOT 真相，
+    但抛异常会打断 `apply_projections` 后续的 projection_log 记录。而静默
+    返回 `{}` 也不行——用户会看到 story/ 停在旧版本却不知道为什么。
+
+    失败原因通过 `render_error_detail()` 取（见下）。**刻意不用模块级全局
+    变量**：那会被并发调用与连续调用串扰（实测：全量跑测试时前一个用例
+    留下的状态让后一个用例取不到原因）。
+    """
     state_path = project_root / ".webnovel" / "state.json"
     if not state_path.is_file():
         return {}
 
-    state = json.loads(state_path.read_text(encoding="utf-8"))
+    try:
+        # utf-8-sig：Windows 记事本 / VS Code 的「UTF-8 with BOM」是中文
+        # 作者的默认保存格式，BOM 会让 json.loads 报 "Unexpected UTF-8 BOM"，
+        # 把合法文件误判成损坏。仓库里已有 7 处这么读。
+        state = json.loads(state_path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError) as exc:
+        logger.warning(
+            "markdown 投影渲染跳过：无法读取 state.json（%s）：%s。"
+            "story/ 下的投影未更新——请先修复或从 .bak 恢复，再运行 ssot rebuild。",
+            state_path, exc,
+        )
+        return {}
 
     renderers: dict[str, Callable[..., str]] = {
         "世界观状态.md": _render_world_state,
@@ -236,18 +286,38 @@ def render_all_projections(project_root: Path) -> dict[str, Path]:
 
 def main():
     import argparse
+    import sys as _sys
+
     ap = argparse.ArgumentParser(description="Render markdown projections from state.json")
     ap.add_argument("--project-root", required=True)
     args = ap.parse_args()
     results = render_all_projections(Path(args.project_root))
+
+    error = render_error_detail(Path(args.project_root))
+    if error:
+        # 读不到 state.json：说清原因并非零退出，不要用 "Rendered 0 files"
+        # 冒充成功——脚本链会据此判断投影已更新。
+        print(f"ERROR: {error}", file=_sys.stderr)
+        raise SystemExit(1)
+
     for name, path in results.items():
         print(f"  {name} → {path}")
     print(f"Rendered {len(results)} projection files.")
 
 
 if __name__ == "__main__":
-    import sys
+    import sys as _sys
+    from pathlib import Path as _Path
+
+    # 独立脚本模式：把 scripts/ 加入 sys.path，否则 runtime_compat /
+    # entity_index_utils 这些顶层模块找不到（本脚本一直被当 CLI 用，
+    # 但此前没有这一步，直接 `python state_projection_renderer.py` 会
+    # ModuleNotFoundError）。
+    _scripts_dir = _Path(__file__).resolve().parent.parent
+    if str(_scripts_dir) not in _sys.path:
+        _sys.path.insert(0, str(_scripts_dir))
+
     from runtime_compat import enable_windows_utf8_stdio
-    if sys.platform == "win32":
+    if _sys.platform == "win32":
         enable_windows_utf8_stdio()
     main()
