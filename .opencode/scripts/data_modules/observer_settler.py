@@ -47,13 +47,38 @@ def _load_known_entities(project_root: Path) -> dict[str, dict]:
         return {}
 
 
+def _entity_display_name(info: dict) -> str:
+    """取实体记录里的显示名。
+
+    记录里两个字段并存：`canonical_name`（权威）与 `name`（旧版/部分写入方）。
+    只看 `name` 会在只有 `canonical_name` 的记录上漏掉名称匹配。
+    """
+    return str(info.get("canonical_name") or info.get("name") or "").strip()
+
+
+def _find_entities_by_name(name: str, known: dict[str, dict]) -> list[str]:
+    """返回所有显示名等于 ``name`` 的实体 id（升序，保证确定性）。"""
+    target = str(name or "").strip()
+    if not target:
+        return []
+    return sorted(
+        eid for eid, info in known.items()
+        if isinstance(info, dict) and _entity_display_name(info) == target
+    )
+
+
 def _resolve_entity(name_or_id: str, known: dict[str, dict]) -> str:
-    """Resolve an entity reference to its canonical entity_id."""
+    """Resolve an entity reference to its canonical entity_id.
+
+    **同名歧义时静默取字典序最小的那个**——这是既有行为，保持向后兼容。
+    需要知道"有歧义"的调用方用 `_find_entities_by_name()` 自查，或读
+    `settle()` 返回的 `ambiguous_mentions`。
+    """
     if name_or_id in known:
         return name_or_id
-    for eid, info in known.items():
-        if info.get("name", "") == name_or_id:
-            return eid
+    matches = _find_entities_by_name(name_or_id, known)
+    if matches:
+        return matches[0]
     return name_or_id
 
 
@@ -321,6 +346,66 @@ def _extract_open_loops(lines: list[str], chapter: int) -> list[dict]:
     return events
 
 
+def _collect_ambiguous_mentions(
+    sections: dict[str, list[str]], known: dict[str, dict]
+) -> list[dict]:
+    """找出「提及命中多个同类型同名实体」的情况。
+
+    只扫需要实体解析的 section（`角色状态变化` / `关系变化` / `力量突破` /
+    `新出场实体` / `宝物/物品获得`），从每行提取可能的实体名，再用
+    `_find_entities_by_name()` 查候选。
+
+    判定规则：候选 > 1 **且** 候选的 entity_type 全相同 → 真歧义。
+    跨类型同名（地点+势力）是设计支持的，不报。
+
+    返回 ``[{"mention": 名字, "candidates": [id...], "entity_type": 类型}]``，
+    去重后按提及名排序，保证输出确定。
+    """
+    # 从行里粗提实体名：括号前那段就是名字（各提取器的正则都以此开头）
+    name_re = re.compile(r'^[-*]\s*(.+?)\s*[（(↔]')
+    seen: dict[str, dict] = {}
+    for heading in ("角色状态变化", "关系变化", "力量突破",
+                    "新出场实体", "宝物/物品获得"):
+        for line in sections.get(heading, []):
+            for raw_name in _candidate_names_from_line(line, name_re):
+                if raw_name in seen:
+                    continue
+                candidates = _find_entities_by_name(raw_name, known)
+                if len(candidates) < 2:
+                    continue
+                types = {
+                    str(known.get(eid, {}).get("entity_type") or "")
+                    for eid in candidates
+                }
+                if len(types) != 1:
+                    continue          # 跨类型同名：设计支持，不算歧义
+                seen[raw_name] = {
+                    "mention": raw_name,
+                    "candidates": candidates,
+                    "entity_type": next(iter(types)),
+                }
+    return [seen[k] for k in sorted(seen)]
+
+
+def _candidate_names_from_line(line: str, name_re: "re.Pattern[str]") -> list[str]:
+    """从一行 observer 输出里取出可能作为实体名的片段。
+
+    `关系变化` 的行是 `A ↔ B：关系从X变为Y`，一行含两个实体，所以除了
+    首个匹配，还要按 `↔` 切分再各取一段。
+    """
+    names: list[str] = []
+    m = name_re.match(line)
+    if m:
+        names.append(m.group(1).strip())
+    if "↔" in line:
+        head = line.split("：", 1)[0].split(":", 1)[0]
+        for part in head.split("↔"):
+            cleaned = part.lstrip("-* ").strip()
+            if cleaned:
+                names.append(cleaned)
+    return [n for n in names if n]
+
+
 def _consumed_line_count(heading: str, produced: list[dict]) -> int:
     """估算某个 section 里"被成功解析"的行数。
 
@@ -384,6 +469,15 @@ def settle(raw_facts_path: Path, project_root: Path, chapter: int) -> dict:
             "settler: %d 个 section 标题不在白名单里，内容已忽略：%s",
             len(unknown_sections), list(unknown_sections),
         )
+
+    # 同名歧义：某提及命中多个**同类型**实体时，`_resolve_entity` 会静默取
+    # 字典序最小的那个。跨类型同名是设计支持的（「天云宗」= 地点 + 势力），
+    # 不算歧义；同类型同名才是真歧义。
+    #
+    # 为什么必须报出来：`data-agent.md:93` 的消歧策略是「置信度>0.8 自动采用，
+    # 0.5-0.8 采用+warning，<0.5 标记待人工」。但 agent 拿到的 entity_id 已经
+    # 是被静默挑好的，没有任何信号能触发这个分级——同名歧义永远走不到人工。
+    ambiguous_mentions = _collect_ambiguous_mentions(sections, known)
 
     validated: list[dict] = []
     dropped = 0
@@ -467,6 +561,14 @@ def settle(raw_facts_path: Path, project_root: Path, chapter: int) -> dict:
         result["unknown_sections"] = {k: len(v) for k, v in unknown_sections.items()}
     if dropped:
         result["dropped_events"] = dropped
+    if ambiguous_mentions:
+        result["ambiguous_mentions"] = ambiguous_mentions
+        logger.warning(
+            "settler: %d 个提及命中同类型同名实体，已按字典序取第一个——"
+            "需人工/agent 复核：%s",
+            len(ambiguous_mentions),
+            [m["mention"] for m in ambiguous_mentions],
+        )
     return result
 
 
