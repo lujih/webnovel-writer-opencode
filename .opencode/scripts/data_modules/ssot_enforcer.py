@@ -22,6 +22,7 @@ import copy
 import json
 import logging
 import os
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
@@ -218,6 +219,54 @@ def read_events(project_root: Path,
 # ── Projection rebuild ───────────────────────────────────────────────
 
 
+#: `rebuild_state_json` 能重放的事件类型全集。
+#:
+#: 与下方 `if/elif etype == ...` 链必须保持一致——由
+#: `test_ssot_unknown_events.py::TestKnownTypeRegistryMatchesDispatch` 钉住
+#: （它会解析源码里的 elif 分支与这个集合比对）。
+#:
+#: 为什么要单独列出：事件日志是 append-only 且跨版本累积的，重放器不认识
+#: 某类型时「不认识」不等于「没有效果」。此前没有 else 分支，未知类型被
+#: 静默 pass——用户拿 rebuild 做灾难恢复会得到看起来完整、实则缺数据的
+#: 状态。有了这个集合，未知类型可以被如实上报。
+KNOWN_EVENT_TYPES: frozenset[str] = frozenset({
+    "chapter_status_changed",
+    "chapter_deleted",
+    "entity_created",
+    "entity_updated",
+    "character_state_changed",
+    "power_breakthrough",
+    "relationship_changed",
+    "artifact_obtained",
+    "world_rule_revealed",
+    "world_rule_broken",
+    "promise_created",
+    "promise_paid_off",
+    "override_rule_added",
+    "override_rule_superseded",
+    "open_loop_created",
+    "open_loop_closed",
+})
+
+
+#: 已知但**没有状态效果**的事件类型（用于标记 / 审计）。
+#:
+#: 与 `KNOWN_EVENT_TYPES` 分开放，因为它们不需要（也不该有）重放分支：
+#: 混进去会让「注册了的类型都能重放」这条一致性检查失去意义。
+#: 它们仍然必须被认作「已知」，否则会被当成未知事件上报。
+#:
+#: `projection_rebuilt`：由 `rebuild_projections()` 自己发布。若不登记，
+#: 每次 rebuild 都会把上一次自己写的这条事件报成未知。
+EVENT_TYPES_WITHOUT_STATE_EFFECT: frozenset[str] = frozenset({
+    "projection_rebuilt",
+})
+
+#: 重放器认识的全部事件类型（含无状态效果的标记类）。
+RECOGNIZED_EVENT_TYPES: frozenset[str] = (
+    KNOWN_EVENT_TYPES | EVENT_TYPES_WITHOUT_STATE_EFFECT
+)
+
+
 def rebuild_state_json(project_root: Path,
                        events: Optional[list[dict]] = None) -> dict:
     """Rebuild state.json as a materialized view from the event log.
@@ -231,16 +280,37 @@ def rebuild_state_json(project_root: Path,
       promise_created, promise_paid_off, open_loop_created, open_loop_closed,
       chapter_status_changed, entity_created, entity_updated,
       chapter_deleted, override_rule_added, override_rule_superseded.
+
+    **未知事件类型不会被静默丢弃**：它们被收集进
+    ``state["_unknown_events"]``（含 event_id / event_type / chapter /
+    payload），由 `rebuild_projections()` 与 `verify_consistency()` 上报。
+    理由：事件日志是 append-only 且跨版本累积的，重放器不认识某类型时
+    「不认识」不等于「没有效果」——静默丢弃会让用户拿 rebuild 做灾难恢复
+    时得到一个看起来完整、实则缺数据的状态。
     """
     if events is None:
         events = read_events(project_root)
     state = _empty_state()
+    unknown_events: list[dict] = []
 
     for evt in events:
         etype = evt["event_type"]
         payload = evt.get("payload") or {}
         ch = str(evt["chapter"])
         subject = payload.get("_subject", "")
+
+        if etype not in RECOGNIZED_EVENT_TYPES:
+            # 不认识的类型：如实留痕，不猜测它的效果。
+            # 保留足够定位的信息，便于用户判断是否需要升级 / 手工补投影。
+            unknown_events.append({
+                "event_id": evt.get("event_id", ""),
+                "event_type": etype,
+                "chapter": evt.get("chapter", 0),
+                "seq": evt.get("seq"),
+                "subject": subject,
+                "payload": payload,
+            })
+            continue
 
         if etype == "chapter_status_changed":
             # 与 StateProjectionWriter 增量路径保持同一值形状（字符串），
@@ -448,6 +518,16 @@ def rebuild_state_json(project_root: Path,
             _apply_foreshadowing_event(
                 state, evt["chapter"], "open_loop_closed", payload,
             )
+
+    if unknown_events:
+        # 只在真有未知事件时写这个键，避免给所有项目加噪声字段。
+        state["_unknown_events"] = unknown_events
+        logger.warning(
+            "rebuild: %d 个未知事件类型未能重放（%s）——这些事件的效果缺失，"
+            "检查是否需要升级或手工补投影",
+            len(unknown_events),
+            ", ".join(sorted({str(e["event_type"]) for e in unknown_events})),
+        )
 
     return state
 
@@ -763,12 +843,21 @@ def rebuild_projections(project_root: Path) -> dict:
     except Exception as exc:
         logger.warning("Markdown projection render failed during rebuild: %s", exc)
 
-    return {
+    summary = {
         "projection": "state.json",
         "event_count": event_count,
         "chapters_in_state": len(state.get("progress", {}).get("chapter_status", {})),
         "entities_in_state": _count_entities(state),
     }
+    # 未知事件必须出现在 CLI 输出里，而不是只写进日志——用 rebuild 做
+    # 灾难恢复的人要看得到「有些事件没被重放」。
+    unknown = state.get("_unknown_events") or []
+    if unknown:
+        summary["unknown_event_count"] = len(unknown)
+        summary["unknown_event_types"] = sorted({
+            str(e.get("event_type")) for e in unknown if e.get("event_type")
+        })
+    return summary
 
 
 # ── Consistency verification ─────────────────────────────────────────
@@ -943,6 +1032,18 @@ def cmd_ssot(args) -> int:
               f"{summary['event_count']} events → "
               f"{summary['chapters_in_state']} chapters, "
               f"{summary['entities_in_state']} entities")
+        # 未知事件是「重建结果不完整」的信号，不能只留在日志里——
+        # 用 rebuild 做灾难恢复的人需要看到它。
+        unknown_count = summary.get("unknown_event_count")
+        if unknown_count:
+            print(
+                f"⚠️ {unknown_count} 个事件类型未被重放"
+                f"（{', '.join(summary.get('unknown_event_types') or [])}）"
+                f"——这些事件的效果不在重建结果里，"
+                f"检查是否需要升级或手工补投影",
+                file=sys.stderr,
+            )
+            return 1
         return 0
 
     if args.action == "events":
