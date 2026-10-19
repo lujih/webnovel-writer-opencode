@@ -33,10 +33,37 @@ _watcher = FileWatcher()
 
 # 允许访问本面板的源。写操作（CSRF 守卫）与 CORS 共用同一份，
 # 避免两处名单漂移后凭空放行或误伤。
+#
+# ⚠️ 端口不能写死：`server.py` 暴露了 `--port`，而它的端口占用提示还主动建议
+# 用户「使用其他端口: --port 8766」。若名单只有 8765，用户照做之后面板会变成
+# **只读**——所有 PUT/POST/DELETE 都被自己的 CSRF 守卫拒掉，界面上表现为
+# 「改了没反应」。因此真实监听端口由 create_app(port=...) 追加进来，
+# 这份常量只作为「未指定端口时」的默认值（保持既有测试与调用方行为不变）。
+_DEFAULT_PORT = 8765
+_VITE_DEV_PORT = 5173
+
 _LOCAL_ORIGINS = frozenset({
-    "http://127.0.0.1:8765", "http://localhost:8765",
-    "http://127.0.0.1:5173", "http://localhost:5173",
+    f"http://127.0.0.1:{_DEFAULT_PORT}", f"http://localhost:{_DEFAULT_PORT}",
+    f"http://127.0.0.1:{_VITE_DEV_PORT}", f"http://localhost:{_VITE_DEV_PORT}",
 })
+
+
+def _build_local_origins(port: int | None) -> frozenset[str]:
+    """把实际监听端口并入允许源集合。
+
+    传 None 时返回默认名单（8765 + Vite 5173），供不关心端口的调用方
+    （测试、嵌入式调用）沿用旧行为。传了端口则**追加**而非替换——
+    Vite 开发服务器仍可能从 5173 反向代理过来。
+    """
+    if port is None:
+        return _LOCAL_ORIGINS
+    if not isinstance(port, int) or not (0 < port < 65536):
+        return _LOCAL_ORIGINS
+    if port in (_DEFAULT_PORT, _VITE_DEV_PORT):
+        return _LOCAL_ORIGINS
+    return _LOCAL_ORIGINS | {
+        f"http://127.0.0.1:{port}", f"http://localhost:{port}",
+    }
 
 # Host 头白名单里除了固定名字，还允许任何 IP 字面量（见 _host_is_local）。
 # 原因：`--host 0.0.0.0` 时用户会用 192.168.x.x 访问，把 IP 写死会误伤；
@@ -286,7 +313,13 @@ def _build_env_status(project_root: Path) -> dict:
 # 应用工厂
 # ---------------------------------------------------------------------------
 
-def create_app(project_root: str | Path | None = None) -> FastAPI:
+def create_app(project_root: str | Path | None = None, *, port: int | None = None) -> FastAPI:
+    """构建 FastAPI 应用。
+
+    `port` 用于把实际监听端口并入 CSRF/CORS 的允许源——`server.py --port`
+    换端口后若不传，面板会静默变成只读（见 `_build_local_origins` 注释）。
+    不传则沿用 8765 + Vite 5173 的默认名单，既有调用方与测试零改动。
+    """
     global _project_root
 
     if project_root:
@@ -294,6 +327,8 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
             import warnings
             warnings.warn(f"Dashboard project_root 被覆盖: {_project_root} → {project_root}", stacklevel=2)
         _project_root = Path(project_root).resolve()
+
+    local_origins = _build_local_origins(port)
 
     _ensure_scripts_dir_on_path()
 
@@ -348,7 +383,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=list(_LOCAL_ORIGINS),
+        allow_origins=list(local_origins),
         allow_methods=["GET", "POST", "PUT", "DELETE"],
         allow_headers=["*"],
     )
@@ -385,7 +420,7 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
         """
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             origin = request.headers.get("origin")
-            if origin and origin not in _LOCAL_ORIGINS:
+            if origin and origin not in local_origins:
                 return JSONResponse(
                     {"detail": f"拒绝跨站写请求: {origin}"}, status_code=403
                 )
@@ -1373,13 +1408,21 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
     def _anti_patterns_path() -> Path:
         return _get_project_root() / ".story-system" / "anti_patterns.json"
 
-    def _atomic_write_json(path: Path, data: Any) -> None:
-        """原子写入 JSON 文件（带备份）。"""
+    def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
+        """原子写入 JSON 文件（带备份）。
+
+        `use_lock=False` 是给「调用方已持有同一把 .lock」的场景用的逃生口：
+        `security_utils.atomic_write_json()` 内部会自己 acquire
+        `<file>.lock`，而 filelock **不可重入**——外层若已经持锁
+        （`_locked_anti_patterns()`），内层再 acquire 会一直等到超时，
+        抛 AtomicWriteError 后被 FastAPI 吞成 500。保持默认 True，
+        未加外层锁的调用方行为不变。
+        """
         try:
             from security_utils import atomic_write_json as _aw
         except ImportError:
             from scripts.security_utils import atomic_write_json as _aw
-        _aw(path, data, backup=True)
+        _aw(path, data, backup=True, use_lock=use_lock)
 
     def _locked_anti_patterns():
         """返回 anti_patterns.json 的文件锁上下文管理器。"""
@@ -1461,7 +1504,8 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
                 "added_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             }
             existing.append(entry)
-            _atomic_write_json(path, existing)
+            # 外层已持 _locked_anti_patterns() 的锁，内层不能再 acquire
+            _atomic_write_json(path, existing, use_lock=False)
 
         try:
             _watcher.publish(json.dumps({
@@ -1490,7 +1534,8 @@ def create_app(project_root: str | Path | None = None) -> FastAPI:
                         if not (isinstance(item, dict) and str(item.get("text", "")).strip() == text)]
             if len(new_list) == len(existing):
                 raise HTTPException(404, f"未找到反模式: {text}")
-            _atomic_write_json(path, new_list)
+            # 外层已持 _locked_anti_patterns() 的锁，内层不能再 acquire
+            _atomic_write_json(path, new_list, use_lock=False)
 
         try:
             _watcher.publish(json.dumps({

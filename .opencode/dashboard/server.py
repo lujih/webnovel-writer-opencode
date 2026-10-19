@@ -153,7 +153,9 @@ def main():
     import uvicorn
     from .app import create_app
 
-    app = create_app(project_root)
+    # 必须把实际端口传进 create_app：CSRF/CORS 的允许源要跟着端口走，
+    # 否则 `--port 8766`（端口占用提示推荐的做法）会让面板静默变成只读。
+    app = create_app(project_root, port=args.port)
 
     url = f"http://{args.host}:{args.port}"
     print(f"Dashboard 启动: {url}")

@@ -142,6 +142,12 @@ export default function ReviewAnalyticsPage() {
     const trendOption = useMemo(() => buildTrendOption(data?.dimension_trends), [data])
     const severityOption = useMemo(() => buildSeverityOption(data?.severity_totals), [data])
 
+    // 维度数是**数据驱动**的，不是固定 8 个：旧书可能只跑过 plot/pacing/character
+    // 三个维度，硬写「8 维度」会与图上的实际顶点数不符（2026-10 实测暴露）。
+    const dimensionCount = data?.dimension_averages
+        ? Object.keys(data.dimension_averages).length
+        : 0
+
     return (
         <section className="dashboard-page">
             <header className="page-header">
@@ -172,7 +178,7 @@ export default function ReviewAnalyticsPage() {
                             <article className="card">
                                 <div className="card-header">
                                     <span className="card-title">维度雷达图</span>
-                                    <Badge tone="purple">8 维度</Badge>
+                                    <Badge tone="purple">{dimensionCount} 维度</Badge>
                                 </div>
                                 <ChartWrapper option={radarOption} height={320} />
                             </article>

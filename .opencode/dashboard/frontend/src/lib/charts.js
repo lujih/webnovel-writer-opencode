@@ -1,8 +1,13 @@
-import { BarChart, BoxplotChart, CustomChart, GraphChart, LineChart, PieChart } from 'echarts/charts'
+// ⚠️ echarts 是**按需注册**的：echarts.use() 就是一份白名单，
+// 没在这里注册的图表类型，页面里写了 `type: 'xxx'` 也不会画出来——
+// 而且**不报错**，只留一个空白画布。新增图表类型时必须同时加进这里，
+// 否则会重演 2026-10 的雷达图空白事故（用了 type:'radar' 但缺 RadarChart）。
+import { BarChart, BoxplotChart, CustomChart, GraphChart, LineChart, PieChart, RadarChart } from 'echarts/charts'
 import {
     GridComponent,
     LegendComponent,
     MarkLineComponent,
+    RadarComponent,
     TooltipComponent,
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
@@ -15,10 +20,12 @@ echarts.use([
     BoxplotChart,
     GraphChart,
     CustomChart,
+    RadarChart,
     GridComponent,
     TooltipComponent,
     LegendComponent,
     MarkLineComponent,
+    RadarComponent,
     CanvasRenderer,
 ])
 
