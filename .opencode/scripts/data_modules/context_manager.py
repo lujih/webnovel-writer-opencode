@@ -55,6 +55,16 @@ from .writing_guidance_builder import (
 logger = logging.getLogger(__name__)
 
 
+class StateUnreadableError(RuntimeError):
+    """state.json 无法读取（损坏 / 权限 / 编码）。
+
+    单独一个异常类型而不是复用 ValueError：调用方（writing_guidance_builder、
+    skill 步骤、CLI）需要区分「状态文件坏了，请修复」与「代码 bug」，
+    前者应原样转达给用户并附修复建议。
+    """
+
+
+
 class ContextManager:
     DEFAULT_TEMPLATE = CONTEXT_DEFAULT_TEMPLATE
     TEMPLATE_WEIGHTS = CONTEXT_TEMPLATE_WEIGHTS
@@ -778,10 +788,36 @@ class ContextManager:
         return extract_markdown_refs(text, max_items=max_items)
 
     def _load_state(self) -> Dict[str, Any]:
+        """读取 state.json。
+
+        读取失败时抛**带修复指引**的 ``StateUnreadableError``，而不是裸
+        ``JSONDecodeError``，也**不**静默返回 ``{}``：
+
+        - 裸异常：用户看到的是 "Expecting property name enclosed in double
+          quotes" 这种解析器术语，不知道该怎么办。同文件里的
+          ``_load_outline()`` 早已采用"可读中文异常"的风格，此处对齐。
+        - 返回 ``{}``：模型会在**完全没有状态**的情况下继续写作，产出自相
+          矛盾的章节——比中断更糟。
+
+        用 ``utf-8-sig`` 读：Windows 记事本 / VS Code 的「UTF-8 with BOM」
+        是中文作者的默认保存格式，BOM 会让 ``json.loads`` 报
+        "Unexpected UTF-8 BOM"，把合法文件误判成损坏。仓库里已有 7 处用
+        ``utf-8-sig``（chapter_commit / review_pipeline / skill_runner /
+        story_system_engine …）。
+        """
         path = self.config.state_file
         if not path.exists():
             return {}
-        return json.loads(path.read_text(encoding="utf-8"))
+        try:
+            return json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError) as exc:
+            raise StateUnreadableError(
+                f"无法读取 state.json（{path}）：{exc}。\n"
+                f"   写作流程已阻断——在状态不可信的情况下继续写作，"
+                f"会产出自相矛盾的章节。\n"
+                f"   修复：确认文件是合法 JSON（常见于手工编辑或写入中断），"
+                f"或从 {path.name}.bak 恢复，再运行 `ssot rebuild` 重建投影。"
+            ) from exc
 
     def _load_outline(self, chapter: int) -> str:
         try:
