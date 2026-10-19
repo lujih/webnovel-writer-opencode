@@ -277,3 +277,43 @@ class TestCliExitCode:
         publish_event(project, "open_loop_created", {"content": "A"}, chapter=1)
         r = self._run(project)
         assert r.returncode == 0, f"已知事件不该失败：{r.stdout}{r.stderr}"
+
+
+class TestVerifySurfacesUnknownEvents:
+    """`ssot verify` 是用户检查一致性的入口，不能对缺数据的项目说"一致"。"""
+
+    def test_verify_reports_warning(self, project):
+        from data_modules.ssot_enforcer import verify_consistency
+
+        publish_event(project, "future_plugin_event", {"a": 1}, chapter=2)
+        drifts = verify_consistency(project)
+
+        blob = str(drifts)
+        assert "future_plugin_event" in blob, (
+            f"verify_consistency 没有报告未知事件：{drifts}"
+        )
+        assert any(d.get("severity") in ("warning", "error") for d in drifts), (
+            f"未知事件只以 info 报告，选项检查不会失败：{drifts}"
+        )
+
+    def test_verify_clean_project_has_no_unknown_warning(self, project):
+        from data_modules.ssot_enforcer import verify_consistency
+
+        publish_event(project, "open_loop_created", {"content": "A"}, chapter=1)
+        drifts = verify_consistency(project)
+        assert not any("unknown" in str(d).lower() or "无法重放" in str(d)
+                       for d in drifts), f"已知事件被误报：{drifts}"
+
+    def test_verify_cli_exit_code(self, project):
+        """CLI 层面：有未知事件时 verify 必须非零退出。"""
+        import subprocess
+
+        publish_event(project, "future_plugin_event", {"a": 1}, chapter=2)
+        r = subprocess.run(
+            [sys.executable, str(SCRIPTS / "webnovel.py"),
+             "ssot", "verify", "--project-root", str(project)],
+            capture_output=True, text=True, timeout=180,
+            cwd=str(SCRIPTS.parent),
+        )
+        assert r.returncode != 0, f"有未知事件但 verify 返回 0：{r.stdout}"
+        assert "future_plugin_event" in r.stdout + r.stderr

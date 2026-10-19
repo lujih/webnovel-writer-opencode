@@ -876,6 +876,24 @@ def verify_consistency(project_root: Path) -> list[dict]:
     events = read_events(project_root)
     expected = rebuild_state_json(project_root, events=events)
 
+    # 未知事件：重放器不认识的内容不会体现在 expected 里，因此下面的逐字段
+    # 比对**必然**判为一致——但"没重放"本身就是一种漂移（投影不完整）。
+    # 单独报一条，否则 `ssot verify` 会对一个缺数据的项目说"一致"。
+    unknown = expected.get("_unknown_events") or []
+    if unknown:
+        types = sorted({str(e.get("event_type")) for e in unknown if e.get("event_type")})
+        drifts.append({
+            "severity": "warning",
+            "field": "_unknown_events",
+            "detail": (
+                f"{len(unknown)} 个事件无法重放（类型: {', '.join(types)}）——"
+                f"这些事件的效果不在投影里，项目状态可能不完整。"
+                f"检查是否需要升级，或手工补投影。"
+            ),
+            "unknown_event_types": types,
+            "unknown_event_count": len(unknown),
+        })
+
     # Compare chapter_status
     # progress.chapter_status 只报事件日志有而 state 缺的（缺口是真漂移；
     # state 超集——增量 chapter-commit 累积 + P0 合并保留 chapter_meta——合法）
