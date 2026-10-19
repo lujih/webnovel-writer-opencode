@@ -251,7 +251,7 @@ export default function ContextHealthPage() {
                 <div className="empty-state">
                     <p>第 {selectedChapter} 章还没有上下文快照。</p>
                     <p className="empty-hint">
-                        快照在 <code>chapter-commit</code> 组装上下文时写入
+                        快照在 <code>chapter-commit</code> 组装上下文时写入{' '}
                         <code>.webnovel/runtime/</code>。先写完并提交一章，再回来查看本页。
                     </p>
                 </div>
