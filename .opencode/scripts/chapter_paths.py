@@ -158,14 +158,70 @@ def default_chapter_draft_path(project_root: Path, chapter_num: int, *, use_volu
 
 
 def parse_chapter_range(spec: str) -> list[int]:
-    """Parse '5-12' or '5,7,9-12' into a sorted list of unique integers."""
-    chapters = []
-    for part in spec.split(","):
-        part = part.strip()
+    """把 `'5-12'` / `'5,7,9-12'` 解析成升序去重的章节号列表。
+
+    服务两个入口，其中 `delete-chapters` 是**破坏性操作**，所以这里的报错
+    质量比"能跑"重要：
+
+    - `chapter_delete_service.cmd_delete_chapters()` —— 删章节
+    - `orchestrate.cmd_orchestrate()` —— 批量写作
+
+    畸形输入一律抛 `ValueError`（带正确格式提示），**不返回空列表**。
+    此前 `'5-2'`（倒序）与 `'5--12'` 都静默变成 `[]`，调用方只看到
+    "no chapters specified"，用户却以为自己指定了范围——对删除操作来说，
+    "我以为删了 5 到 12 章"和"什么都没删"之间的误解很危险。
+
+    Raises:
+        ValueError: 格式非法、范围倒序、或章节号 < 1
+    """
+    if not spec or not spec.strip():
+        raise ValueError("章节范围不能为空。正确格式：'5'、'5-12' 或 '5,7,9-12'")
+
+    chapters: list[int] = []
+    for raw_part in spec.split(","):
+        part = raw_part.strip()
+        if not part:
+            raise ValueError(
+                f"章节范围 {spec!r} 里有空项。正确格式：'5'、'5-12' 或 '5,7,9-12'"
+            )
+
         if "-" in part:
-            a, b = part.split("-", 1)
-            chapters.extend(range(int(a), int(b) + 1))
+            # 用 split 得到恰好两段；三段及以上（如 '5--12'、'-3--1'）都算非法。
+            pieces = part.split("-")
+            if len(pieces) != 2:
+                raise ValueError(
+                    f"无法解析章节范围 {part!r}（来自 {spec!r}）。"
+                    f"范围必须形如 '5-12'，且两端都是正整数"
+                )
+            a_raw, b_raw = pieces
+            try:
+                a, b = int(a_raw), int(b_raw)
+            except ValueError:
+                raise ValueError(
+                    f"无法解析章节范围 {part!r}（来自 {spec!r}）。"
+                    f"范围两端必须是正整数，如 '5-12'"
+                ) from None
+            if a < 1 or b < 1:
+                raise ValueError(
+                    f"章节号必须 ≥ 1，收到 {part!r}（来自 {spec!r}）"
+                )
+            if a > b:
+                raise ValueError(
+                    f"章节范围倒序：{part!r}（来自 {spec!r}）。应写成 '{b}-{a}'"
+                )
+            chapters.extend(range(a, b + 1))
         else:
-            chapters.append(int(part))
+            try:
+                num = int(part)
+            except ValueError:
+                raise ValueError(
+                    f"无法解析章节号 {part!r}（来自 {spec!r}）。"
+                    f"必须是正整数，或形如 '5-12' 的范围"
+                ) from None
+            if num < 1:
+                raise ValueError(f"章节号必须 ≥ 1，收到 {num}（来自 {spec!r}）")
+            chapters.append(num)
+
     return sorted(set(chapters))
+
 

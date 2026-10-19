@@ -35,7 +35,11 @@ def cmd_orchestrate(args) -> int:
         return 1
 
     root_flag = ["--project-root", project_root]
-    chapters = parse_chapter_range(args.chapters)
+    try:
+        chapters = parse_chapter_range(args.chapters)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
     mode = args.mode
 
     if not chapters:

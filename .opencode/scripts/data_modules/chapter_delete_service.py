@@ -119,7 +119,13 @@ def cmd_delete_chapters(args) -> int:
         print("ERROR: Not a webnovel project root.", file=sys.stderr)
         return 1
 
-    chapters = parse_chapter_range(args.chapters)
+    # 破坏性操作：参数错了要在动手之前说清楚，不能把 Python traceback
+    # 甩给用户——那样他既不知道错在哪，也不知道有没有已经删掉什么。
+    try:
+        chapters = parse_chapter_range(args.chapters)
+    except ValueError as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        return 2
     if not chapters:
         print("ERROR: no chapters specified", file=sys.stderr)
         return 1
