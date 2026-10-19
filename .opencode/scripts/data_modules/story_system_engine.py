@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import logging
 import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -16,6 +17,8 @@ from reference_search import (
 )
 
 from .story_contracts import merge_anti_patterns
+
+logger = logging.getLogger(__name__)
 
 
 ANTI_PATTERN_SOURCE_FIELDS = {
@@ -62,6 +65,10 @@ class StorySystemEngine:
     def __init__(self, csv_dir: str | Path):
         self.csv_dir = Path(csv_dir)
         self._csv_cache: Dict[str, List[Dict[str, Any]]] = {}
+        #: 每张 CSV 的读取诊断（仅在有畸形行/空行时出现）。
+        #: 键为表名，值为 {rows_read, rows_kept, dropped_blank_rows, normalized_rows}。
+        #: CSV 是知识层最上游，静默丢行会让「路由不到正确题材」无从排查。
+        self.csv_diagnostics: Dict[str, Dict[str, int]] = {}
 
     def build(
         self,
@@ -301,14 +308,66 @@ class StorySystemEngine:
         return trace
 
     def _load_csv_rows(self, table_name: str) -> List[Dict[str, Any]]:
+        """读取知识层 CSV，剔除畸形行并记录诊断。
+
+        CSV 是六层数据流的最上游（题材路由 / 反模式 / 裁决规则）。读坏了
+        后面每一层都跟着偏，而且不会报错——只会"路由到错误的题材"。
+        `csv.DictReader` 对畸形行有三种默认行为，都会污染下游：
+
+        1. 列数多于表头 → 多出的值进 `None` 键
+           `{'题材': '仙侠', None: ['多一列']}`
+        2. 列数少于表头 → 缺的列取 `None`
+           `{'题材': '科幻', '关键词': None}`
+        3. 全空行 → 保留成一行全空字符串
+
+        `None` 键最危险：`row.get("关键词")` 看着正常，但任何
+        `row.items()` 遍历或 `dict(row)` 比较都会撞上它；而 `None` 值会让
+        下游 `.strip()` / 拼接直接抛 `AttributeError`。全空行则让「文件存在
+        但没内容」看起来像"有数据"，掩盖配置缺失。
+
+        这里统一归一：多余列丢弃、缺列补空字符串、全空行剔除，并把被处理
+        的行数记进 `csv_diagnostics` 供排查。
+        """
         if table_name in self._csv_cache:
             return list(self._csv_cache[table_name])
         csv_path = self.csv_dir / f"{table_name}.csv"
         if not csv_path.is_file():
             self._csv_cache[table_name] = []
             return []
+
         with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
-            rows = list(csv.DictReader(f))
+            reader = csv.DictReader(f)
+            fieldnames = list(reader.fieldnames or [])
+            raw_rows = list(reader)
+
+        rows: List[Dict[str, Any]] = []
+        dropped_blank = 0
+        normalized = 0
+        for raw_row in raw_rows:
+            # 归一：只保留表头声明的列，缺列补 ""，None 值补 ""
+            row = {name: ("" if raw_row.get(name) is None else raw_row.get(name))
+                   for name in fieldnames}
+            # 全空行（所有声明列都是空字符串）→ 剔除
+            if not any(str(v).strip() for v in row.values()):
+                dropped_blank += 1
+                continue
+            if len(raw_row) != len(fieldnames) or None in raw_row:
+                normalized += 1
+            rows.append(row)
+
+        if dropped_blank or normalized:
+            self.csv_diagnostics[table_name] = {
+                "rows_read": len(raw_rows),
+                "rows_kept": len(rows),
+                "dropped_blank_rows": dropped_blank,
+                "normalized_rows": normalized,
+            }
+            logger.warning(
+                "story_system CSV %s: 读入 %d 行，保留 %d 行"
+                "（剔除 %d 个空行，归一 %d 个畸形行）",
+                table_name, len(raw_rows), len(rows), dropped_blank, normalized,
+            )
+
         self._csv_cache[table_name] = rows
         return list(rows)
 
