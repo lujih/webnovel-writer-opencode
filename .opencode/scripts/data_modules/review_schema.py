@@ -82,14 +82,30 @@ class ReviewResult:
     chapter: int
     issues: List[ReviewIssue] = field(default_factory=list)
     summary: str = ""
+    #: 模型自己声明的阻断数。仅参与「取更严格一方」，不是权威值——
+    #: 权威值始终是从 issues 推导的 `_derived_blocking_count`。
+    declared_blocking_count: int = 0
 
     @property
     def issues_count(self) -> int:
         return len(self.issues)
 
     @property
-    def blocking_count(self) -> int:
+    def _derived_blocking_count(self) -> int:
         return sum(1 for i in self.issues if i.blocking)
+
+    @property
+    def blocking_count(self) -> int:
+        """阻断数 = max(从 issues 推导, 模型声明)。
+
+        为什么要取 max：本项目已确立「不直接信任 LLM 原始值」——模型说
+        `blocking_count: 0` 但列了 critical issue 时必须阻断，这个方向由
+        issues 侧保证。但反方向同样要成立：模型报了 `blocking_count: 3`
+        却没展开明细时，纯 issues 自算会得 0 并**放行这一章**。
+        「无法判断具体问题、但已知有问题」按本仓库的 fail-closed 取向
+        应当阻断，而不是当成没问题。
+        """
+        return max(self._derived_blocking_count, self.declared_blocking_count)
 
     @property
     def has_blocking(self) -> bool:
@@ -145,6 +161,9 @@ class ReviewResult:
             "issues": [i.to_dict() for i in self.issues],
             "issues_count": self.issues_count,
             "blocking_count": self.blocking_count,
+            # 两个来源分开暴露，便于诊断「为什么阻断」与「计数从哪来」
+            "blocking_count_derived": self._derived_blocking_count,
+            "blocking_count_declared": self.declared_blocking_count,
             "has_blocking": self.has_blocking,
             "summary": self.summary,
         }
@@ -205,9 +224,18 @@ def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
 
     issues = []
     malformed = 0
+    empty = 0
     for item in raw_issues:
         if not isinstance(item, dict):
             malformed += 1
+            continue
+        # 完全空的 issue 对象：模型占了个位却说不出任何内容。
+        # 与「issues 非数组」同类——都是「报了问题但无法判断」，
+        # 按 fail-closed 不应放行。空对象此前被归一成
+        # severity=medium / description="" 的合法 issue，于是很容易通过。
+        if not any(str(item.get(k) or "").strip() for k in
+                   ("severity", "description", "evidence", "fix_hint")):
+            empty += 1
             continue
         issues.append(ReviewIssue(
             severity=str(item.get("severity", "medium")),
@@ -228,11 +256,35 @@ def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
                         "已按阻断处理，请人工复核。"),
             blocking=True,
         ))
+    if empty:
+        issues.append(ReviewIssue(
+            severity="critical",
+            category="review_output_malformed",
+            description=(f"issues 数组中有 {empty} 个元素是空对象，没有任何可判读的内容。"
+                        "已按阻断处理，请人工复核。"),
+            blocking=True,
+        ))
     return ReviewResult(
         chapter=chapter,
         issues=issues,
         summary=str(raw.get("summary", "")),
+        declared_blocking_count=_coerce_blocking_count(raw.get("blocking_count")),
     )
+
+
+def _coerce_blocking_count(value: Any) -> int:
+    """把模型声明的 blocking_count 归一成非负整数。
+
+    模型常把它写成字符串（`"3"`）或浮点（`3.7`），负数与垃圾值都按 0 处理
+    （「-1 个阻断」没有意义，不该反而增加阻断数）。
+    """
+    if value is None or isinstance(value, bool):
+        return 0
+    try:
+        count = int(float(value))
+    except (TypeError, ValueError):
+        return 0
+    return max(0, count)
 
 
 def _read_json_if_exists(path: Path) -> Any | None:
