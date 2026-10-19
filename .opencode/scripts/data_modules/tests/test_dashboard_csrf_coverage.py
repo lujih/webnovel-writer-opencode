@@ -122,7 +122,17 @@ class TestGuardCoversEveryWriteRoute:
         )
 
     def test_local_origin_is_allowed(self, client, app):
-        """反向验证：本地源不该被误拦（否则面板自己用不了）。"""
+        """反向验证：本地源不该被误拦（否则面板自己用不了）。
+
+        ⚠️ 这条断言**曾经**写成 `status_code != 403 or "跨站" not in text`，
+        于是 500 也能通过——2026-10 的「反模式写入 100% 失败」P0 正是借此
+        藏了很久：处理器在锁上自锁后抛 500，测试却认为"没被 CSRF 拦，很好"。
+
+        CSRF 守卫的职责只是「不要把本地源当成跨站」。判断它尽职与否，
+        应当看**是否被 CSRF 拒绝**，而不是看最终状态码是否为 2xx——
+        业务层返回 400/404/409/422 都是正常拒绝，属于"守卫已放行、
+        处理器在正常校验"，必须与"守卫误拦"区分开。
+        """
         for method, path in _write_routes(app):
             url = path
             for segment in path.split("/"):
@@ -133,8 +143,16 @@ class TestGuardCoversEveryWriteRoute:
                 headers={"Origin": _LOCAL_BASE_URL},
                 json={} if method in ("POST", "PUT", "PATCH") else None,
             )
-            assert response.status_code != 403 or "跨站" not in response.text, (
+            # 只有被 CSRF 守卫拦下才算失败；业务层拒绝是允许的。
+            blocked_by_csrf = response.status_code == 403 and "跨站" in response.text
+            assert not blocked_by_csrf, (
                 f"{method} {path} 把本地源也拒了：{response.text[:200]}"
+            )
+            # 5xx 说明处理器崩了——这与 CSRF 无关，但同样必须报出来，
+            # 否则「能通过但一用就 500」的端点会继续蒙混过关。
+            assert response.status_code < 500, (
+                f"{method} {path} 在本地源下返回 {response.status_code}（服务端错误），"
+                f"说明处理器自身有问题：{response.text[:300]}"
             )
 
 
