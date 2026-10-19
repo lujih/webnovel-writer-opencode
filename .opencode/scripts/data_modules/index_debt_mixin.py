@@ -239,20 +239,34 @@ class IndexDebtMixin:
             return cursor.fetchone()[0]
 
     def accrue_interest(self, current_chapter: int) -> Dict[str, Any]:
-        """
-        计算利息（每章调用一次）
+        """按**章节数**计算复利，与调用频率无关。
 
         - 对 active 和 overdue 债务都计息（逾期债务继续累积利息）
-        - 使用 debt_events 表防止同一章重复计息
+        - 只对「建债章节之后、到 current_chapter 为止」的章节计息
+        - 用 debt_events 记录已计息到哪一章（`interest_accrued.chapter` 的
+          最大值），据此算出本次需要补几章
         - 检查逾期并更新状态
 
-        返回: {debts_processed, total_interest, new_overdues, skipped_already_processed}
+        语义说明：此前是 `current_amount * interest_rate`，每次调用只收
+        **一期**。于是结果取决于调用频率而非章节跨度：
+
+            逐章调用 ch2..ch10  →  余额 235.79
+            只调用 ch10         →  余额 110.00
+
+        而 `accrue-interest` 是一条**手工 CLI 命令**（`index_manager.py:1353`），
+        从没接入 chapter-commit 自动流程——作者隔几章才跑一次是常态，
+        每次只收一期，复利威慑名存实亡。现在改为按实际跨过的章节数补算，
+        两种调用方式得到同一结果。
+
+        返回: {debts_processed, total_interest, new_overdues,
+               skipped_already_processed, chapters_accrued}
         """
         result = {
             "debts_processed": 0,
             "total_interest": 0.0,
             "new_overdues": 0,
             "skipped_already_processed": 0,
+            "chapters_accrued": 0,
         }
 
         with self._get_conn() as conn:
@@ -271,20 +285,34 @@ class IndexDebtMixin:
                 due_chapter = debt["due_chapter"]
                 debt_status = debt["status"]
 
-                # 检查本章是否已计息（防止重复调用）
+                # 已经计息到哪一章？取 debt_events 里的最大 chapter。
+                # 用它而不是「本章是否已计过」来判断，才能补上跳过的章节。
                 cursor.execute(
                     """
-                    SELECT 1 FROM debt_events
-                    WHERE debt_id = ? AND chapter = ? AND event_type = 'interest_accrued'
+                    SELECT MAX(chapter) FROM debt_events
+                    WHERE debt_id = ? AND event_type = 'interest_accrued'
                 """,
-                    (debt_id, current_chapter),
+                    (debt_id,),
                 )
-                if cursor.fetchone():
+                row = cursor.fetchone()
+                accrued_through = row[0] if row and row[0] is not None else None
+
+                # 计息起点：从未计过息时从「建债章节」的下一章开始；
+                # 只对建债之后的章节收息，建债前的不收。
+                source_chapter = int(debt["source_chapter"] or 0)
+                start_chapter = (accrued_through + 1) if accrued_through is not None \
+                    else (source_chapter + 1)
+
+                # 需要补算的章节数
+                chapters_to_accrue = max(0, current_chapter - start_chapter + 1)
+
+                if chapters_to_accrue == 0:
+                    # 已计过 / 尚在建债章节之前 / 往回跑
                     result["skipped_already_processed"] += 1
                     continue
 
-                # 计算利息
-                interest = current_amount * interest_rate
+                # 按章节数复利：一次性补算 chapters_to_accrue 期
+                interest = current_amount * ((1 + interest_rate) ** chapters_to_accrue - 1)
                 new_amount = current_amount + interest
 
                 # 更新债务
@@ -305,11 +333,13 @@ class IndexDebtMixin:
                     "interest_accrued",
                     interest,
                     current_chapter,
-                    f"利息: {interest:.2f} (利率: {interest_rate * 100:.0f}%)",
+                    f"利息: {interest:.2f} "
+                    f"({chapters_to_accrue} 章 × 利率 {interest_rate * 100:.0f}%)",
                 )
 
                 result["debts_processed"] += 1
                 result["total_interest"] += interest
+                result["chapters_accrued"] += chapters_to_accrue
 
                 # 检查是否逾期（仅对 active 状态的债务）
                 if debt_status == "active" and current_chapter > due_chapter:
