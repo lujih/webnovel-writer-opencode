@@ -321,16 +321,25 @@ export default function CharactersPage() {
         }
     }, [selected])
 
+    // 时间轴自动播放：定时器里要调最新的 advance 逻辑，但 interval 不该因为
+    // 依赖变化而重建（那会让 120ms 的节奏被反复重置）。用 ref 承接最新实现。
+    //
+    // ⚠️ 必须在 effect 里写 ref.current，不能在 render 阶段直接赋值：
+    // render 期间改 ref 是 React 明确禁止的副作用，并发渲染下会写进"被丢弃
+    // 的那次渲染"，读到过期闭包。eslint react-hooks/refs 会直接报 error。
     const advanceGraphRef = useRef(null)
-    advanceGraphRef.current = () => {
-        setGraphChapter(current => {
-            if (current >= latestChapter) {
-                setPlaying(false)
-                return latestChapter
-            }
-            return Math.min(latestChapter, current + 5)
-        })
-    }
+
+    useEffect(() => {
+        advanceGraphRef.current = () => {
+            setGraphChapter(current => {
+                if (current >= latestChapter) {
+                    setPlaying(false)
+                    return latestChapter
+                }
+                return Math.min(latestChapter, current + 5)
+            })
+        }
+    }, [latestChapter])
 
     useEffect(() => {
         if (!playing) return undefined

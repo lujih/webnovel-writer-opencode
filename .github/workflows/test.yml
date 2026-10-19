@@ -42,3 +42,47 @@ jobs:
 
       - name: Byte-compile all scripts
         run: python -m compileall -q .opencode/scripts
+
+  # 前端此前零 CI：dist 提交进 git 但没有人在 CI 里验证它**能构建出来**，
+  # 于是跨平台 node_modules（只含 win32 rollup 包）这类问题长期不可见。
+  # 这里独立成一个 job：Python 侧的失败不该掩盖前端失败，反之亦然。
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .opencode/dashboard/frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: .opencode/dashboard/frontend/package-lock.json
+
+      # npm ci 而不是 npm install：按 lock 文件精确安装，顺带证明
+      # package-lock.json 与 package.json 没有脱节（install 会"顺手修好"）。
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # dist 是提交进 git 的（npm 离线包要带上它）。构建后若无差异，
+      # 说明仓库里的产物与源码同步；有差异说明有人改了 src 忘了重建。
+      # 只警告不失败——构建产物含 hash 文件名的差异噪音较大，
+      # 强门禁会让正常 PR 频繁变红，但至少要让人看见。
+      - name: Warn if committed dist is stale
+        working-directory: .
+        run: |
+          if ! git diff --quiet -- .opencode/dashboard/frontend/dist; then
+            echo "::warning::committed dist/ differs from a fresh build — 前端源码改了但没重建产物"
+            git diff --stat -- .opencode/dashboard/frontend/dist | tail -20
+          fi
+

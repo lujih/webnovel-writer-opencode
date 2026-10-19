@@ -8,9 +8,19 @@ export function escapeHtml(value) {
     return String(value).replace(/[&<>"']/g, ch => HTML_ESCAPES[ch])
 }
 
+// `value || 0` 会把 null / undefined / '' / false 一律变成 0，于是
+// 「这一章还没有审查分」会被显示成「0 分」——读者/作者会以为是真实测量值。
+// 缺值必须显示占位符，只有**真正的数字 0** 才显示 0。
+function toFiniteNumber(value) {
+    if (value === null || value === undefined || value === '') return null
+    if (typeof value === 'boolean') return null
+    const number = Number(value)
+    return Number.isFinite(number) ? number : null
+}
+
 export function formatNumber(value) {
-    const number = Number(value || 0)
-    if (!Number.isFinite(number)) return '—'
+    const number = toFiniteNumber(value)
+    if (number === null) return '—'
     if (Math.abs(number) >= 10000) {
         return `${new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1 }).format(number / 10000)} 万`
     }
@@ -18,8 +28,8 @@ export function formatNumber(value) {
 }
 
 export function formatShortNumber(value) {
-    const number = Number(value || 0)
-    if (!Number.isFinite(number)) return '—'
+    const number = toFiniteNumber(value)
+    if (number === null) return '—'
     return new Intl.NumberFormat('zh-CN', { maximumFractionDigits: 1 }).format(number)
 }
 
@@ -64,9 +74,12 @@ export function formatJSONText(value) {
 }
 
 export function average(values) {
-    const valid = values
-        .map(item => Number(item))
-        .filter(item => Number.isFinite(item))
+    // 必须走 toFiniteNumber 而不是裸 Number()：Number(null) === 0 且
+    // Number.isFinite(0) 为真，于是「没测量的章节」会被当成 0 分拖低均值。
+    // 均值会显示在总览/节奏页的统计卡上，是作者判断趋势的依据。
+    const valid = (values || [])
+        .map(toFiniteNumber)
+        .filter(item => item !== null)
     if (!valid.length) return null
     return valid.reduce((sum, item) => sum + item, 0) / valid.length
 }

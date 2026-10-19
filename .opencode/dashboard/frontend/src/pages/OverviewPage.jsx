@@ -370,7 +370,13 @@ export default function OverviewPage() {
                     borderWidth: 2,
                 },
             }))
-    }, [projectInfo?.strand_tracker?.history])
+    // 依赖必须写 projectInfo 而不是它的某个可选链路径：
+    // 依赖数组里的表达式会被比较，而 `projectInfo?.strand_tracker?.history`
+    // 在 projectInfo 整体被替换（SSE 刷新）但该字段引用恰好复用时不会触发重算，
+    // 环形图就会停在旧数据上。React Compiler 会因此拒绝优化并报
+    // "inferred dependency was projectInfo, but the source dependencies were
+    // [projectInfo?.strand_tracker?.history]"。
+    }, [projectInfo])
 
     const totalWords = Number(progress.total_words || 0)
     const targetWords = Number(info.target_words || 0)
