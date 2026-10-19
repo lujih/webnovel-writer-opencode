@@ -84,52 +84,60 @@ def sanitize_filename(name: str, max_length: int = 100) -> str:
 
 def sanitize_commit_message(message: str, max_length: int = 200) -> str:
     """
-    清理Git提交消息，防止命令注入 (CWE-77)
+    把任意文本规整成单行、可安全传给 `git commit -m` 的提交消息。
 
-    安全关键函数 - 修复backup_manager.py命令注入漏洞
+    **这不是命令注入防护，也不需要是。** 两处调用方都以 list 形式调用
+    subprocess（`["git", "commit", "-m", msg]`），不经过 shell，所以
+    消息里的 `--author=…` / `--amend` 只是普通文本，不会被 git 当成参数
+    ——`-m` 已经吃掉了它后面的整个字面量。此前本函数按"防注入"思路删除
+    所有 `--xxx`，代价是静默吞掉中文标题里常见的破折号：
+
+        "重生--归来"  →  "重生"        ← 「--归来」被当成 git 标志删了
+
+    现在只做提交消息本身需要的清理：压成单行、去控制字符、收敛空白、
+    限长。用户写进标题的破折号、引号、连字符都原样保留。
 
     Args:
-        message: 原始提交消息（可能包含Git标志）
-        max_length: 消息最大长度（默认200字符）
+        message: 原始文本（通常是章节标题）
+        max_length: 最大长度（默认 200 字符）
 
     Returns:
-        安全的提交消息（移除Git特殊标志和危险字符）
+        单行、无控制字符、长度受限的提交消息；全空白时返回 "Untitled commit"
 
     示例:
-        >>> sanitize_commit_message("Test\\n--author='Attacker'")
-        'Test  author Attacker'
         >>> sanitize_commit_message("--amend Chapter 1")
-        'amend Chapter 1'
+        '--amend Chapter 1'
+        >>> sanitize_commit_message("第5章: 他来了--然后呢")
+        '第5章: 他来了--然后呢'
+        >>> sanitize_commit_message("重生--归来")
+        '重生--归来'
 
-    安全验证:
-        - ✅ 防止多行注入（换行符）
-        - ✅ 防止Git标志注入（--xxx）
-        - ✅ 防止参数分隔符混淆（引号）
-        - ✅ 防止单字母标志（-x）
+    保证的不变式:
+        - 不含换行/回车（否则破坏 git 的单行 summary）
+        - 不含 C0/C1 控制字符
+        - 长度 ≤ max_length
+        - 非空
     """
-    # Step 1: 移除换行符（防止多行参数注入）
-    safe_msg = message.replace('\n', ' ').replace('\r', ' ')
+    # Step 1: 换行 → 空格（提交消息必须是单行；多行要用 -m 多次，不是这里的事）
+    safe_msg = message.replace("\n", " ").replace("\r", " ")
 
-    # Step 2: 移除Git特殊标志（--开头的参数）
-    safe_msg = re.sub(r'--[\w-]+', '', safe_msg)
+    # Step 2: 去掉控制字符（\x00 之类会被 git / 终端当成截断）
+    safe_msg = "".join(
+        ch for ch in safe_msg
+        if ch == "\t" or (ord(ch) >= 0x20 and not (0x7F <= ord(ch) <= 0x9F))
+    )
 
-    # Step 3: 移除引号（防止参数分隔符混淆）
-    safe_msg = safe_msg.replace("'", "").replace('"', '')
+    # Step 3: 收敛空白（含制表符）
+    safe_msg = re.sub(r"\s+", " ", safe_msg)
 
-    # Step 4: 移除前导的-（防止单字母标志如-m）
-    safe_msg = safe_msg.lstrip('-')
-
-    # Step 5: 移除连续空格（美化）
-    safe_msg = re.sub(r'\s+', ' ', safe_msg)
-
-    # Step 6: 长度限制
+    # Step 4: 长度限制
     if len(safe_msg) > max_length:
         safe_msg = safe_msg[:max_length]
 
-    # Step 7: 移除首尾空格
+    # Step 5: 去首尾空白
     safe_msg = safe_msg.strip()
 
-    # Step 8: 确保非空
+    # Step 6: 确保非空
     if not safe_msg:
         safe_msg = "Untitled commit"
 
@@ -580,21 +588,33 @@ def _run_self_tests():
 
     # Test 1: sanitize_filename
     assert sanitize_filename("../../../etc/passwd") == "passwd", "路径遍历测试失败"
-    assert sanitize_filename("C:\\Windows\\System32") == "System32", "Windows路径测试失败"
+    # 跨平台注意：POSIX 的 os.path.basename 不认反斜杠，所以 Windows 路径在
+    # Linux 上不走「取 basename」分支，而是落到第 2 步「反斜杠 → 下划线」。
+    # 两条路径都**安全**（都剥掉了目录层级），只是产出不同：
+    #   Windows: 'System32'          POSIX: 'C_Windows_System32'
+    # 断言不能钉死其中一个，否则这个自检只能在 Windows 上跑——它确实一直是
+    # 这么"通过"的，而 Linux CI 从没执行过它（不在 test.yml 里）。
+    _win_path_result = sanitize_filename("C:\\Windows\\System32")
+    assert _win_path_result in ("System32", "C_Windows_System32"), (
+        f"Windows路径处理异常: {_win_path_result!r}"
+    )
+    assert "\\" not in _win_path_result and "/" not in _win_path_result, "分隔符残留"
     assert sanitize_filename("正常角色名") == "正常角色名", "中文测试失败"
     assert sanitize_filename("/tmp/../../../../../etc/hosts") == "hosts", "复杂路径遍历测试失败"
     assert sanitize_filename("test///file...name") == "file_name", "特殊字符测试失败"  # . 会被替换
     print("  ✅ sanitize_filename: 所有测试通过")
 
     # Test 2: sanitize_commit_message
-    result = sanitize_commit_message("Test\n--author='Attacker'")
+    # 注意：本函数**不是**命令注入防护（调用方全是 list 形式 subprocess，
+    # 不经 shell）。所以这里断言的是「单行化 + 保留内容」，不再断言
+    # 「--xxx 被删除」——那个旧断言会吞掉用户标题里的合法破折号。
+    result = sanitize_commit_message("Test\n第二行")
     assert "\n" not in result, "换行符未移除"
-    assert "--author" not in result, "Git标志未移除"
-    assert "Attacker" in result, "内容被错误移除"
+    assert "Test" in result and "第二行" in result, "内容被错误移除"
 
-    assert sanitize_commit_message("--amend Chapter 1") == "Chapter 1", "Git标志测试失败"  # --amend被完全移除
-    assert "'" not in sanitize_commit_message("Test'message"), "引号测试失败"
-    assert sanitize_commit_message("-m Test") == "m Test", "单字母标志测试失败"  # -m被移除后是"m Test"
+    assert sanitize_commit_message("--amend Chapter 1") == "--amend Chapter 1", "内容被改写"
+    assert sanitize_commit_message("重生--归来") == "重生--归来", "破折号被吞"
+    assert sanitize_commit_message("") == "Untitled commit", "空值兜底失败"
     print("  ✅ sanitize_commit_message: 所有测试通过")
 
     # Test 3: validate_integer_input
