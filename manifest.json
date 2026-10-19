@@ -1,67 +1,122 @@
 {
-  "version": "v2.9.2-20261018.0903",
+  "version": "v2.9.2-20261019.1204",
   "tag": "v2.9.2",
-  "updated": "2026-10-18T09:03:11Z",
+  "updated": "2026-10-19T12:04:56Z",
   "changelog": [
     {
-      "hash": "d3f84cb",
-      "type": "fix",
-      "message": "fix: manifest \u6309 git \u7d22\u5f15\u53d6\u6587\u4ef6\u96c6\u5e76\u5f52\u4e00\u5316\u884c\u5c3e\uff0c\u53d1\u5e03\u5305\u4e0d\u518d\u6df7\u8fdb\u672c\u5730\u4ea7\u7269"
-    },
-    {
-      "hash": "8fe873a",
-      "type": "fix",
-      "message": "fix: \u5b89\u88c5\u5668\u6821\u9a8c sha256\u2014\u2014\u6b64\u524d\u53ea\u6bd4 content-length\uff0c\u6076\u610f\u955c\u50cf\u53ef\u6ce8\u5165 AGENTS.md"
-    },
-    {
-      "hash": "79ba14b",
-      "type": "fix",
-      "message": "fix: dashboard \u6821\u9a8c Host \u5934\u2014\u2014\u5835\u4f4f DNS rebinding \u7684\u8bfb\u53d6\u8def\u5f84"
-    },
-    {
-      "hash": "8a769ff",
+      "hash": "1e543b1",
       "type": "docs",
-      "message": "docs: \u4fee\u6389 6 \u5904\u4e0e\u5b9e\u9645\u4ee3\u7801\u4e0d\u7b26\u7684\u6587\u6863\u65ad\u8a00"
+      "message": "docs: \u8bb0\u5f55\u8ffd\u8bfb\u503a\u5229\u606f\u7684\u7ae0\u8282\u590d\u5229\u8bed\u4e49\uff0c\u9632\u6b62\u88ab\u6539\u56de\u300c\u6bcf\u6b21\u8c03\u7528\u6536\u4e00\u671f\u300d"
     },
     {
-      "hash": "1ba1d23",
-      "type": "docs",
-      "message": "docs: README \u7684\u76ee\u5f55\u6811\u6570\u5b57\u8ddf\u4e0a\u5b9e\u9645\uff08\u6a21\u5757 73 / \u6d4b\u8bd5 109 / \u7528\u4f8b 1251\uff09"
-    },
-    {
-      "hash": "dbe1cde",
+      "hash": "a72adc6",
       "type": "test",
-      "message": "test: \u4fee\u6389\u5076\u53d1\u7ea2\u7684\u6839\u56e0\u2014\u2014rglob \u626b\u8fdb conftest \u9489\u5728\u4ed3\u5e93\u5185\u7684 .tmp"
+      "message": "test: CSRF \u5b88\u536b\u8986\u76d6\u5168\u90e8\u5199\u7aef\u70b9\u2014\u2014\u6b64\u524d\u53ea\u6709 /api/actions/* \u6709\u56de\u5f52\u4fdd\u62a4"
     },
     {
-      "hash": "3bd091c",
+      "hash": "4a241cf",
       "type": "fix",
-      "message": "fix: entities_v3 \u7edf\u4e00\u4e3a\u5d4c\u5957\u5f62\u72b6\u2014\u2014rebuild \u5199\u6241\u5e73\u7684\u9690\u60a3 + \u4e8b\u4ef6\u91cd\u653e\u6309\u6570\u503c\u5e8f"
+      "message": "fix: BOM \u5bb9\u9519\u8865\u9f50\u5230\u5269\u4f59\u7528\u6237\u53ef\u7f16\u8f91 JSON\u2014\u2014rebuild \u4f1a\u56e0\u6b64\u64e6\u6389 project_info"
     },
     {
-      "hash": "4331386",
+      "hash": "a6304f5",
       "type": "fix",
-      "message": "fix: write-guard \u771f\u6b63\u62e6\u4f4f SSOT \u5199\u5165\u2014\u2014\u8bfb\u9519\u53c2\u6570\u952e\u3001\u6f0f\u4e86 patch\u3001bash \u5199\u610f\u56fe\u4e0d\u5168"
+      "message": "fix: markdown \u6295\u5f71\u9047\u574f state.json \u6574\u6279\u9759\u9ed8\u4e0d\u751f\u6210\uff1b\u540c\u4e00\u7f3a\u9677\u6a21\u5f0f\u7b2c 4 \u6b21\u51fa\u73b0"
     },
     {
-      "hash": "a569861",
+      "hash": "5f58f8d",
       "type": "fix",
-      "message": "fix: state.json \u635f\u574f\u65f6 fail-closed\uff0c\u4e0d\u518d\u9759\u9ed8\u6e05\u7a7a\u6574\u672c\u5c0f\u8bf4\u7684\u72b6\u6001"
+      "message": "fix: \u5ba1\u67e5\u8f93\u51fa\u4e0d\u662f JSON \u65f6\u6d41\u7a0b\u76f4\u63a5\u4e2d\u65ad\u2014\u2014\u7578\u5f62 JSON \u5374\u4f1a fail-closed\uff0c\u4e24\u6761\u8def\u4e0d\u4e00\u81f4"
     },
     {
-      "hash": "99b11bc",
+      "hash": "a3c0b95",
       "type": "fix",
-      "message": "fix: npm \u79bb\u7ebf\u5305\u5fc5\u987b\u643a\u5e26 dashboard \u524d\u7aef\u4ea7\u7269\uff08\u6b64\u524d\u53d1\u5e03\u7684\u5305\u6839\u672c\u6ca1\u6709\u524d\u7aef\uff09"
+      "message": "fix: \u77e5\u8bc6\u5c42 CSV \u7684 None \u952e\u4e0e\u7a7a\u884c\u6c61\u67d3\u8def\u7531\u2014\u2014\u9898\u6750\u5339\u914d\u5728\u65e0\u63d0\u793a\u5730\u504f"
     },
     {
-      "hash": "0ec5305",
+      "hash": "3114997",
+      "type": "fix",
+      "message": "fix: \u4e0a\u4e0b\u6587\u7ec4\u88c5\u9047\u574f state.json \u76f4\u63a5\u629b\u89e3\u6790\u5668\u5f02\u5e38\u2014\u2014\u5199\u4f5c\u6d41\u7a0b\u4ee5 traceback \u4e2d\u65ad"
+    },
+    {
+      "hash": "38f6dd3",
+      "type": "fix",
+      "message": "fix: structural_checker \u9047\u574f state.json \u76f4\u63a5\u629b JSONDecodeError\uff0c\u5ba1\u67e5\u94fe\u8def\u4ee5 traceback \u4e2d\u65ad"
+    },
+    {
+      "hash": "101ff90",
+      "type": "fix",
+      "message": "fix: \u5ba1\u67e5\u963b\u65ad\u5224\u636e\u53ea\u505a\u4e86\u4e00\u534a\u2014\u2014\u6a21\u578b\u62a5\u300c3 \u4e2a\u963b\u65ad\u4f46\u6ca1\u5217\u660e\u7ec6\u300d\u65f6\u7ae0\u8282\u88ab\u653e\u884c"
+    },
+    {
+      "hash": "c1ba230",
+      "type": "fix",
+      "message": "fix: observer_settler \u62ec\u53f7\u91cc\u591a\u5199\u4e00\u53e5\u5c31\u4e22\u6574\u884c\u2014\u2014\u81ea\u7531\u6587\u672c\u63d0\u53d6\u7684\u5bb9\u9519\u4e0e\u53ef\u89c2\u6d4b"
+    },
+    {
+      "hash": "ddeaf05",
+      "type": "fix",
+      "message": "fix: override \u4e8b\u4ef6\u4f18\u5148\u4e8e\u6587\u4ef6\u2014\u2014\u65e7\u987a\u5e8f\u4e0b rebuild \u540e\u4e16\u754c\u89c4\u5219\u8986\u76d6\u4f1a\u6d88\u5931"
+    },
+    {
+      "hash": "99933ca",
+      "type": "fix",
+      "message": "fix: ssot verify \u5bf9\u542b\u672a\u77e5\u4e8b\u4ef6\u7684\u9879\u76ee\u4e5f\u8bf4\"\u4e00\u81f4\"\u2014\u2014\u68c0\u67e5\u9879\u81ea\u5df1\u6f0f\u4e86"
+    },
+    {
+      "hash": "6289a10",
+      "type": "fix",
+      "message": "fix: \u5220\u7ae0\u8282\u5148\u5199\u4e8b\u4ef6\u518d\u6539 state\u2014\u2014\u65e7\u987a\u5e8f\u4e0b rebuild \u4f1a\u628a\u5220\u9664\u7684\u7ae0\u8282\u590d\u6d3b"
+    },
+    {
+      "hash": "4aaa441",
+      "type": "fix",
+      "message": "fix: rebuild \u4e0d\u518d\u9759\u9ed8\u4e22\u5f03\u672a\u77e5\u4e8b\u4ef6\u7c7b\u578b\u2014\u2014SSOT \u707e\u96be\u6062\u590d\u4f1a\u7f3a\u6570\u636e"
+    },
+    {
+      "hash": "e0b3918",
+      "type": "fix",
+      "message": "fix: \u522b\u540d\u540c\u7c7b\u578b\u6b67\u4e49\u4e0d\u518d\u9759\u9ed8\u541e\u6389\u2014\u2014\u65b0\u589e lookup_alias_detailed"
+    },
+    {
+      "hash": "5383afe",
+      "type": "fix",
+      "message": "fix: \u8ffd\u8bfb\u503a\u5229\u606f\u6309\u7ae0\u8282\u6570\u590d\u5229\u2014\u2014\u6b64\u524d\u7ed3\u679c\u53d6\u51b3\u4e8e\u4f5c\u8005\u4ec0\u4e48\u65f6\u5019\u624b\u5de5\u8dd1\u4e00\u6b21"
+    },
+    {
+      "hash": "34026d2",
+      "type": "fix",
+      "message": "fix: \u4e8b\u4ef6\u65e5\u5fd7\u53cc\u5199\u5931\u8d25\u534a\u5199 + health() \u6c38\u8fdc\u62a5\u5065\u5eb7\uff1bJSON \u53c2\u6570\u4e0d\u8ba4 BOM"
+    },
+    {
+      "hash": "11c55e6",
+      "type": "fix",
+      "message": "fix: CLI \u5165\u53e3\u628a\u300c\u627e\u4e0d\u5230\u4e66\u9879\u76ee\u300d\u663e\u793a\u6210\u4e2d\u6587\u63d0\u793a\uff0c\u4e0d\u518d\u7529\u4e24\u5c42\u6808\u5e27"
+    },
+    {
+      "hash": "983f0d2",
+      "type": "fix",
+      "message": "fix: parse_chapter_range \u62d2\u7edd\u7578\u5f62\u8f93\u5165\u2014\u2014\u5012\u5e8f\u8303\u56f4\u66fe\u9759\u9ed8\u53d8\u6210\u300c\u4ec0\u4e48\u90fd\u4e0d\u5220\u300d"
+    },
+    {
+      "hash": "5af6050",
+      "type": "fix",
+      "message": "fix: .env \u89e3\u6790\u652f\u6301\u5f15\u53f7\u4e0e\u884c\u5185\u6ce8\u91ca\u2014\u2014\u5e26\u5f15\u53f7\u7684 API key \u4f1a\u8ba9\u9274\u6743\u9759\u9ed8\u5931\u8d25"
+    },
+    {
+      "hash": "e1ce8ec",
+      "type": "fix",
+      "message": "fix: sanitize_commit_message \u4e0d\u518d\u541e\u6389\u6807\u9898\u91cc\u7684\u7834\u6298\u53f7\u2014\u2014\u5b83\u9632\u7684\u4e0d\u662f\u6ce8\u5165"
+    },
+    {
+      "hash": "708d8cf",
+      "type": "fix",
+      "message": "fix: \u5199\u5165\u95e8\u7981\u63a5\u5165\u63d0\u4ea4\u94fe\u8def\u2014\u2014\u6b64\u524d 400 \u884c\u95e8\u7981\u662f\u6b7b\u4ee3\u7801\uff0c\u4e00\u6b21\u90fd\u6ca1\u88ab\u8c03\u7528"
+    },
+    {
+      "hash": "9b74bc0",
       "type": "chore",
-      "message": "chore: \u6dfb\u52a0 .gitattributes\uff0c\u628a\u884c\u5c3e\u7edf\u4e00\u4e3a LF"
-    },
-    {
-      "hash": "0a99e34",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261010.1506 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261018.0903 [skip ci]"
     }
   ],
   "files": {
@@ -642,16 +697,16 @@
       "size": 21654
     },
     ".opencode/scripts/chapter_commit.py": {
-      "sha256": "09076c7e30a0f07fb5270b128f682010f18b1aece649d73ada26d4ee4518a08a",
-      "size": 2659
+      "sha256": "d1e4bbe15561a7b6d2e1fc4d0ce6b0bd03960f657850b5c52ce32d4e26dc62a2",
+      "size": 3437
     },
     ".opencode/scripts/chapter_outline_loader.py": {
       "sha256": "d841658706c00582116da7940bc0275f5f6307d24a8e7d9f4cd3a6c1e92634b3",
       "size": 13284
     },
     ".opencode/scripts/chapter_paths.py": {
-      "sha256": "457f82341da4f0c3c986497d94e379a9db3e36de8c021903223d4e7bb0b56dab",
-      "size": 6105
+      "sha256": "62c04272ece04acda633d9906da2130d87fbc65d6ab70d30f3568fe04b2afa45",
+      "size": 8548
     },
     ".opencode/scripts/conftest.py": {
       "sha256": "0df41a7ff29228a389333ca5dac382d7e208709e7f5f11ad583c74bbb2063eff",
@@ -678,20 +733,20 @@
       "size": 9824
     },
     ".opencode/scripts/data_modules/chapter_commit_service.py": {
-      "sha256": "20c705614abd6cc14f44249515cd7181554c22cda6181c5dcbfd4e1c229ee9b8",
-      "size": 13513
+      "sha256": "713fc326baef1ddc21d330effee2e51ba89bc88881557f631f8f973702d2878f",
+      "size": 16373
     },
     ".opencode/scripts/data_modules/chapter_delete_service.py": {
-      "sha256": "62e91fd0cbdc757f957fdee607e7a732ecefafdf7052f576845dcd35b4deb5eb",
-      "size": 6446
+      "sha256": "4da3f513047f6df7af867e6d45211d1e2805b2f2eca6a1800ff03dec84f128e5",
+      "size": 8126
     },
     ".opencode/scripts/data_modules/chapter_rename.py": {
       "sha256": "18130f096b098a9e34355ff0ed81c64eaf12de16a227e1cdfe4c355cecd97e30",
       "size": 4575
     },
     ".opencode/scripts/data_modules/cli_args.py": {
-      "sha256": "3e7b540a2119bda20a0c6fbc575945c11c1ce6cfc62893023e1c1e5e542fc4d0",
-      "size": 3078
+      "sha256": "8f64d2734f4d08e6f70a311ff18db8f3513cbd19c07283e9f9f364350f3e50f2",
+      "size": 4412
     },
     ".opencode/scripts/data_modules/cli_output.py": {
       "sha256": "6715f3870f455d6cf3ec0bc91202463c14c841e72a679a07dbbb2382257de9a1",
@@ -702,12 +757,12 @@
       "size": 1980
     },
     ".opencode/scripts/data_modules/config.py": {
-      "sha256": "03f0f5858f1b1820f814250832c9953188fd91de7d6065e3be90d064b13375a2",
-      "size": 13157
+      "sha256": "2d7669ef42b2fa3a5d0ae3aff251b27a2d95fb94d9cdff8630c162bde9d5f788",
+      "size": 14938
     },
     ".opencode/scripts/data_modules/context_manager.py": {
-      "sha256": "ad56eda2d83309005b2b26b90c356105827c6a1ca872f1d2cd89eee86e1b6461",
-      "size": 42500
+      "sha256": "e06c1200623d300c69c17577a0ee21995a9cc85c66b8d3a66edfef7c828051d6",
+      "size": 44379
     },
     ".opencode/scripts/data_modules/context_ranker.py": {
       "sha256": "0de21e6fa2c94c9df7de88732662223577a1b9d33c14d65cf4110abe298283cd",
@@ -722,8 +777,8 @@
       "size": 6724
     },
     ".opencode/scripts/data_modules/doctor.py": {
-      "sha256": "41533c691e843a1c49145327871030452d9f9f5ca08388574a0a85f57e7af265",
-      "size": 12186
+      "sha256": "546b5cc8851b72143ebf7d1114161b8091d086fb7e20ceaac811a89388877ae6",
+      "size": 12198
     },
     ".opencode/scripts/data_modules/entity_cleanup.py": {
       "sha256": "16819289ab0de159c95c71d92f9dd120a9a31ec8b35d5c644854a341bce27545",
@@ -734,12 +789,12 @@
       "size": 6392
     },
     ".opencode/scripts/data_modules/entity_linker.py": {
-      "sha256": "a0e517d42ae6751e952fefbb15fe62a3f076b311bcc18a0dd01e6e64bc8d71a0",
-      "size": 9584
+      "sha256": "1e2de1174506ecb1a7c4cd4cfecff72546bd2727c20cf214346788e40c4b1fee",
+      "size": 12044
     },
     ".opencode/scripts/data_modules/event_log_store.py": {
-      "sha256": "0bda582696a302922e67afd2a2c104ab0a1cd4f0ba73ebdf51d33eb63c506c43",
-      "size": 6003
+      "sha256": "e60a1c60b274e3b454f8dc1940dd6fcaed512677d5ce20a8ccb1db24c945c174",
+      "size": 9617
     },
     ".opencode/scripts/data_modules/event_projection_router.py": {
       "sha256": "5b4adeb99c5e44e16922cad13a3054e71e625a820f5c06e1e8ce7150d611746b",
@@ -762,8 +817,8 @@
       "size": 9739
     },
     ".opencode/scripts/data_modules/index_debt_mixin.py": {
-      "sha256": "11cbcafd1f50910cb05eb504db155ec769639ddfa4bfcabdcbec4249007b5bbd",
-      "size": 22251
+      "sha256": "66a4da7770eec0ca739d3bdad01235bd32527b88110e85647805a81695368be1",
+      "size": 24103
     },
     ".opencode/scripts/data_modules/index_entity_mixin.py": {
       "sha256": "410de75d0f3a11b1c061548cbf06bdff9c604db439491ae52a625fbd8303d392",
@@ -826,8 +881,8 @@
       "size": 3875
     },
     ".opencode/scripts/data_modules/memory_contract_adapter.py": {
-      "sha256": "ffcefad95dbd4d42227e020c9d032626bb8a93a0d229405782c09537d4b49610",
-      "size": 14275
+      "sha256": "bfed0775a6e5b6359eca7139481b0d30f8fea76a6aafbabf91c45f425d5101cb",
+      "size": 14634
     },
     ".opencode/scripts/data_modules/memory_projection_writer.py": {
       "sha256": "3a3f4fd87cc530a2ea2fa4b3be836853e8bdc66d51b40fca5e1ecb7deaac0636",
@@ -846,16 +901,16 @@
       "size": 2360
     },
     ".opencode/scripts/data_modules/observer_settler.py": {
-      "sha256": "98bd1327a6cea3b8377ce8da9fd5db5894d4233b17f89184564bb77f36921ae5",
-      "size": 16275
+      "sha256": "74190863ab4773c7e22d1a7c25684bf7842385999c7a9d10f522f3f7c1b51c46",
+      "size": 20292
     },
     ".opencode/scripts/data_modules/orchestrate.py": {
-      "sha256": "adfc5890517c436f60c3c039c0447cc6fedb6311fa99b90c6a444c13cdc1b4bf",
-      "size": 3194
+      "sha256": "31affe870dfa1a024394659a46cf4b4c33585f802dbbe40d3418e98081bedcf1",
+      "size": 3302
     },
     ".opencode/scripts/data_modules/override_contract_engine.py": {
-      "sha256": "3cf1b70616f659a8e0b56887233fbe2c4610f04db75bad38fdcb459296b63340",
-      "size": 8659
+      "sha256": "b6a1711c2eb4110eaffb5cb3cc127a658b86ba3ff039790f88d6c95d163e84f8",
+      "size": 9497
     },
     ".opencode/scripts/data_modules/override_ledger_service.py": {
       "sha256": "a196b6cc7251702d0e7fc4ddbde0d2722ea261a813549fe1e0f232af9e2617bc",
@@ -870,8 +925,8 @@
       "size": 3856
     },
     ".opencode/scripts/data_modules/project_phase.py": {
-      "sha256": "af9abafd672553bc1d6d930d5dbeb705ee5917a89688f96ebcba395ba743da28",
-      "size": 13661
+      "sha256": "09a17fde9672a235170cd41b32e11b45cd27bd8293c9579871870e79d27e0ae1",
+      "size": 13665
     },
     ".opencode/scripts/data_modules/projection_log.py": {
       "sha256": "7f430b4174c799d4d6297906fd97a72a66189c66007b25fc09e41a2e105115b0",
@@ -886,8 +941,8 @@
       "size": 58629
     },
     ".opencode/scripts/data_modules/review_schema.py": {
-      "sha256": "35bd962f9807ad87e8575a955442ae78da93a40c24a673b81316cb3caa9a3114",
-      "size": 9815
+      "sha256": "448722efeb6b8c54fedaf9ef6196496bd8329fadfb646022eca4893d95994e18",
+      "size": 12421
     },
     ".opencode/scripts/data_modules/runtime_contract_builder.py": {
       "sha256": "9fd4054c6829d8a48ec7991867b3e3f3dd0c78d12119c19a902b850a5c96c863",
@@ -902,16 +957,16 @@
       "size": 21853
     },
     ".opencode/scripts/data_modules/ssot_enforcer.py": {
-      "sha256": "3cea41ac67d12c843c286e39a395a04285d7d20e78c2b0f9c80306774e0e2e91",
-      "size": 43200
+      "sha256": "9906bf1a8a86a26ab37033dfd7cb4adfe3408723b18a029aa68a879af7a13412",
+      "size": 48946
     },
     ".opencode/scripts/data_modules/state_manager.py": {
       "sha256": "70b74a57dd82361f6225702cd63d72dfbaddf938fbf8caaf03dadbb1e643e34e",
       "size": 69711
     },
     ".opencode/scripts/data_modules/state_projection_renderer.py": {
-      "sha256": "eaecc5cfbeb8ba291b37d325e35c22e802064536ae3dd5a8f06813c02ec99167",
-      "size": 9776
+      "sha256": "ff9c5f841982ef7b5cf0c89e0d59a12966a84212e979b341e151fb0e5beb688e",
+      "size": 12915
     },
     ".opencode/scripts/data_modules/state_projection_writer.py": {
       "sha256": "35ed025191932ee7e79c99838021b9ad7932255152e6cf106ca3cda3c7c3a668",
@@ -926,8 +981,8 @@
       "size": 2278
     },
     ".opencode/scripts/data_modules/story_contracts.py": {
-      "sha256": "ee37ce0afd08328d94d73d3360a0271dfd4502fc7889dace0f09218a4698cee4",
-      "size": 7206
+      "sha256": "d072122cf3bf31c4c33678784dd4441c33c627c69bd5a498a3b97d6cd7d5d573",
+      "size": 7210
     },
     ".opencode/scripts/data_modules/story_event_schema.py": {
       "sha256": "69261ec8dd0abf74c5360afa37a01cd3adb523af788f28b181290662d1473a5b",
@@ -942,12 +997,12 @@
       "size": 2918
     },
     ".opencode/scripts/data_modules/story_system_engine.py": {
-      "sha256": "a01c8c25a745fb1094842d4ea96f22502e9390b8ff01841b65124daefc0d7fe1",
-      "size": 25758
+      "sha256": "4907c49e16a1e23d0e72f57bb948fcddc2b56b961f6ec74b75febf806e49391f",
+      "size": 28580
     },
     ".opencode/scripts/data_modules/structural_checker.py": {
-      "sha256": "7bfa090e9450df8498a8bfa20fb53b5e00777675ea795a9631526c054e932128",
-      "size": 11808
+      "sha256": "b1aa3ad3f42c7d39375528d36e39b39fa9a9c9d296c5b29db19302a23f331bd8",
+      "size": 13444
     },
     ".opencode/scripts/data_modules/style_sampler.py": {
       "sha256": "9b60de91c67d22e426b46dcff4be38cc69b1913b9a4e028b5758ba408e6a1f57",
@@ -989,13 +1044,21 @@
       "sha256": "6d73f0cbf29a3cf8c06abe0b69e4b8c9f1e77c654ac2c5e5161ec4d8f262d8c1",
       "size": 10495
     },
+    ".opencode/scripts/data_modules/tests/test_bom_tolerance.py": {
+      "sha256": "e7e80ef701d4759c7eab114604b3d62ca0e89c629812f7ff0f909b685b88bb52",
+      "size": 5898
+    },
     ".opencode/scripts/data_modules/tests/test_chapter_commit_service.py": {
-      "sha256": "6ecc73f9f2e19344731941da36019e28aeb032a323a2b0a47884a6dc1bd0c1ff",
-      "size": 9908
+      "sha256": "9b9ba7b7b175d4c9f2157f892c87a6f7e1d5a41511bdcd5dac83598d4d9b7fcb",
+      "size": 11668
     },
     ".opencode/scripts/data_modules/tests/test_chapter_delete_current_chapter.py": {
       "sha256": "95b9126dbdbea0359b174b4d9c037ba02c5b43eee28c4d568e8a45c585954daf",
       "size": 5012
+    },
+    ".opencode/scripts/data_modules/tests/test_chapter_delete_dual_write.py": {
+      "sha256": "6afa42e34b705b781f0c4423a052fd05eac049f65ac5666d74d74b6dad47ff97",
+      "size": 5356
     },
     ".opencode/scripts/data_modules/tests/test_chapter_outline_directive.py": {
       "sha256": "fbe75821b305f5b13e0792891b183a37fa14801d34f3c0cf23f79a467069e1fb",
@@ -1005,9 +1068,21 @@
       "sha256": "779adf40abac0483fd011eddb074cfba1aea98f160d2e0725fa3423adc9d007f",
       "size": 1541
     },
+    ".opencode/scripts/data_modules/tests/test_chapter_range_parsing.py": {
+      "sha256": "e1e0a67dd17cfa1828aa5c9f669188cd96ce8d3228c31b73910dc52c71310177",
+      "size": 5251
+    },
     ".opencode/scripts/data_modules/tests/test_chapter_status.py": {
       "sha256": "df2499adceb695a0f41ff6b6fc50d392738ab8d7f8727a76721731b50f627b2f",
       "size": 2639
+    },
+    ".opencode/scripts/data_modules/tests/test_cli_args.py": {
+      "sha256": "61f737ab9db2dca1facdf2f70f69b44ebea9dbadafe78243b106b5b4ab1559c4",
+      "size": 6256
+    },
+    ".opencode/scripts/data_modules/tests/test_cli_error_presentation.py": {
+      "sha256": "18617c0b5e6258ef7e79d296bef437091cbe0999bc46aa4fe5c431733d0d523f",
+      "size": 6854
     },
     ".opencode/scripts/data_modules/tests/test_cli_exit_codes.py": {
       "sha256": "f5617e433bd974d67a84d6831449fa24694309893428146c3ff2af899f8b96a1",
@@ -1033,6 +1108,10 @@
       "sha256": "5ce9678648fc213788889df4ef9561187abbaef8ccc5b3c763a3e74c07a2f30a",
       "size": 35378
     },
+    ".opencode/scripts/data_modules/tests/test_context_manager_state_loading.py": {
+      "sha256": "6c8b35b1706c3ee9cca04d2f0620368eb924e25e45ab4ee822464e85fe8d8501",
+      "size": 5763
+    },
     ".opencode/scripts/data_modules/tests/test_context_override_hints.py": {
       "sha256": "1b14f333fab23755ac497b49d5c595292d9fe8ee51ad831fdd99e7c56298ad1b",
       "size": 2933
@@ -1056,6 +1135,10 @@
     ".opencode/scripts/data_modules/tests/test_dashboard_csrf.py": {
       "sha256": "77c7197db2f7b56985a33b50f830f33a1f0d950e4b0982000addf51176afa985",
       "size": 4462
+    },
+    ".opencode/scripts/data_modules/tests/test_dashboard_csrf_coverage.py": {
+      "sha256": "88928af4b673b57244322b3e36490e512d11f096ac3d168cf6aec3ce8d433f07",
+      "size": 6936
     },
     ".opencode/scripts/data_modules/tests/test_dashboard_host_guard.py": {
       "sha256": "48db04df1143f181312c7de9567aabf2fd8bc2b3ef3b1d6b1b682c54f724ff8c",
@@ -1081,13 +1164,25 @@
       "sha256": "912c6ad2828f8578e84622ce6cafacb5eca994a928845425f4118dff1c1ad79e",
       "size": 4837
     },
+    ".opencode/scripts/data_modules/tests/test_dotenv_parsing.py": {
+      "sha256": "5fcd0f990b26f1b8ccba57f575e11c7849fc171041989fd713b242ddcd529ca9",
+      "size": 7892
+    },
     ".opencode/scripts/data_modules/tests/test_entities_v3_shape.py": {
       "sha256": "70579b1a0054b8ffb47c835f24fe06668f95ab8870557090109b9ad45791708d",
       "size": 13740
     },
+    ".opencode/scripts/data_modules/tests/test_entity_alias_ambiguity.py": {
+      "sha256": "001bb54f4806a0af3b2169094c2b6c91f13cf8ca54c39acbd5a668ae8b965aea",
+      "size": 7215
+    },
     ".opencode/scripts/data_modules/tests/test_entity_linker_cli.py": {
       "sha256": "d0938e64880dc5ffb4d5c91578b3036f777e0f0944cdd782128d8ae221bcda12",
       "size": 2740
+    },
+    ".opencode/scripts/data_modules/tests/test_event_log_consistency.py": {
+      "sha256": "a9d97b5030e236a2db03e12be1f0254e6cefa09d4305275a7216ae516f2045ee",
+      "size": 8023
     },
     ".opencode/scripts/data_modules/tests/test_event_log_store.py": {
       "sha256": "63f6691366be3fbf0c050ce4a3939969e4b46361a50b0672251d4245dcc2f389",
@@ -1116,6 +1211,10 @@
     ".opencode/scripts/data_modules/tests/test_foreshadowing_debt_keys.py": {
       "sha256": "f70f867891f0487116b004b4e30b4ffebf09561669f6faa1f51399138107cc6e",
       "size": 6403
+    },
+    ".opencode/scripts/data_modules/tests/test_index_debt_mixin.py": {
+      "sha256": "701342a26f127a56dda5658c0e8b9a511e7379c0ab5c119f149da61ec42d87a6",
+      "size": 7193
     },
     ".opencode/scripts/data_modules/tests/test_init_project_pruning.py": {
       "sha256": "4abb45e8e4030c07727e72b763efcad5a4932cdbf406f029fd86a6f39d7555e7",
@@ -1150,8 +1249,8 @@
       "size": 3898
     },
     ".opencode/scripts/data_modules/tests/test_memory_contract_adapter.py": {
-      "sha256": "66ec1fdd0cff4579fd9a0d5a3bde0ce40f57cc88efab46efc96ddce421afecdb",
-      "size": 14964
+      "sha256": "95116bc1a56489244e351ea1b97284222b3f059acf65bc60b5f53e92bab2000c",
+      "size": 16661
     },
     ".opencode/scripts/data_modules/tests/test_memory_open_loop_closed.py": {
       "sha256": "b8db524c874fc3c215a52e240dd170b377bb2fb3731b524e49b6d3414915cf1a",
@@ -1205,9 +1304,17 @@
       "sha256": "c6a173d348f78704883aecdb94132deee7261b861aa9b8f9ee1c03186c928446",
       "size": 6632
     },
+    ".opencode/scripts/data_modules/tests/test_observer_settler_tolerance.py": {
+      "sha256": "ad07edefcb98ad86fbf35638e892ee1525953c4bf68be5096cc2375680014dd5",
+      "size": 8956
+    },
     ".opencode/scripts/data_modules/tests/test_opencode_v2_config.py": {
       "sha256": "7d90e8cb8f05f68f61ff532dbde883d53e7e5ed5f906273ebdba5f66e4455ffb",
       "size": 18071
+    },
+    ".opencode/scripts/data_modules/tests/test_override_dual_write.py": {
+      "sha256": "d4185753dfeee6aef3ef3a448023671a18763c81d65bc1e39d418d2981c25d4e",
+      "size": 8149
     },
     ".opencode/scripts/data_modules/tests/test_override_ledger_service.py": {
       "sha256": "209b8d0831e8b05a51a36437f92563ce3f4cf4a92f5ede882f48034a6e528d2b",
@@ -1242,8 +1349,8 @@
       "size": 22284
     },
     ".opencode/scripts/data_modules/tests/test_projection_writers.py": {
-      "sha256": "e618e8a3e7652f64a0e342c726a4721d9bcdc3403da6296d5283df9b174333cd",
-      "size": 28208
+      "sha256": "c95238f430143c6a60de0b1e52778f310003e8eec167381bce896b638b68a108",
+      "size": 29826
     },
     ".opencode/scripts/data_modules/tests/test_prompt_integrity.py": {
       "sha256": "a7eecb5e91ba75cd6243b65b74c53c8a9292dd406b678216e28fd98bd85f1b5c",
@@ -1273,6 +1380,10 @@
       "sha256": "dfd82fa8361b5b61346eb452846177fa13199124dcb49f5be96737496bb2d9b4",
       "size": 8756
     },
+    ".opencode/scripts/data_modules/tests/test_review_blocking_signal.py": {
+      "sha256": "69890325807ec5ce066ea4e850f768e0ce867f8cc688703cb7f4054c6cb85af7",
+      "size": 6650
+    },
     ".opencode/scripts/data_modules/tests/test_review_gate_fail_closed.py": {
       "sha256": "4bbf928cad1a1c7369d48b061024d8aef448d014f6c19b3b4a10c65208389afd",
       "size": 4342
@@ -1281,6 +1392,10 @@
       "sha256": "cb7a52832afd82af674962f282a0490b52b0f68480cfdedba960c09a019e6e03",
       "size": 587
     },
+    ".opencode/scripts/data_modules/tests/test_review_pipeline_unparseable.py": {
+      "sha256": "3d0205fb85926bf1ca503bd2c21f04576cc406103deda7a5d71a850f44337110",
+      "size": 7743
+    },
     ".opencode/scripts/data_modules/tests/test_review_schema.py": {
       "sha256": "fad52f6cf3aeffb64bc54956438677457ad2083d98a79f39a6c24fe7b90d7bf4",
       "size": 5687
@@ -1288,6 +1403,10 @@
     ".opencode/scripts/data_modules/tests/test_runtime_contract_builder.py": {
       "sha256": "c79f9aa9e17cdce0e4b7031aea820e6273e6decf7762e4d1b13fc4536ceb61e1",
       "size": 4010
+    },
+    ".opencode/scripts/data_modules/tests/test_sanitize_commit_message.py": {
+      "sha256": "89f6220393235e66df3315b718fb1b62567dd970f5bf8752bc0d072829546f9f",
+      "size": 7325
     },
     ".opencode/scripts/data_modules/tests/test_security_utils_atomic.py": {
       "sha256": "7b9bcda3da3bc75469c5e557c1679d934741915fd38a3bdb2910d772cbe931e4",
@@ -1317,6 +1436,10 @@
       "sha256": "2423d75a08232cb2c6edef0c31393a861434bd234701c4ff601b36b7b1543ecf",
       "size": 17769
     },
+    ".opencode/scripts/data_modules/tests/test_ssot_unknown_events.py": {
+      "sha256": "f388f4de0a9a9950aa87d16b7a38588270433f499333c37abddbd0e6b932a615",
+      "size": 14054
+    },
     ".opencode/scripts/data_modules/tests/test_ssot_verify_shape_aware.py": {
       "sha256": "bd13e976e75594011708cb1c6d06183fddc146bf38a837c13aa194082bf0343e",
       "size": 4988
@@ -1332,6 +1455,10 @@
     ".opencode/scripts/data_modules/tests/test_state_projection_renderer.py": {
       "sha256": "1c9f1a641793d2deecb8f536d46975e40d97d0c35d85ad19621990ef8115e9b8",
       "size": 6163
+    },
+    ".opencode/scripts/data_modules/tests/test_state_renderer_failure.py": {
+      "sha256": "d412c57e4d3c3de333b695235a0a105672ff6880b79056b8b1ec351ae0a362f0",
+      "size": 8446
     },
     ".opencode/scripts/data_modules/tests/test_state_validator.py": {
       "sha256": "5a7b0e1915e52b8b1a3e33c547df3254b853f61c2fa17ba02a6e6ca3e9f28d13",
@@ -1365,6 +1492,10 @@
       "sha256": "2b4b3ca579fb44cffd82b290411ad3ec5160aaf6635552a1c4bb3608dd996f62",
       "size": 7935
     },
+    ".opencode/scripts/data_modules/tests/test_story_system_csv_robustness.py": {
+      "sha256": "9af2658bb098bf03436aa283f31cfec9344afb94f21ff777091929bf39a81d01",
+      "size": 6313
+    },
     ".opencode/scripts/data_modules/tests/test_story_system_engine.py": {
       "sha256": "0bffe9b89889933cf9c156e29f57e74d765df869cb54f378b6e197985ddd4526",
       "size": 29150
@@ -1372,6 +1503,10 @@
     ".opencode/scripts/data_modules/tests/test_structural_checker.py": {
       "sha256": "f01b071d18f16c169f12a58fa2caa9de180c1c7e996ac6b73b59a4493a536c64",
       "size": 10389
+    },
+    ".opencode/scripts/data_modules/tests/test_structural_checker_failure.py": {
+      "sha256": "70840b1576e1ebaebfab1d51e7a7a231465fdd40ee9d94e2d9703b4c508fb9af",
+      "size": 6326
     },
     ".opencode/scripts/data_modules/tests/test_style_sampler_cli.py": {
       "sha256": "ddaf9ca395eb05032c23652e084d6e8070d24b1ffbdee04a8c2312ab01332e73",
@@ -1402,8 +1537,12 @@
       "size": 3844
     },
     ".opencode/scripts/data_modules/tests/test_write_gates.py": {
-      "sha256": "30e1d285e8855031355c5ed1f4adc74de15a2350fcd99040590c7aaeb88fb69c",
-      "size": 7063
+      "sha256": "ed379a14361b4719c2694f648a2da60ec474fa3b84091c6e8aa4293ddf1d55df",
+      "size": 7875
+    },
+    ".opencode/scripts/data_modules/tests/test_write_gates_wiring.py": {
+      "sha256": "587e44f56c8a7011c415922861e641832d3aba1c65459b6ab26f23284a1322ad",
+      "size": 6970
     },
     ".opencode/scripts/data_modules/tests/test_write_guard_plugin.py": {
       "sha256": "ccfa2d486d995110692e0a12fc27e9052ad27d1e41055f1560e187c356774d18",
@@ -1426,20 +1565,20 @@
       "size": 6587
     },
     ".opencode/scripts/data_modules/write_gates/__init__.py": {
-      "sha256": "8fe38ab67b93033ec477c2e321e9d438a4c277e729000acc88e8284b6c6b88df",
-      "size": 2967
+      "sha256": "4988625363ec25678db235bf3ecbe6d0b0dc302ffc5fd3a5e0379ab1a960aa2e",
+      "size": 3554
     },
     ".opencode/scripts/data_modules/write_gates/postcommit.py": {
-      "sha256": "6bb7b8ae45b1b877a3457c96a512273bf0dcc34b271048a084dbde102d817cc0",
-      "size": 7016
+      "sha256": "003dc9a667b8c525cf86f8e5827802f70c4ed49bc0b7bab694a31a4b559b3233",
+      "size": 8301
     },
     ".opencode/scripts/data_modules/write_gates/precommit.py": {
-      "sha256": "fcdfc94562518bf7108a4ef30bcaf925e2423c7b9bc8ae4544be7a9dbac882a8",
-      "size": 3607
+      "sha256": "f91b11d7fb932535838e79742b0b4c73b405ae2947970f58f548fe9f7ca49a42",
+      "size": 3926
     },
     ".opencode/scripts/data_modules/write_gates/prewrite.py": {
-      "sha256": "05473756b120ea2431d743e63867483d2920c66603990193dc4294192f6fa23f",
-      "size": 5630
+      "sha256": "9290e2c5ddf4b5444f26c1e02152118719912613fa81a173736006e0cb15c6fa",
+      "size": 6700
     },
     ".opencode/scripts/data_modules/writing_guidance_builder.py": {
       "sha256": "85e439ded80f6114f5001fc841afb5ec7e89f63df917569d64ecbc53de0dc9d4",
@@ -1506,8 +1645,8 @@
       "size": 3972
     },
     ".opencode/scripts/project_locator.py": {
-      "sha256": "47affe94883e5c3076fa5b401c2cde865bfb517112f942f67983643f34261ccd",
-      "size": 18605
+      "sha256": "aea911eb7af8519f1c67d313e0db1e392f8256d6755b11e44fcef7511f4a069c",
+      "size": 18617
     },
     ".opencode/scripts/project_memory.py": {
       "sha256": "b7076327819c05055fe784401025b17df2b4f97a654779f22c59cb961cdab6a2",
@@ -1566,8 +1705,8 @@
       "size": 1138
     },
     ".opencode/scripts/review_pipeline.py": {
-      "sha256": "f1492579aae0964d9379c57751d248dac66443e64709cf28459fd2b7a1610702",
-      "size": 10058
+      "sha256": "111bd16f4074df5add884a896f9aa96d647c8f9f6a824c1fdae19d23789f4e1d",
+      "size": 11631
     },
     ".opencode/scripts/run_tests.ps1": {
       "sha256": "49f636eff55ec991a07a88504edb8f6d21281660be145aa9b7e6a794f6ee23a0",
@@ -1578,8 +1717,8 @@
       "size": 2105
     },
     ".opencode/scripts/security_utils.py": {
-      "sha256": "1cf18089457de24b2eb0c0255613840187f4b66bd70b49b634807a63949b3bfe",
-      "size": 20943
+      "sha256": "7c1578dbad9ab8729bf85bd464668a1c1634e33477934ce962c9d3ea8532470c",
+      "size": 22573
     },
     ".opencode/scripts/skill_runner.py": {
       "sha256": "4161b3de64f1da900fa96f42c0a89bb597f05020dfbef1153668216021003e3e",
@@ -1590,8 +1729,8 @@
       "size": 1251
     },
     ".opencode/scripts/status_reporter.py": {
-      "sha256": "5b9328b68dd544eb943acf7c489c9af6f15dc3917e7a3d6a042fa0dd52b981eb",
-      "size": 47223
+      "sha256": "28b366020cd22acc39f45142e47a146c5e1a825239307b5cebd1c89d1ebcdaca",
+      "size": 48361
     },
     ".opencode/scripts/story_events.py": {
       "sha256": "0510f9c05d01e94a13fe28726680c2e7d527b87b5f491eb4fe63f3ff163144d6",
@@ -1626,8 +1765,8 @@
       "size": 8794
     },
     ".opencode/scripts/webnovel.py": {
-      "sha256": "06dfc3f9621b9ea2172a57194be5fd85c33444d14bdcd9f5cc1b9ed7b34bdb8c",
-      "size": 906
+      "sha256": "d69abb2563c62f9da97ac9c368cf9cef66806f13685cff0a20049b5add5dc835",
+      "size": 3168
     },
     ".opencode/skills/webnovel-dashboard/SKILL.md": {
       "sha256": "2289a815358fc9429b6b448252b94ea7a6410676361745222d334b02f6991e1d",
