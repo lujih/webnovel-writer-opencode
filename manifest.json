@@ -1,122 +1,22 @@
 {
-  "version": "v2.9.2-20261019.1204",
+  "version": "v2.9.2-20261019.1220",
   "tag": "v2.9.2",
-  "updated": "2026-10-19T12:04:56Z",
+  "updated": "2026-10-19T12:20:23Z",
   "changelog": [
     {
-      "hash": "1e543b1",
-      "type": "docs",
-      "message": "docs: \u8bb0\u5f55\u8ffd\u8bfb\u503a\u5229\u606f\u7684\u7ae0\u8282\u590d\u5229\u8bed\u4e49\uff0c\u9632\u6b62\u88ab\u6539\u56de\u300c\u6bcf\u6b21\u8c03\u7528\u6536\u4e00\u671f\u300d"
-    },
-    {
-      "hash": "a72adc6",
-      "type": "test",
-      "message": "test: CSRF \u5b88\u536b\u8986\u76d6\u5168\u90e8\u5199\u7aef\u70b9\u2014\u2014\u6b64\u524d\u53ea\u6709 /api/actions/* \u6709\u56de\u5f52\u4fdd\u62a4"
-    },
-    {
-      "hash": "4a241cf",
+      "hash": "02ab891",
       "type": "fix",
-      "message": "fix: BOM \u5bb9\u9519\u8865\u9f50\u5230\u5269\u4f59\u7528\u6237\u53ef\u7f16\u8f91 JSON\u2014\u2014rebuild \u4f1a\u56e0\u6b64\u64e6\u6389 project_info"
+      "message": "fix: \u540c\u540d\u6b67\u4e49\u4e0a\u62a5\u5230\u63d0\u53d6\u9636\u6bb5\u2014\u2014data-agent \u7684\u7f6e\u4fe1\u5ea6\u5206\u7ea7\u62ff\u4e0d\u5230\u89e6\u53d1\u6761\u4ef6"
     },
     {
-      "hash": "a6304f5",
-      "type": "fix",
-      "message": "fix: markdown \u6295\u5f71\u9047\u574f state.json \u6574\u6279\u9759\u9ed8\u4e0d\u751f\u6210\uff1b\u540c\u4e00\u7f3a\u9677\u6a21\u5f0f\u7b2c 4 \u6b21\u51fa\u73b0"
+      "hash": "89c9658",
+      "type": "feat",
+      "message": "feat: \u8ffd\u8bfb\u503a\u8ba1\u606f\u63a5\u5165\u63d0\u4ea4\u94fe\u8def\u2014\u2014\u6b64\u524d\u53ea\u6709\u624b\u5de5 CLI\uff0c\u9ed8\u8ba4\u8def\u5f84\u4e0a\u673a\u5236\u4e0d\u5b58\u5728"
     },
     {
-      "hash": "5f58f8d",
-      "type": "fix",
-      "message": "fix: \u5ba1\u67e5\u8f93\u51fa\u4e0d\u662f JSON \u65f6\u6d41\u7a0b\u76f4\u63a5\u4e2d\u65ad\u2014\u2014\u7578\u5f62 JSON \u5374\u4f1a fail-closed\uff0c\u4e24\u6761\u8def\u4e0d\u4e00\u81f4"
-    },
-    {
-      "hash": "a3c0b95",
-      "type": "fix",
-      "message": "fix: \u77e5\u8bc6\u5c42 CSV \u7684 None \u952e\u4e0e\u7a7a\u884c\u6c61\u67d3\u8def\u7531\u2014\u2014\u9898\u6750\u5339\u914d\u5728\u65e0\u63d0\u793a\u5730\u504f"
-    },
-    {
-      "hash": "3114997",
-      "type": "fix",
-      "message": "fix: \u4e0a\u4e0b\u6587\u7ec4\u88c5\u9047\u574f state.json \u76f4\u63a5\u629b\u89e3\u6790\u5668\u5f02\u5e38\u2014\u2014\u5199\u4f5c\u6d41\u7a0b\u4ee5 traceback \u4e2d\u65ad"
-    },
-    {
-      "hash": "38f6dd3",
-      "type": "fix",
-      "message": "fix: structural_checker \u9047\u574f state.json \u76f4\u63a5\u629b JSONDecodeError\uff0c\u5ba1\u67e5\u94fe\u8def\u4ee5 traceback \u4e2d\u65ad"
-    },
-    {
-      "hash": "101ff90",
-      "type": "fix",
-      "message": "fix: \u5ba1\u67e5\u963b\u65ad\u5224\u636e\u53ea\u505a\u4e86\u4e00\u534a\u2014\u2014\u6a21\u578b\u62a5\u300c3 \u4e2a\u963b\u65ad\u4f46\u6ca1\u5217\u660e\u7ec6\u300d\u65f6\u7ae0\u8282\u88ab\u653e\u884c"
-    },
-    {
-      "hash": "c1ba230",
-      "type": "fix",
-      "message": "fix: observer_settler \u62ec\u53f7\u91cc\u591a\u5199\u4e00\u53e5\u5c31\u4e22\u6574\u884c\u2014\u2014\u81ea\u7531\u6587\u672c\u63d0\u53d6\u7684\u5bb9\u9519\u4e0e\u53ef\u89c2\u6d4b"
-    },
-    {
-      "hash": "ddeaf05",
-      "type": "fix",
-      "message": "fix: override \u4e8b\u4ef6\u4f18\u5148\u4e8e\u6587\u4ef6\u2014\u2014\u65e7\u987a\u5e8f\u4e0b rebuild \u540e\u4e16\u754c\u89c4\u5219\u8986\u76d6\u4f1a\u6d88\u5931"
-    },
-    {
-      "hash": "99933ca",
-      "type": "fix",
-      "message": "fix: ssot verify \u5bf9\u542b\u672a\u77e5\u4e8b\u4ef6\u7684\u9879\u76ee\u4e5f\u8bf4\"\u4e00\u81f4\"\u2014\u2014\u68c0\u67e5\u9879\u81ea\u5df1\u6f0f\u4e86"
-    },
-    {
-      "hash": "6289a10",
-      "type": "fix",
-      "message": "fix: \u5220\u7ae0\u8282\u5148\u5199\u4e8b\u4ef6\u518d\u6539 state\u2014\u2014\u65e7\u987a\u5e8f\u4e0b rebuild \u4f1a\u628a\u5220\u9664\u7684\u7ae0\u8282\u590d\u6d3b"
-    },
-    {
-      "hash": "4aaa441",
-      "type": "fix",
-      "message": "fix: rebuild \u4e0d\u518d\u9759\u9ed8\u4e22\u5f03\u672a\u77e5\u4e8b\u4ef6\u7c7b\u578b\u2014\u2014SSOT \u707e\u96be\u6062\u590d\u4f1a\u7f3a\u6570\u636e"
-    },
-    {
-      "hash": "e0b3918",
-      "type": "fix",
-      "message": "fix: \u522b\u540d\u540c\u7c7b\u578b\u6b67\u4e49\u4e0d\u518d\u9759\u9ed8\u541e\u6389\u2014\u2014\u65b0\u589e lookup_alias_detailed"
-    },
-    {
-      "hash": "5383afe",
-      "type": "fix",
-      "message": "fix: \u8ffd\u8bfb\u503a\u5229\u606f\u6309\u7ae0\u8282\u6570\u590d\u5229\u2014\u2014\u6b64\u524d\u7ed3\u679c\u53d6\u51b3\u4e8e\u4f5c\u8005\u4ec0\u4e48\u65f6\u5019\u624b\u5de5\u8dd1\u4e00\u6b21"
-    },
-    {
-      "hash": "34026d2",
-      "type": "fix",
-      "message": "fix: \u4e8b\u4ef6\u65e5\u5fd7\u53cc\u5199\u5931\u8d25\u534a\u5199 + health() \u6c38\u8fdc\u62a5\u5065\u5eb7\uff1bJSON \u53c2\u6570\u4e0d\u8ba4 BOM"
-    },
-    {
-      "hash": "11c55e6",
-      "type": "fix",
-      "message": "fix: CLI \u5165\u53e3\u628a\u300c\u627e\u4e0d\u5230\u4e66\u9879\u76ee\u300d\u663e\u793a\u6210\u4e2d\u6587\u63d0\u793a\uff0c\u4e0d\u518d\u7529\u4e24\u5c42\u6808\u5e27"
-    },
-    {
-      "hash": "983f0d2",
-      "type": "fix",
-      "message": "fix: parse_chapter_range \u62d2\u7edd\u7578\u5f62\u8f93\u5165\u2014\u2014\u5012\u5e8f\u8303\u56f4\u66fe\u9759\u9ed8\u53d8\u6210\u300c\u4ec0\u4e48\u90fd\u4e0d\u5220\u300d"
-    },
-    {
-      "hash": "5af6050",
-      "type": "fix",
-      "message": "fix: .env \u89e3\u6790\u652f\u6301\u5f15\u53f7\u4e0e\u884c\u5185\u6ce8\u91ca\u2014\u2014\u5e26\u5f15\u53f7\u7684 API key \u4f1a\u8ba9\u9274\u6743\u9759\u9ed8\u5931\u8d25"
-    },
-    {
-      "hash": "e1ce8ec",
-      "type": "fix",
-      "message": "fix: sanitize_commit_message \u4e0d\u518d\u541e\u6389\u6807\u9898\u91cc\u7684\u7834\u6298\u53f7\u2014\u2014\u5b83\u9632\u7684\u4e0d\u662f\u6ce8\u5165"
-    },
-    {
-      "hash": "708d8cf",
-      "type": "fix",
-      "message": "fix: \u5199\u5165\u95e8\u7981\u63a5\u5165\u63d0\u4ea4\u94fe\u8def\u2014\u2014\u6b64\u524d 400 \u884c\u95e8\u7981\u662f\u6b7b\u4ee3\u7801\uff0c\u4e00\u6b21\u90fd\u6ca1\u88ab\u8c03\u7528"
-    },
-    {
-      "hash": "9b74bc0",
+      "hash": "ac66e00",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261018.0903 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261019.1204 [skip ci]"
     }
   ],
   "files": {
@@ -733,8 +633,8 @@
       "size": 9824
     },
     ".opencode/scripts/data_modules/chapter_commit_service.py": {
-      "sha256": "713fc326baef1ddc21d330effee2e51ba89bc88881557f631f8f973702d2878f",
-      "size": 16373
+      "sha256": "f8ce9e8b6c1239ffaed92d7a52d57d4a5ec3389a9210c8942ac0db11eb68e0a3",
+      "size": 17742
     },
     ".opencode/scripts/data_modules/chapter_delete_service.py": {
       "sha256": "4da3f513047f6df7af867e6d45211d1e2805b2f2eca6a1800ff03dec84f128e5",
@@ -901,8 +801,8 @@
       "size": 2360
     },
     ".opencode/scripts/data_modules/observer_settler.py": {
-      "sha256": "74190863ab4773c7e22d1a7c25684bf7842385999c7a9d10f522f3f7c1b51c46",
-      "size": 20292
+      "sha256": "93c0c52acafe73fa884169ebb0c00640296b3623ca5942ba5ff7079d7331c90a",
+      "size": 24865
     },
     ".opencode/scripts/data_modules/orchestrate.py": {
       "sha256": "31affe870dfa1a024394659a46cf4b4c33585f802dbbe40d3418e98081bedcf1",
@@ -1156,6 +1056,10 @@
       "sha256": "b725653a0c33043e8d2eeac0f8bcf96a19b0439aa7ac9b5a827b64094ce10755",
       "size": 51767
     },
+    ".opencode/scripts/data_modules/tests/test_debt_auto_accrual.py": {
+      "sha256": "a6adf3342b2bac6dda38ca301042a6bc10234715399d3fd2535a00189e677175",
+      "size": 9129
+    },
     ".opencode/scripts/data_modules/tests/test_debt_repair.py": {
       "sha256": "2bfcce856341662f7d8fe2281479b8a0a2c126c57e5cb33e53273a51d033adc7",
       "size": 7585
@@ -1303,6 +1207,10 @@
     ".opencode/scripts/data_modules/tests/test_observer_settler.py": {
       "sha256": "c6a173d348f78704883aecdb94132deee7261b861aa9b8f9ee1c03186c928446",
       "size": 6632
+    },
+    ".opencode/scripts/data_modules/tests/test_observer_settler_ambiguity.py": {
+      "sha256": "165fd1d2541f7844102ee4db8ea42048afacd5f98a006def6b81c652e87a1d28",
+      "size": 6478
     },
     ".opencode/scripts/data_modules/tests/test_observer_settler_tolerance.py": {
       "sha256": "ad07edefcb98ad86fbf35638e892ee1525953c4bf68be5096cc2375680014dd5",
