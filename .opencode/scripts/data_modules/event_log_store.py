@@ -34,10 +34,35 @@ class EventLogStore:
             conn.close()
 
     def write_events(self, chapter: int, events: List[dict]) -> Path:
+        """写事件：JSON 文件 + SQLite 镜像。
+
+        两条路径不可能真正原子（一个是文件、一个是数据库），所以采用
+        **失败即回滚文件**：SQLite 失败时把刚写的 JSON 也删掉，让磁盘回到
+        调用前的状态。否则会留下一份"文件有、镜像没有"的分叉：
+        `chapter_commit_service.py:271` 只对写失败做 `logger.warning`，
+        分叉会静默留下来，直到 dashboard 少事件才被发现。
+        """
         normalized = self.normalize_events(chapter, events)
         path = self.paths.event_json(chapter)
+        previous = path.read_bytes() if path.is_file() else None
+
         write_json(path, normalized)
-        self._write_sqlite_mirror(normalized)
+        try:
+            self._write_sqlite_mirror(normalized)
+        except Exception:
+            # 回滚到写入前的字节（可能是"原本没有这个文件"）
+            try:
+                if previous is None:
+                    path.unlink(missing_ok=True)
+                else:
+                    path.write_bytes(previous)
+            except OSError:
+                # 回滚失败时至少留个痕迹：健康检查会发现分叉。
+                print(
+                    f"⚠️ 事件文件回滚失败，可能与 SQLite 镜像分叉: {path}",
+                    file=sys.stderr,
+                )
+            raise
         return path
 
     def read_events(self, chapter: int) -> List[Dict[str, Any]]:
@@ -92,18 +117,69 @@ class EventLogStore:
         return result
 
     def health(self) -> Dict[str, Any]:
+        """事件日志双写一致性检查。
+
+        事件同时存在两处：`.story-system/events/chapter_*.events.json`
+        （人类可读、进 git）与 index.db 的 `story_events` 表（查询用）。
+        两者本应一一对应。此前本函数已经算出了两个数字却**从不比较**，
+        永远返回 `ok: True`——而 `story_events.py` 会把它原样打印给用户
+        （`webnovel.py story-events health`），于是分叉显示为健康。
+
+        这里按「事件 ID 集合」而非「行数」比较：一个事件文件里可以有多条
+        事件，行数相等不代表内容相同。
+        """
         db_path = self.project_root / ".webnovel" / "index.db"
-        file_count = len(list(self.paths.events_dir.glob("chapter_*.events.json")))
+        event_files = sorted(self.paths.events_dir.glob("chapter_*.events.json"))
+        file_count = len(event_files)
+
+        file_ids: set[str] = set()
+        for path in event_files:
+            try:
+                payload = json.loads(path.read_text(encoding="utf-8-sig"))
+            except (json.JSONDecodeError, OSError):
+                # 解析不了的文件本身就是问题，记一个哨兵让它进不一致集合
+                file_ids.add(f"<unreadable:{path.name}>")
+                continue
+            for item in payload if isinstance(payload, list) else []:
+                if isinstance(item, dict) and item.get("event_id"):
+                    file_ids.add(str(item["event_id"]))
+
         sqlite_rows = 0
+        sqlite_ids: set[str] = set()
         if db_path.is_file():
             with self._connect() as conn:
                 try:
-                    sqlite_rows = int(
-                        conn.execute("SELECT COUNT(*) FROM story_events").fetchone()[0]
-                    )
+                    rows = conn.execute("SELECT event_id FROM story_events").fetchall()
+                    sqlite_ids = {str(r[0]) for r in rows}
+                    sqlite_rows = len(sqlite_ids)
                 except sqlite3.OperationalError:
                     sqlite_rows = 0
-        return {"ok": True, "sqlite_rows": sqlite_rows, "event_files": file_count}
+
+        only_in_files = file_ids - sqlite_ids
+        only_in_sqlite = sqlite_ids - file_ids
+
+        result: Dict[str, Any] = {
+            "ok": not (only_in_files or only_in_sqlite),
+            "sqlite_rows": sqlite_rows,
+            "event_files": file_count,
+            "event_ids_in_files": len(file_ids),
+        }
+        if only_in_files or only_in_sqlite:
+            broken = [i for i in file_ids if i.startswith("<unreadable:")]
+            detail = (
+                f"事件日志双写分叉：{len(only_in_files)} 条只在文件里、"
+                f"{len(only_in_sqlite)} 条只在 SQLite 里"
+            )
+            if broken:
+                detail += f"；另有 {len(broken)} 个文件无法解析"
+            result["mismatch"] = detail
+            result["only_in_files"] = sorted(only_in_files)[:20]
+            result["only_in_sqlite"] = sorted(only_in_sqlite)[:20]
+            result["repair"] = (
+                "运行 `webnovel.py ssot rebuild` 从事件文件重建 SQLite 镜像；"
+                "若文件缺失，检查 git 是否回滚了 .story-system/events/"
+            )
+        return result
 
     def normalize_events(self, chapter: int, events: List[dict]) -> List[Dict[str, Any]]:
         normalized: List[Dict[str, Any]] = []

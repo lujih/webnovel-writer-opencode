@@ -43,11 +43,20 @@ def _extract_flag_value(argv: List[str], flag: str) -> Tuple[Optional[str], List
     while i < len(argv):
         token = argv[i]
         if token == flag:
-            if i + 1 < len(argv):
+            # 只有「下一个 token 不是另一个 flag」时才算有值。
+            # 旧实现无条件取 argv[i+1]，于是
+            #   ["cmd", "--project-root", "--chapter", "5"]
+            # 会把 '--chapter' 当成路径（结果 ["--project-root", "--chapter",
+            # "cmd", "5"]），argparse 报出的错误与真实原因（少写了路径）
+            # 完全对不上。
+            # 以 '-' 开头的合法路径极罕见；真需要时用户可写
+            # `--project-root=./-weird`。
+            if i + 1 < len(argv) and not argv[i + 1].startswith("-"):
                 value = argv[i + 1]
                 i += 2
                 continue
-            # Dangling flag; keep it so argparse can error out properly.
+            # Dangling flag; keep it (and the rest) as-is so argparse can
+            # report the real problem instead of us silently reordering.
             rest.append(token)
             i += 1
             continue
@@ -70,6 +79,8 @@ def normalize_global_project_root(argv: List[str], *, flag: str = "--project-roo
     """
     value, rest = _extract_flag_value(argv, flag)
     if value is None:
+        # 没找到值（含悬空 flag）：原样返回，让 argparse 报出真正的问题。
+        # 不能返回 `rest`——那会把 'cmd' 和 '5' 挪到后面，掩盖根因。
         return argv
     return [flag, value] + rest
 
@@ -91,6 +102,12 @@ def load_json_arg(raw: str) -> Any:
         if target == "-":
             content = sys.stdin.read()
         else:
-            content = Path(target).read_text(encoding="utf-8")
+            # utf-8-sig：容忍 UTF-8 BOM。Windows 记事本 / VS Code 的
+            # 「UTF-8 with BOM」是中文作者的默认保存格式，而 BOM 会让
+            # `json.loads` 报 "Unexpected UTF-8 BOM"。仓库里已有 7 处
+            # 用 utf-8-sig 处理（chapter_commit.py / review_pipeline.py /
+            # skill_runner.py / story_system_engine.py …），此处是漏掉的一处。
+            content = Path(target).read_text(encoding="utf-8-sig")
         return json.loads(content)
-    return json.loads(text)
+    # 内联字符串同样可能有 BOM（如从文件复制粘贴）
+    return json.loads(text.lstrip("\ufeff"))
