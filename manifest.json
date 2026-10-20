@@ -725,8 +725,8 @@
       "size": 15732
     },
     ".opencode/scripts/data_modules/context_manager.py": {
-      "sha256": "e06c1200623d300c69c17577a0ee21995a9cc85c66b8d3a66edfef7c828051d6",
-      "size": 44379
+      "sha256": "1dbf34817d4032bcfcc4041727030d5b7d9a336cb1a2ab9e72f0dd105e40baa0",
+      "size": 45738
     },
     ".opencode/scripts/data_modules/context_ranker.py": {
       "sha256": "0de21e6fa2c94c9df7de88732662223577a1b9d33c14d65cf4110abe298283cd",
@@ -1043,6 +1043,10 @@
     ".opencode/scripts/data_modules/tests/test_chapter_status.py": {
       "sha256": "df2499adceb695a0f41ff6b6fc50d392738ab8d7f8727a76721731b50f627b2f",
       "size": 2639
+    },
+    ".opencode/scripts/data_modules/tests/test_checklist_score_edge.py": {
+      "sha256": "8b77dcd420ce0d1a8f9565d238094992805c5f00006a5afb7568bee363d8752c",
+      "size": 7004
     },
     ".opencode/scripts/data_modules/tests/test_cli_args.py": {
       "sha256": "61f737ab9db2dca1facdf2f70f69b44ebea9dbadafe78243b106b5b4ab1559c4",

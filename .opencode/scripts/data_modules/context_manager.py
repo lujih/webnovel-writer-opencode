@@ -625,11 +625,37 @@ class ContextManager:
             else:
                 pending_labels.append(str(item.get("label") or item.get("id") or "未命名项"))
 
-        completion_rate = (completed_items / total_items) if total_items > 0 else 1.0
-        weighted_rate = (completed_weight / total_weight) if total_weight > 0 else completion_rate
-        required_rate = (completed_required / required_items) if required_items > 0 else 1.0
-
-        score = 100.0 * (0.5 * weighted_rate + 0.3 * required_rate + 0.2 * completion_rate)
+        # 空清单：没有任何检查项可依据，直接 0 分。
+        #
+        # 此前 `total_items == 0` 时 `completion_rate` 与 `required_rate` 都取
+        # 1.0，于是**什么都没检查却得 100 分**。这与第一轮修的 `fallback` 无条件
+        # 完成是同一类：把「没有依据」当成「全部达成」。
+        if total_items <= 0:
+            completion_rate = weighted_rate = required_rate = 0.0
+            score = 0.0
+        else:
+            completion_rate = completed_items / total_items
+            weighted_rate = (completed_weight / total_weight) if total_weight > 0 else completion_rate
+            if required_items > 0:
+                required_rate = completed_required / required_items
+                w_weighted, w_required, w_completion = 0.5, 0.3, 0.2
+            else:
+                # 无 required 项：把 0.3 的权重**按比例分给其余两项**，而不是
+                # 白送满分。
+                #
+                # 此前 `required_items == 0` 时 `required_rate` 取 1.0，等于
+                # 「0 个 required 项全部完成」——实测新书场景
+                # （`build_writing_checklist(reader_signal={})` 产出 3 项全是
+                # fallback，required_items=0）**一项未完成也能拿 30 分**，
+                # 且 30% 的权重对该场景永远不起作用，新书与老书的分数不可比。
+                required_rate = 0.0
+                w_required = 0.0
+                w_weighted, w_completion = 0.625, 0.25
+            score = 100.0 * (
+                w_weighted * weighted_rate
+                + w_required * required_rate
+                + w_completion * completion_rate
+            )
 
         if getattr(self.config, "context_writing_score_include_reader_trend", True):
             trend_window = max(1, int(getattr(self.config, "context_writing_score_trend_window", 10)))
