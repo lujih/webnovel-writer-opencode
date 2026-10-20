@@ -135,6 +135,70 @@ def _parse_markdown_sections(text: str) -> dict[str, list[str]]:
     return sections
 
 
+#: 从自由文本里抽「字段 + 新值」的几条常见句式。
+#:
+#: 观察者的输出是**自由文本**（coverage-first，不强制 schema），所以结构只能
+#: 靠句式识别。识别不出来时**仍保留 description**——拿不到 field 不等于事件
+#: 不存在。
+_STATE_PATTERNS: tuple[tuple["re.Pattern[str]", str], ...] = (
+    # 「境界从斗者变为斗师」/「境界由斗者提升至斗师」
+    (re.compile(r"(?P<field>[\u4e00-\u9fff]{1,8}?)从(?P<old>.+?)"
+                r"(?:变为|变成|转为|改为|提升至|突破至|晋升至|升至)(?P<new>.+)"),
+     "transition"),
+    # 「突破到斗师」/「晋升为斗师」——无旧值
+    (re.compile(r"^(?P<new>.+?)?(?:突破到|突破至|晋升为|晋升至|升至|达到)"
+                r"(?P<value>.+)$"), "breakthrough"),
+    # 「境界：斗师」
+    (re.compile(r"^(?P<field>[\u4e00-\u9fff]{1,8}?)\s*[：:]\s*(?P<value>.+)$"), "colon"),
+)
+
+
+def _parse_state_change(desc: str) -> dict[str, str]:
+    """尝试把一段状态描述拆成 ``{field, old, new}``；拆不出返回 ``{}``。
+
+    为什么需要这一步：`state_projection_writer._collect_state_deltas()` 对
+    ``character_state_changed`` 只认 ``payload["field"]``，为空就 ``continue``：
+
+        field = str(payload.get("field") or payload.get("field_path") or "").strip()
+        if not field or key in seen:
+            continue
+
+    而本提取器此前只给 ``description``，于是**角色状态变化一条都进不了
+    state_deltas**——实测 1 条事件提取出 0 条 delta，数据完全丢失。
+
+    同一模块的 `_extract_power_breakthroughs()` 给了 `old_realm`/`new_realm`，
+    下游还专门为它写了兼容分支。两条路待遇不同，差别只在有没有结构化字段。
+    """
+    text = str(desc or "").strip()
+    if not text:
+        return {}
+
+    m = _STATE_PATTERNS[0][0].search(text)
+    if m:
+        return {
+            "field": m.group("field").strip(),
+            "old": m.group("old").strip(),
+            "new": m.group("new").strip(),
+        }
+
+    m = _STATE_PATTERNS[1][0].search(text)
+    if m:
+        value = (m.group("value") or "").strip()
+        if value:
+            # 无旧值时只给 new；下游会把 old 视为缺失
+            return {"field": "状态", "new": value}
+
+    m = _STATE_PATTERNS[2][0].search(text)
+    if m:
+        field = m.group("field").strip()
+        value = m.group("value").strip()
+        # 过滤掉「心情：沉重」这类自由描述——field 太长通常不是字段名
+        if field and value and len(field) <= 6:
+            return {"field": field, "new": value}
+
+    return {}
+
+
 def _extract_character_state_changes(lines: list[str], known: dict[str, dict], chapter: int) -> list[dict]:
     events: list[dict] = []
     for line in lines:
@@ -143,16 +207,19 @@ def _extract_character_state_changes(lines: list[str], known: dict[str, dict], c
             name, eid_raw, desc = m.groups()
             eid_raw = _split_entity_id_segment(eid_raw)
             eid = _resolve_entity(name, known) if eid_raw in ("未知", "新") else _resolve_entity(eid_raw, known)
+            payload: dict = {
+                "entity_id": eid,
+                "entity_name": name,
+                "description": desc,
+            }
+            # 能解析出结构就补上 field/old/new——否则下游 state writer 会跳过这条
+            payload.update(_parse_state_change(desc))
             events.append({
                 "event_id": f"evt-ch{chapter:03d}-state-{len(events):03d}",
                 "chapter": chapter,
                 "event_type": "character_state_changed",
                 "subject": eid,
-                "payload": {
-                    "entity_id": eid,
-                    "entity_name": name,
-                    "description": desc,
-                },
+                "payload": payload,
             })
     return events
 
