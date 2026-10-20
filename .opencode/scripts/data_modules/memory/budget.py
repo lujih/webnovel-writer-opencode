@@ -16,7 +16,14 @@ DEFAULT_BUDGET = {
 
 
 def get_budget(task_type: str = "write") -> Dict[str, float]:
-    key = str(task_type or "write").lower()
+    """按任务类型取预算配置。
+
+    必须先 `strip()` 再 `lower()`：此前只有 `lower()`，于是
+    `'  review  '` 这类带空白（或换行、制表符）的任务类型匹配不到
+    `DEFAULT_BUDGET`，**静默回落到 write**——review 本该给 episodic 更高权重
+    （0.35 vs 0.30），一个前导空格就让配置失效且不报错。
+    """
+    key = str(task_type or "write").strip().lower() or "write"
     return dict(DEFAULT_BUDGET.get(key, DEFAULT_BUDGET["write"]))
 
 

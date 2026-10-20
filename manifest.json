@@ -817,8 +817,8 @@
       "size": 6842
     },
     ".opencode/scripts/data_modules/memory/budget.py": {
-      "sha256": "d89b330a43fbf2b5afd21b2cb7891ff649aa59405eafb230d7a0f68abc5c90d8",
-      "size": 1627
+      "sha256": "0f9dffa81c39a1d272b36bbc3babac627534273fbb76dd07224a3467224f7ea9",
+      "size": 2027
     },
     ".opencode/scripts/data_modules/memory/compactor.py": {
       "sha256": "bc1c5a0d54b6b211049ad92b6befbebd7ea23ee66a6561be93642a95495af162",
@@ -1251,6 +1251,10 @@
     ".opencode/scripts/data_modules/tests/test_memory_bootstrap.py": {
       "sha256": "6bee5c959ba1950b5a963082777a6968c166cb785df76d3300e4da2ead9d12b3",
       "size": 2553
+    },
+    ".opencode/scripts/data_modules/tests/test_memory_budget.py": {
+      "sha256": "1bfc6d08b084b27f90c7608ff87d21e1ef32574b60bdeaa41a5594477cbdc0da",
+      "size": 6564
     },
     ".opencode/scripts/data_modules/tests/test_memory_cli.py": {
       "sha256": "3e4215829355b90b697e6e61b9f8ce8ef98cb52045986c65b61f0a9d5d1569c6",
