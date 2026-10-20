@@ -118,15 +118,34 @@ class QimaoAdapter(BasePlatform):
         return book_id
 
     def _find_category_id(self, categories, genre: str) -> int:
+        """按题材找平台分类 id；匹配不到返回 0。
+
+        此前匹配失败时**静默回落到第一个分类**：
+
+            genre='科幻'  → categories[0]（玄幻）的 id
+
+        作者写「科幻」，书就被发布到「玄幻」分类下，不报错、不提示。七猫的
+        分类决定推荐池与读者群，归错类的后果不是"发不出去"，而是"发出去了
+        但没人看"——比直接失败更难发现。
+
+        返回 0 让调用方/平台显式失败，是可见的；静默归错类是不可见的。
+        """
+        target = str(genre or "").strip()
+        if not target:
+            return 0
+
         for cat in categories:
-            name = cat.get("name") or cat.get("category_name", "")
-            if name == genre:
+            name = str(cat.get("name") or cat.get("category_name", "") or "").strip()
+            if name and name == target:
                 return int(cat["category_id"])
+
         for cat in categories:
-            name = cat.get("name") or cat.get("category_name", "")
-            if genre in name or name in genre:
+            name = str(cat.get("name") or cat.get("category_name", "") or "").strip()
+            if name and (target in name or name in target):
                 return int(cat["category_id"])
-        return int(categories[0]["category_id"]) if categories else 0
+
+        # 匹配不到：返回 0，让失败可见
+        return 0
 
     def _find_label_ids(self, labels, genre: str, max_count: int = 4) -> list[str]:
         def get_name(lb): return str(lb.get("name") or lb.get("label_name", ""))

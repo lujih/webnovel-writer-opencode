@@ -1388,6 +1388,10 @@
       "sha256": "24d26deb49b5faaa7a39fad04cdb9bb40aaedac76decf24e7ae21efe526a085e",
       "size": 9247
     },
+    ".opencode/scripts/data_modules/tests/test_qimao_adapter.py": {
+      "sha256": "d8f827be90156113d2f0f641566b1104dff4e353f9d3aa9b3f40f5ea7c42b168",
+      "size": 6098
+    },
     ".opencode/scripts/data_modules/tests/test_rag_adapter.py": {
       "sha256": "d44d7c1a1744e5f870ff9a447f8b4c952dc94d4b4a8192fc8e3c0b175d7f24c5",
       "size": 17217
@@ -1697,8 +1701,8 @@
       "size": 20499
     },
     ".opencode/scripts/publisher/adapters/qimao.py": {
-      "sha256": "3f32d9763774bb02a56b53dc16d97c6aec1a1d41d5c1026b0a7493553f3bc297",
-      "size": 9924
+      "sha256": "661d8cce45e2f8f6861fe088fae52f0618696fa886541fc8f4e0aeb751dee40f",
+      "size": 10656
     },
     ".opencode/scripts/publisher/base.py": {
       "sha256": "09ae17c5fe922273698e476cf89d128735c0633a40ceb7ebc928551cd984116a",
