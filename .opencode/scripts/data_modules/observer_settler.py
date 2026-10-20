@@ -413,6 +413,56 @@ def _extract_open_loops(lines: list[str], chapter: int) -> list[dict]:
     return events
 
 
+#: 歧义项的统一置信度。必须低于 data-agent 的自动采用阈值 0.8
+#: （`data-agent.md:93`：「置信度>0.8 自动采用，0.5-0.8 采用+warning，
+#: <0.5 标记待人工」）。取 0.0 表示「完全无法判断」，强制走人工。
+AMBIGUOUS_CONFIDENCE = 0.0
+
+
+def ambiguous_to_pending(ambiguous_mentions: list[dict] | None) -> list[dict]:
+    """把 `settle()` 算出的歧义转成 `disambiguation_result.pending` 条目。
+
+    ## 为什么需要这个函数
+
+    `settle()` 早就能检出同名歧义（`ambiguous_mentions`），但那个信号此前
+    **只写不读**：它被写进 `extraction_result.json`、打一条 warning，然后
+    `disambiguation_result.json` 仍由 data-agent 按 LLM 自评置信度生成。
+
+    结果是：两个实体都叫「萧炎」时，settler 静默取字典序最小者，`pending`
+    为空，提交照常通过——**错误的实体绑定被固化为事实**。
+
+    而 `artifact_validator._policy_issues()` 对 `pending` 非空的处理是 error
+    → 阻断提交（fail-closed）。也就是说：只要把歧义真的放进 `pending`，
+    既有的安全策略就会生效。缺的只是这条接线。
+
+    本函数提供**不依赖 LLM 判断**的代码通道。
+    """
+    if not ambiguous_mentions:
+        return []
+
+    pending: list[dict] = []
+    for item in ambiguous_mentions:
+        if not isinstance(item, dict):
+            continue
+        mention = str(item.get("mention") or "").strip()
+        candidates = [str(c) for c in (item.get("candidates") or []) if str(c).strip()]
+        if not mention or len(candidates) < 2:
+            continue
+        pending.append({
+            "mention": mention,
+            "candidates": candidates,
+            "entity_type": str(item.get("entity_type") or ""),
+            "confidence": AMBIGUOUS_CONFIDENCE,
+            "reason": (
+                f"「{mention}」在实体库里对应 {len(candidates)} 个同类型实体"
+                f"（{'、'.join(candidates)}），无法确定指哪一个。"
+                f"settler 已按字典序取第一个，请人工确认后再提交。"
+            ),
+            "source": "observer_settler.ambiguous_mentions",
+        })
+    return pending
+
+
 def _collect_ambiguous_mentions(
     sections: dict[str, list[str]], known: dict[str, dict]
 ) -> list[dict]:

@@ -185,7 +185,11 @@ class TestOperationalDocsHaveNoStaleMarkers:
         for path in live_docs:
             text = path.read_text(encoding="utf-8")
             for marker, why in stale.items():
-                if marker in text:
+                # 用前后边界防止子串误判：「159 个测试文件」包含子串
+                # 「59 个测试文件」，纯 `in` 会把正确的新计数当成过期标记。
+                pattern = re.compile(r"(?<!\d)" + re.escape(marker) + r"(?!\d)")
+                m = pattern.search(text)
+                if m:
                     offenders.append(f"{path.name}: {marker}（{why}）")
         assert not offenders, offenders
 
