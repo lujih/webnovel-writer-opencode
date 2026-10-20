@@ -19,6 +19,33 @@ except ImportError:  # pragma: no cover
     from scripts.security_utils import atomic_write_json
 
 VALID_SEVERITIES = {"critical", "high", "medium", "low"}
+
+#: `_shape_issue()` 使用的固定 summary。下游用它识别"审查输出不可解析"——
+#: 此时 CED 不应计算（解析失败不是一致性错误，否则趋势图出现虚假尖峰）。
+#:
+#: 不能用 category 判断：`review_output_malformed` 不在 VALID_CATEGORIES 里，
+#: `ReviewIssue.__post_init__` 会把它降级成 `other`，`categories` 里查不到。
+UNPARSEABLE_SUMMARY = "审查结果不可解析，已阻断提交。"
+
+#: CED 加权口径用的 severity 权重。
+#:
+#: 为什么不用"severity 越严重值越小"的直观设计：这里是**计数权重**，
+#: critical 计 4.0、low 计 1.0，所以同等字数下 4 个 low 与 1 个 critical
+#: 等权。这让"少量严重问题"与"大量轻微问题"在同一坐标上可比，
+#: 而 ced_blocking 单独负责"只看阻断项"的严格口径。
+SEVERITY_WEIGHTS: Dict[str, float] = {
+    "critical": 4.0,
+    "high": 3.0,
+    "medium": 2.0,
+    "low": 1.0,
+}
+
+#: CED 的归一化基数：每 1 万字的一致性错误数。
+#:
+#: **中文口径**：`_count_chapter_words()` 用 `len(text)` 计的是**字符数**，
+#: 即中文的"字数"；ConStory-Bench 的 CED 是"每万词"（英文 word count）。
+#: 两者单位不同，不可直接横向比较数值，只能比较同一口径下的趋势。
+CED_SCALE = 10000.0
 VALID_CATEGORIES = {
     "continuity", "setting", "character", "timeline",
     "ai_flavor", "logic", "pacing", "other",
@@ -82,6 +109,13 @@ class ReviewResult:
     chapter: int
     issues: List[ReviewIssue] = field(default_factory=list)
     summary: str = ""
+    #: 审查输出是否可解析。`_shape_issue()` 会置 1 表示"载荷畸形"。
+    #:
+    #: 为什么要显式标记而不是靠 category/summary 推断：
+    #: `review_output_malformed` 不在 VALID_CATEGORIES 里，会被
+    #: `__post_init__` 降级成 `other`；`summary` 又不在 `to_metrics_dict()`
+    #: 的输出里。两条间接路径都断过，故用显式字段。
+    unparseable: bool = False
     #: 模型自己声明的阻断数。仅参与「取更严格一方」，不是权威值——
     #: 权威值始终是从 issues 推导的 `_derived_blocking_count`。
     declared_blocking_count: int = 0
@@ -168,6 +202,16 @@ class ReviewResult:
             "summary": self.summary,
         }
 
+    def compute_ced_for(self, chapter_words: int) -> Dict[str, Any]:
+        """按给定字数计算本结果的三个 CED 口径。
+
+        只是 `compute_ced()` 的薄封装，让调用方写
+        `result.compute_ced_for(words)` 而不必自己拆 issues。
+        """
+        ced = compute_ced(self.issues, chapter_words)
+        ced.pop("chapter_words", None)      # 由调用方统一决定是否带上
+        return ced
+
     def to_metrics_dict(self, report_file: str = "") -> Dict[str, Any]:
         categories = self.categories
         severity_counts = self.severity_counts
@@ -184,8 +228,55 @@ class ReviewResult:
             "issues_count": self.issues_count,
             "blocking_count": self.blocking_count,
             "categories": categories,
+            "review_parseable": 0 if self.unparseable else 1,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
         }
+
+
+def compute_ced(
+    issues: "List[ReviewIssue]",
+    chapter_words: int,
+) -> Dict[str, Any]:
+    """计算三个口径的 CED（一致性错误密度）。
+
+    口径定义（**唯一定义处**，`review_pipeline` 与文档都引用这里）：
+
+    - ``ced_raw``       = len(issues) / chapter_words × 10000
+                          每个 issue 计 1，与 ConStory-Bench 的 CED 同义
+    - ``ced_weighted``  = Σ(severity 权重) / chapter_words × 10000
+                          critical 4.0 / high 3.0 / medium 2.0 / low 1.0
+    - ``ced_blocking``  = blocking 的 issue 数 / chapter_words × 10000
+
+    返回 ``{"chapter_words", "ced_raw", "ced_weighted", "ced_blocking"}``。
+
+    **返回 None 而不是 0 的情况**（关键区分）：
+    - ``chapter_words <= 0`` → 取不到有效分母（章节文件缺失、空文件、
+      纯 markdown 语法文件）。此时三个口径全为 None——不得除以 0，
+      也不得伪造一个 0（那会被读成"这一章完美无问题"）。
+    - ``issues`` 为空且分母有效 → 三个口径都是 0.0（真的没发现问题）。
+
+    区分这两者对趋势图至关重要：不可计算的章节应该不画点，
+    而不是画在 0 位上。
+    """
+    words = int(chapter_words or 0)
+    if words <= 0:
+        return {
+            "chapter_words": 0,
+            "ced_raw": None,
+            "ced_weighted": None,
+            "ced_blocking": None,
+        }
+
+    total_issues = len(issues)
+    weighted = sum(SEVERITY_WEIGHTS.get(str(i.severity), 1.0) for i in issues)
+    blocking = sum(1 for i in issues if i.blocking)
+
+    return {
+        "chapter_words": words,
+        "ced_raw": round(total_issues / words * CED_SCALE, 4),
+        "ced_weighted": round(weighted / words * CED_SCALE, 4),
+        "ced_blocking": round(blocking / words * CED_SCALE, 4),
+    }
 
 
 def _shape_issue(chapter: int, detail: str) -> ReviewResult:
@@ -201,13 +292,14 @@ def _shape_issue(chapter: int, detail: str) -> ReviewResult:
     """
     return ReviewResult(
         chapter=chapter,
+        unparseable=True,
         issues=[ReviewIssue(
             severity="critical",
             category="review_output_malformed",
             description=f"审查结果形状异常，无法判定本章是否存在问题：{detail}。已按阻断处理，请人工复核。",
             blocking=True,
         )],
-        summary="审查结果不可解析，已阻断提交。",
+        summary=UNPARSEABLE_SUMMARY,
     )
 
 

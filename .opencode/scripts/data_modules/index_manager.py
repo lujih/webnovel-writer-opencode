@@ -194,7 +194,11 @@ class ChapterReadingPowerMeta:
 
 @dataclass
 class ReviewMetrics:
-    """审查指标记录 (v5.4 引入)"""
+    """审查指标记录 (v5.4 引入)
+
+    CED（一致性错误密度）字段说明见 `review_pipeline._build_review_metrics_record()`
+    的 docstring——那里是唯一定义三个口径的地方，避免两处口径漂移。
+    """
 
     start_chapter: int
     end_chapter: int
@@ -204,6 +208,17 @@ class ReviewMetrics:
     critical_issues: List[str] = field(default_factory=list)
     report_file: str = ""
     notes: str = ""
+    # 单章字数（CED 的分母）。0 表示取不到——此时三个 CED 都应为 None/0，
+    # 不得除以 0 伪造值。
+    chapter_words: int = 0
+    # 三个口径的 CED。None 表示「无法计算」（分母为 0 或审查输出不可解析），
+    # 与「算出来是 0」是两件事——后者意味着真的没有发现问题。
+    ced_raw: Optional[float] = None
+    ced_weighted: Optional[float] = None
+    ced_blocking: Optional[float] = None
+    # 审查输出是否可解析。不可解析时（_shape_issue 路径）不应产出 CED，
+    # 否则一次性解析失败会在趋势图上制造一个虚假尖峰。
+    review_parseable: int = 1
 
 
 
@@ -234,6 +249,36 @@ class IndexManager(IndexChapterMixin, IndexEntityMixin, IndexDebtMixin, IndexRea
     def __init__(self, config=None):
         self.config = config or get_config()
         self._init_db()
+
+    #: CED 集成新列的 DDL 片段（ALTER 迁移与 CREATE 共用同一份定义）。
+    _REVIEW_METRICS_NEW_COLUMNS = (
+        ("chapter_words", "INTEGER DEFAULT 0"),
+        ("ced_raw", "REAL DEFAULT 0"),
+        ("ced_weighted", "REAL DEFAULT 0"),
+        ("ced_blocking", "REAL DEFAULT 0"),
+        ("review_parseable", "INTEGER DEFAULT 1"),
+    )
+
+    @classmethod
+    def _migrate_review_metrics_columns(cls, cursor) -> None:
+        """给旧库的 `review_metrics` 表补上 CED 所需的列（幂等）。
+
+        为什么必须做：本库此前只靠 `CREATE TABLE IF NOT EXISTS` 原地演化，
+        没有任何 ALTER 迁移。老库的 `review_metrics` 只有原来的 9 列，而新的
+        `save_review_metrics()` INSERT 会带 `chapter_words` 等列——实测：
+
+            sqlite3.OperationalError:
+                table review_metrics has no column named chapter_words
+
+        也就是说：不做迁移，老用户跑一次 `review-pipeline --save-metrics`
+        就直接崩，连审查指标都存不进去。
+        """
+        existing = {row[1] for row in cursor.execute("PRAGMA table_info(review_metrics)")}
+        if not existing:
+            return                      # 表刚由 CREATE 建好，无需迁移
+        for name, ddl in cls._REVIEW_METRICS_NEW_COLUMNS:
+            if name not in existing:
+                cursor.execute(f"ALTER TABLE review_metrics ADD COLUMN {name} {ddl}")
 
     def _init_db(self):
         """初始化数据库表（仅在 state.json 存在时创建目录，防止错误 PROJECT_ROOT 漂移）"""
@@ -550,9 +595,17 @@ class IndexManager(IndexChapterMixin, IndexEntityMixin, IndexDebtMixin, IndexRea
                     notes TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    -- 以下 5 列为 CED（一致性错误密度）集成新增。
+                    -- 口径见 review_pipeline._build_review_metrics_record() 的 docstring。
+                    chapter_words INTEGER DEFAULT 0,
+                    ced_raw REAL DEFAULT 0,
+                    ced_weighted REAL DEFAULT 0,
+                    ced_blocking REAL DEFAULT 0,
+                    review_parseable INTEGER DEFAULT 1,
                     PRIMARY KEY (start_chapter, end_chapter)
                 )
             """)
+            self._migrate_review_metrics_columns(cursor)
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_review_metrics_end ON review_metrics(end_chapter)"
             )

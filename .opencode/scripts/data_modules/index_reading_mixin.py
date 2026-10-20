@@ -138,12 +138,17 @@ class IndexReadingMixin:
         """保存审查指标记录"""
         with self._get_conn() as conn:
             cursor = conn.cursor()
+            # CED 三个口径可能是 None（无法计算）。SQLite 存 NULL，
+            # 与「算出来是 0」区分开——查询侧因此能过滤掉不可计算的章节。
             cursor.execute(
                 """
                 INSERT INTO review_metrics
                 (start_chapter, end_chapter, overall_score, dimension_scores,
-                 severity_counts, critical_issues, report_file, notes, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                 severity_counts, critical_issues, report_file, notes,
+                 chapter_words, ced_raw, ced_weighted, ced_blocking,
+                 review_parseable, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                        CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT(start_chapter, end_chapter)
                 DO UPDATE SET
                     overall_score = excluded.overall_score,
@@ -152,6 +157,11 @@ class IndexReadingMixin:
                     critical_issues = excluded.critical_issues,
                     report_file = excluded.report_file,
                     notes = excluded.notes,
+                    chapter_words = excluded.chapter_words,
+                    ced_raw = excluded.ced_raw,
+                    ced_weighted = excluded.ced_weighted,
+                    ced_blocking = excluded.ced_blocking,
+                    review_parseable = excluded.review_parseable,
                     updated_at = CURRENT_TIMESTAMP
             """,
                 (
@@ -163,6 +173,11 @@ class IndexReadingMixin:
                     json.dumps(metrics.critical_issues, ensure_ascii=False),
                     metrics.report_file,
                     metrics.notes,
+                    metrics.chapter_words,
+                    metrics.ced_raw,
+                    metrics.ced_weighted,
+                    metrics.ced_blocking,
+                    metrics.review_parseable,
                 ),
             )
             conn.commit()

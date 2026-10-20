@@ -18,6 +18,8 @@ from typing import Any, Dict, List
 
 from runtime_compat import enable_windows_utf8_stdio
 
+from data_modules.review_schema import SYSTEM_DIMENSIONS, _shape_issue
+
 logger = logging.getLogger(__name__)
 
 
@@ -89,6 +91,62 @@ def clean_reviewer_output(raw: str) -> dict:
         except json.JSONDecodeError as e:
             preview = json_str[:500] + "..." if len(json_str) > 500 else json_str
             raise ValueError(f"JSON解析失败，raw前500字符: {preview}") from e
+
+
+def _assemble_artifacts(
+    *,
+    self_project_root: Path,
+    chapter: int,
+    result,
+    report_file: str,
+) -> Dict[str, Any]:
+    """把 ReviewResult 组装成 build_review_artifacts 的返回结构。
+
+    抽成函数是因为 fail-closed 与正常两条路径都要走这同一段组装逻辑——
+    此前各写一遍，改 CED 字段时容易漏掉其中一条。
+    """
+    anti_patterns_added = append_ai_flavor_anti_patterns(self_project_root, result)
+    metrics = result.to_metrics_dict(report_file=report_file)
+    metrics["chapter_words"] = _count_chapter_words_for(self_project_root, chapter)
+    metrics.update(result.compute_ced_for(metrics["chapter_words"]))
+
+    dim_scores = metrics.get("dimension_scores", {})
+    system_health = {d: dim_scores.get(d, 0) for d in SYSTEM_DIMENSIONS}
+    return {
+        "chapter": chapter,
+        "review_result": result.to_dict(),
+        "metrics": metrics,
+        "score": metrics["overall_score"],
+        "overall_score": metrics["overall_score"],
+        "system_health": system_health,
+        "anti_patterns_added": anti_patterns_added,
+    }
+
+
+def _count_chapter_words_for(project_root: Path, chapter: int) -> int:
+    """取本章正文字数；取不到返回 0。
+
+    复用 `state_projection_writer._count_chapter_words()` 的口径（去 markdown
+    语法后 `len()`），与 `progress.total_words` 累加用的是同一个函数——
+    CED 的分母因此与既有字数统计完全一致，不会出现"两套字数"。
+
+    定位不到文件时返回 0（不是猜一个值）：CED 由 `compute_ced()` 判空。
+    """
+    if chapter <= 0:
+        return 0
+    try:
+        from chapter_paths import find_chapter_file
+
+        chapter_file = find_chapter_file(Path(project_root), int(chapter))
+        if chapter_file is None or not chapter_file.is_file():
+            return 0
+        content = chapter_file.read_text(encoding="utf-8")
+
+        from data_modules.state_projection_writer import StateProjectionWriter
+        return StateProjectionWriter._count_chapter_words(content)
+    except (OSError, ValueError, ImportError) as exc:
+        logger.warning("无法读取第 %s 章正文以计算字数: %s", chapter, exc)
+        return 0
 
 
 def _resolve_report_path(project_root: Path, report_file: str) -> Path:
@@ -189,8 +247,45 @@ def write_review_report(project_root: Path, report_file: str, payload: Dict[str,
     return report_path
 
 
+#: 审查输出不可解析时的 summary 文案（由 review_schema 唯一定义）。
+#: 用它识别"这一章的 CED 不该被计算"——一次性解析失败不是一致性错误，
+#: 照常算会在趋势图上制造无法解释的尖峰。
+
+
 def _build_review_metrics_record(metrics: Dict[str, Any]):
+    """把 metrics dict 转成 ReviewMetrics 记录。
+
+    CED 三个口径与字数的语义见 `review_schema.compute_ced()` 的 docstring
+    （唯一定义处）。这里只负责搬运，并处理一个特例：
+
+    **不可解析的审查输出不产出 CED。** `_shape_issue()` 会合成一条 critical
+    issue，于是 issues_count=1。若照常算，这一章的 CED 会是
+    "1 / 字数 × 10000"——一个纯粹的解析失败被算成了"发现一致性问题"，
+    在趋势图上是个无法解释的尖峰。故用 `review_parseable=0` 标记并清空 CED。
+
+    parseable 的来源是 `review_schema.to_metrics_dict()` 直接输出的
+    `review_parseable` 字段（底层是 `ReviewResult.unparseable`）。
+    不用 category 或 summary 推断：前者会被 `__post_init__` 降级成
+    `other`，后者根本不在 to_metrics_dict 的输出里——两条间接路径都断过。
+    """
     from data_modules.index_manager import ReviewMetrics
+
+    # 注意：不能写成 `or 1`——`review_parseable=0` 是合法值（审查输出不可
+    # 解析），`0 or 1` 会把它吃成 1。本会话已在 budget.strip() 与
+    # hybrid_search 的 top_k 上踩过同一个 falsy 陷阱。
+    if metrics.get("review_parseable") is None:
+        parseable = 1
+    else:
+        parseable = int(metrics.get("review_parseable") or 0)
+    chapter_words = int(metrics.get("chapter_words") or 0)
+
+    if parseable == 0:
+        # 解析失败：保留字数（分母是客观事实），但不给 CED
+        ced_raw = ced_weighted = ced_blocking = None
+    else:
+        ced_raw = metrics.get("ced_raw")
+        ced_weighted = metrics.get("ced_weighted")
+        ced_blocking = metrics.get("ced_blocking")
 
     return ReviewMetrics(
         start_chapter=int(metrics["start_chapter"]),
@@ -201,6 +296,11 @@ def _build_review_metrics_record(metrics: Dict[str, Any]):
         critical_issues=list(metrics.get("critical_issues", [])),
         report_file=str(metrics.get("report_file", "")),
         notes=str(metrics.get("notes", "")),
+        chapter_words=chapter_words,
+        ced_raw=ced_raw,
+        ced_weighted=ced_weighted,
+        ced_blocking=ced_blocking,
+        review_parseable=parseable,
     )
 
 
@@ -227,35 +327,29 @@ def build_review_artifacts(
         raw = clean_reviewer_output(raw_text)
     except ValueError as exc:
         logger.warning("reviewer output 不可解析（chapter %s）：%s", chapter, exc)
-        raw = {
-            "issues": [{
-                "severity": "critical",
-                "category": "review_output_malformed",
-                "description": (
-                    f"审查输出无法解析为 JSON，无法判断本章是否存在问题：{exc}。"
-                    f"已按阻断处理，请人工复核或重新运行审查。"
-                ),
-                "blocking": True,
-            }],
-            "summary": "审查输出不可解析，已阻断提交。",
-        }
+        # 直接复用 `_shape_issue()`，不在这里另造一份 raw dict。
+        #
+        # 此前这里自己构造 `{"issues": [...], "summary": ...}`，虽然同样是
+        # fail-closed，但 `category: review_output_malformed` 会被
+        # `ReviewIssue.__post_init__` 降级成 `other`、summary 又不进
+        # `to_metrics_dict()`——下游**没有一个可靠信号**能识别"这一章的审查
+        # 输出其实没解析成功"。CED 集成需要这个标记来区分"纯解析失败"与
+        # "真的发现了一致性问题"，否则趋势图出现虚假尖峰。
+        result = _shape_issue(chapter, f"审查输出无法解析为 JSON：{exc}")
+        return _assemble_artifacts(
+            self_project_root=project_root,
+            chapter=chapter,
+            result=result,
+            report_file=report_file,
+        )
 
     result = parse_review_output(chapter=chapter, raw=raw)
-    anti_patterns_added = append_ai_flavor_anti_patterns(project_root, result)
-    metrics = result.to_metrics_dict(report_file=report_file)
-
-    dim_scores = metrics.get("dimension_scores", {})
-    system_health = {d: dim_scores.get(d, 0) for d in SYSTEM_DIMENSIONS}
-
-    return {
-        "chapter": chapter,
-        "review_result": result.to_dict(),
-        "metrics": metrics,
-        "score": metrics["overall_score"],      # alias for batch_state compatibility
-        "overall_score": metrics["overall_score"],
-        "system_health": system_health,
-        "anti_patterns_added": anti_patterns_added,
-    }
+    return _assemble_artifacts(
+        self_project_root=project_root,
+        chapter=chapter,
+        result=result,
+        report_file=report_file,
+    )
 
 
 def main() -> None:

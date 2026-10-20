@@ -471,7 +471,13 @@ class StateProjectionWriter:
                 continue
         return total
 
-    def _count_chapter_words(self, content: str) -> int:
+    @staticmethod
+    def _count_chapter_words(content: str) -> int:
+        """统计正文有效字数（去掉 markdown 语法干扰）。
+
+        口径：剥掉代码块、标题行、分隔线后取字符串长度——中文即"字数"。
+        这是 `progress.total_words` 与 CED 分母共用的唯一口径，避免两套字数。
+        """
         text = re.sub(r"```[\s\S]*?```", "", content)
         text = re.sub(r"^#+ .*$", "", text, flags=re.MULTILINE)
         text = re.sub(r"---", "", text)
