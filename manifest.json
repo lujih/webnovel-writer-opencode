@@ -1,22 +1,67 @@
 {
-  "version": "v2.9.2-20261019.1220",
+  "version": "v2.9.2-20261020.0728",
   "tag": "v2.9.2",
-  "updated": "2026-10-19T12:20:23Z",
+  "updated": "2026-10-20T07:28:25Z",
   "changelog": [
     {
-      "hash": "02ab891",
+      "hash": "40b3911",
       "type": "fix",
-      "message": "fix: 同名歧义上报到提取阶段——data-agent 的置信度分级拿不到触发条件"
+      "message": "fix: manifest \u6f0f\u6536 6 \u4e2a\u65b0\u6d4b\u8bd5\u6587\u4ef6"
     },
     {
-      "hash": "89c9658",
+      "hash": "4b8d93b",
+      "type": "test",
+      "message": "test: \u524d\u7aef\u8865\u7ec4\u4ef6\u5c42\u6d4b\u8bd5\u2014\u2014\u8986\u76d6 loading/\u7a7a\u6001/\u9519\u8bef\u6001/\u7ade\u6001"
+    },
+    {
+      "hash": "b0e874e",
       "type": "feat",
-      "message": "feat: 追读债计息接入提交链路——此前只有手工 CLI，默认路径上机制不存在"
+      "message": "feat: \u8865\u5b8c\u8ba1\u5212\u5185 3 \u9879\u9057\u6f0f + \u8fd0\u7ef4\u8bca\u65ad\u9875\uff08\u7b2c 11 \u4e2a\u9875\u9762\uff09"
     },
     {
-      "hash": "ac66e00",
+      "hash": "ef4ca72",
+      "type": "fix",
+      "message": "fix: \u7b2c\u4e8c\u8f6e\u6df1\u5ea6\u5ba1\u67e5\u2014\u2014\u8865 --host \u7ef4\u5ea6\u3001totals \u88ab LIMIT \u622a\u65ad\u3001HttpError \u672a\u8986\u76d6\u5199\u65b9\u6cd5"
+    },
+    {
+      "hash": "ff87f83",
+      "type": "fix",
+      "message": "fix: \u4e0a\u4e0b\u6587\u7a7a\u6001\u5f15\u5bfc\u6587\u6848\u7684\u4e2d\u82f1\u6587\u7c98\u8fde"
+    },
+    {
+      "hash": "0e818bb",
+      "type": "docs",
+      "message": "docs: dashboard \u52a0\u56fa\u4e0e\u8865\u5168\u8ba1\u5212\uff08Phase 1-5\uff0c\u542b\u5b9e\u6d4b\u8bc1\u636e\uff09"
+    },
+    {
+      "hash": "9fce407",
+      "type": "fix",
+      "message": "fix: \u4e0a\u4e0b\u6587\u9875\u533a\u5206\u7a7a\u6001\u4e0e\u9519\u8bef\u3001\u4e09\u5904\u89c6\u89c9\u7455\u75b5\u3001\u6587\u6863\u4e0e\u5b9e\u73b0\u5bf9\u9f50"
+    },
+    {
+      "hash": "6da15d6",
+      "type": "test",
+      "message": "test: \u524d\u7aef\u5f15\u5165 vitest + eslint + CI\uff0c\u5e76\u4fee\u6389 lint \u6293\u51fa\u7684\u4e24\u4e2a\u771f bug"
+    },
+    {
+      "hash": "cd49290",
+      "type": "feat",
+      "message": "feat: \u8ffd\u8bfb\u503a\u9762\u677f\u2014\u2014\u6570\u636e\u5c42\u6709\u3001\u770b\u677f\u4e00\u76f4\u6ca1\u6709\u5165\u53e3\u7684\u5b50\u7cfb\u7edf"
+    },
+    {
+      "hash": "d8b075f",
+      "type": "test",
+      "message": "test: dashboard \u5199\u7aef\u70b9\u65ad\u8a00\u526f\u4f5c\u7528\uff0c\u5835\u4f4f\u300c500 \u4e5f\u7b97\u901a\u8fc7\u300d\u7684\u76f2\u533a"
+    },
+    {
+      "hash": "fa6a660",
+      "type": "fix",
+      "message": "fix: dashboard \u4e09\u4e2a P0\u2014\u2014\u53cd\u6a21\u5f0f\u5199\u5165\u81ea\u9501\u3001\u96f7\u8fbe\u56fe\u7a7a\u767d\u3001\u6362\u7aef\u53e3\u540e\u5199\u64cd\u4f5c\u5168\u6302"
+    },
+    {
+      "hash": "db49af4",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261019.1204 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261019.1220 [skip ci]"
     }
   ],
   "files": {
@@ -372,23 +417,23 @@
       "sha256": "ea3109cd09aa8e11399fdcab2cdd1621dc001c8232a433bf447ccdc18cd699c4",
       "size": 3258
     },
-    ".opencode/evals/files/test-project/大纲/总纲.md": {
+    ".opencode/evals/files/test-project/\u5927\u7eb2/\u603b\u7eb2.md": {
       "sha256": "bfa2a3ee10cd88f2a66d44521f0b5b7fda259058e7c4dc02a74b573a0327357f",
       "size": 717
     },
-    ".opencode/evals/files/test-project/大纲/第1卷-时间线.md": {
+    ".opencode/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u65f6\u95f4\u7ebf.md": {
       "sha256": "cc61f5fc594246c38639cf24eac2d055c12082f247c40ce862533169dfcb539f",
       "size": 356
     },
-    ".opencode/evals/files/test-project/大纲/第1卷-详细大纲.md": {
+    ".opencode/evals/files/test-project/\u5927\u7eb2/\u7b2c1\u5377-\u8be6\u7ec6\u5927\u7eb2.md": {
       "sha256": "9816f65703a311dd8904e92bb2342478404ce6b6d33ea6ed751bc7ec4fbe527d",
       "size": 742
     },
-    ".opencode/evals/files/test-project/正文/第0004章-迦南学院的考验.md": {
+    ".opencode/evals/files/test-project/\u6b63\u6587/\u7b2c0004\u7ae0-\u8fe6\u5357\u5b66\u9662\u7684\u8003\u9a8c.md": {
       "sha256": "99f34bb3c10f1e92baaf6c3091104f76665dd51f2387b2781ec18b612cdc2516",
       "size": 2447
     },
-    ".opencode/evals/files/test-project/设定集/世界观.md": {
+    ".opencode/evals/files/test-project/\u8bbe\u5b9a\u96c6/\u4e16\u754c\u89c2.md": {
       "sha256": "a9314908d7f0162104adb8bba2fd67e470b634f3d096787a253a5605307959fc",
       "size": 546
     },
@@ -564,39 +609,39 @@
       "sha256": "06c30a6c213d72628c1d32ea17b67a6dde4cda29c96bcfb9c6a3526b913783bd",
       "size": 14254
     },
-    ".opencode/references/csv/人设与关系.csv": {
+    ".opencode/references/csv/\u4eba\u8bbe\u4e0e\u5173\u7cfb.csv": {
       "sha256": "e5b1b6eb954cb8799a20da7df8abc7738214d072e957c1834045eeeb38631f7d",
       "size": 83518
     },
-    ".opencode/references/csv/写作技法.csv": {
+    ".opencode/references/csv/\u5199\u4f5c\u6280\u6cd5.csv": {
       "sha256": "85be6642896ef04450e2bac37070577aaa5a300c548ca29ab6ec4c3b6ea90e1d",
       "size": 87274
     },
-    ".opencode/references/csv/命名规则.csv": {
+    ".opencode/references/csv/\u547d\u540d\u89c4\u5219.csv": {
       "sha256": "accaa5f1fe9ebb2d62f3b3af2f578432a5be94fb8ccf2c8895a47b51a671b8c5",
       "size": 56361
     },
-    ".opencode/references/csv/场景写法.csv": {
+    ".opencode/references/csv/\u573a\u666f\u5199\u6cd5.csv": {
       "sha256": "a7e7e577d3e222b38db82ac4fd06fb3a9ac4a3ebf53f69cf44d887fe48af2016",
       "size": 77966
     },
-    ".opencode/references/csv/桥段套路.csv": {
+    ".opencode/references/csv/\u6865\u6bb5\u5957\u8def.csv": {
       "sha256": "f61c33aadebd3c5fe4b4b9353141b39df91111e16b3708f571755b5df835043a",
       "size": 94030
     },
-    ".opencode/references/csv/爽点与节奏.csv": {
+    ".opencode/references/csv/\u723d\u70b9\u4e0e\u8282\u594f.csv": {
       "sha256": "c977e495218e87350f1da18a194b9c293ddc1b8f2869fa4f21423ca17a38a10b",
       "size": 67366
     },
-    ".opencode/references/csv/裁决规则.csv": {
+    ".opencode/references/csv/\u88c1\u51b3\u89c4\u5219.csv": {
       "sha256": "3663cf4dee4d692891cf313729ac10ff576eb4a5a98a6c919f8dc08470d077f6",
       "size": 8803
     },
-    ".opencode/references/csv/金手指与设定.csv": {
+    ".opencode/references/csv/\u91d1\u624b\u6307\u4e0e\u8bbe\u5b9a.csv": {
       "sha256": "e429b0f0485a93c9a271da2671612f94686d3f53b711689400c7081754e53c51",
       "size": 74152
     },
-    ".opencode/references/csv/题材与调性推理.csv": {
+    ".opencode/references/csv/\u9898\u6750\u4e0e\u8c03\u6027\u63a8\u7406.csv": {
       "sha256": "c5e3391467166974753f4be3a9e60d16762509b28f16d814e5ddcc387dac7346",
       "size": 22720
     },
@@ -1920,7 +1965,7 @@
       "sha256": "72d7543554cb2ac60db1aee77fe2b3d724d0bc0c4bd9b592ad877802c662496e",
       "size": 8715
     },
-    ".opencode/skills/webnovel-publish/使用说明.md": {
+    ".opencode/skills/webnovel-publish/\u4f7f\u7528\u8bf4\u660e.md": {
       "sha256": "a308f10f92e8df8f0a84199b0dcf5c4c7305e254ff2e1efec5f764ce2dee2045",
       "size": 6998
     },
@@ -2056,151 +2101,151 @@
       "sha256": "71a4a57263a69267bb80857d734eea64f3d79322bfe8c6a3331a96540c3167d2",
       "size": 10711
     },
-    ".opencode/templates/genres/修仙.md": {
+    ".opencode/templates/genres/\u4fee\u4ed9.md": {
       "sha256": "b87326f3924d96f66e989bd766b4740ef1b356dca63cc1b6078460fccac1bd81",
       "size": 4185
     },
-    ".opencode/templates/genres/克苏鲁.md": {
+    ".opencode/templates/genres/\u514b\u82cf\u9c81.md": {
       "sha256": "d0d3d989bff877fe0fee6d50bb8946b26c000066f1c75068a97ee3ca930db936",
       "size": 3685
     },
-    ".opencode/templates/genres/历史古代.md": {
+    ".opencode/templates/genres/\u5386\u53f2\u53e4\u4ee3.md": {
       "sha256": "6b18bd3ab821007100dc5c0fe80da07e2250be65c3a567f65e83d3a86f0bfdde",
       "size": 6043
     },
-    ".opencode/templates/genres/历史脑洞.md": {
+    ".opencode/templates/genres/\u5386\u53f2\u8111\u6d1e.md": {
       "sha256": "12b0581dbee1f9fb0015e34daeef3639992170ee0ab708d0b788a8165d1af540",
       "size": 6372
     },
-    ".opencode/templates/genres/古言.md": {
+    ".opencode/templates/genres/\u53e4\u8a00.md": {
       "sha256": "cf2fb303c944bef033e284f2f044776e11bbddbbdf6ae414ed2e4976ee491a37",
       "size": 6254
     },
-    ".opencode/templates/genres/多子多福.md": {
+    ".opencode/templates/genres/\u591a\u5b50\u591a\u798f.md": {
       "sha256": "05f2f1681764607cdcf180b79d031d1f26eaec7782fd04817fe334357eae1d65",
       "size": 5154
     },
-    ".opencode/templates/genres/女频悬疑.md": {
+    ".opencode/templates/genres/\u5973\u9891\u60ac\u7591.md": {
       "sha256": "1483a2fbb1623ea4ed1e34577da49b126b975f116573b4a9aae4e7ce058106ac",
       "size": 6294
     },
-    ".opencode/templates/genres/宫斗宅斗.md": {
+    ".opencode/templates/genres/\u5bab\u6597\u5b85\u6597.md": {
       "sha256": "ef3a09d8a9e703347cea76f99ba38980aeae00cf4f5395427787ba448c9dc841",
       "size": 5857
     },
-    ".opencode/templates/genres/年代.md": {
+    ".opencode/templates/genres/\u5e74\u4ee3.md": {
       "sha256": "cae0934d15d63602fa2bf0d6a14de30f2770eacaa5204387890d5a74ad21e70a",
       "size": 5753
     },
-    ".opencode/templates/genres/幻想言情.md": {
+    ".opencode/templates/genres/\u5e7b\u60f3\u8a00\u60c5.md": {
       "sha256": "10b3568073e5f806577998956de2b8d01003efcf5d6a335c9057f3d247d09407",
       "size": 5984
     },
-    ".opencode/templates/genres/悬疑灵异.md": {
+    ".opencode/templates/genres/\u60ac\u7591\u7075\u5f02.md": {
       "sha256": "03235b72a94c8b4a1e86a1687ab8c3d5c65e943dd47fa3676e84ecf64fb5409e",
       "size": 5488
     },
-    ".opencode/templates/genres/悬疑脑洞.md": {
+    ".opencode/templates/genres/\u60ac\u7591\u8111\u6d1e.md": {
       "sha256": "fa0439423c41e6fe37163ab138e93fed74bd52c589ca9729b5add41afbd72aae",
       "size": 6229
     },
-    ".opencode/templates/genres/抗战谍战.md": {
+    ".opencode/templates/genres/\u6297\u6218\u8c0d\u6218.md": {
       "sha256": "2767530c4721025ade68af3cd88dd0b0f1b11fdbde0c19ac25c906a3f9650615",
       "size": 5825
     },
-    ".opencode/templates/genres/无限流.md": {
+    ".opencode/templates/genres/\u65e0\u9650\u6d41.md": {
       "sha256": "9bda8e77ac066baf35335585e19a99ad887ff6e88a21f61d0d9de5794290f292",
       "size": 6749
     },
-    ".opencode/templates/genres/替身文.md": {
+    ".opencode/templates/genres/\u66ff\u8eab\u6587.md": {
       "sha256": "fb618645e90b38db8248e5f9c30044c06af0abba0b6c338abc533a457ff8d3ba",
       "size": 3524
     },
-    ".opencode/templates/genres/末世.md": {
+    ".opencode/templates/genres/\u672b\u4e16.md": {
       "sha256": "c319ae075191e85fb355f757ed0103bb4caa8d875a8a2aa7c21d6835059c4a0f",
       "size": 6719
     },
-    ".opencode/templates/genres/民国言情.md": {
+    ".opencode/templates/genres/\u6c11\u56fd\u8a00\u60c5.md": {
       "sha256": "8cbf2df326b8a2f1e1d751eef7c7b57b39084d0763e6f8a930cb641893e6b6ef",
       "size": 5990
     },
-    ".opencode/templates/genres/游戏体育.md": {
+    ".opencode/templates/genres/\u6e38\u620f\u4f53\u80b2.md": {
       "sha256": "c6e04c0c87013e82f14cb0c4e49bb9e5070f75512d0f5a3eb92cf677b44145bc",
       "size": 5834
     },
-    ".opencode/templates/genres/狗血言情.md": {
+    ".opencode/templates/genres/\u72d7\u8840\u8a00\u60c5.md": {
       "sha256": "92e9fb04b682c0b048d8321b458a6023e3455deb57fdb29eba35804a78f1e41c",
       "size": 5197
     },
-    ".opencode/templates/genres/现实题材.md": {
+    ".opencode/templates/genres/\u73b0\u5b9e\u9898\u6750.md": {
       "sha256": "ad58ed60e100c0faf3e1c0e1544d0f9c42cbe95b0c7b3c3800a5e3e1efd4bab0",
       "size": 6164
     },
-    ".opencode/templates/genres/现言脑洞.md": {
+    ".opencode/templates/genres/\u73b0\u8a00\u8111\u6d1e.md": {
       "sha256": "79983cc6cbbb39d33f3e749e0c8a1a97d1d0144fa2532cec103241e6d70d923d",
       "size": 6335
     },
-    ".opencode/templates/genres/电竞.md": {
+    ".opencode/templates/genres/\u7535\u7ade.md": {
       "sha256": "b748375f7184f4683b2da3a0c8180c4df9b61125ce66fb99ad2482dac48aecf3",
       "size": 3910
     },
-    ".opencode/templates/genres/直播文.md": {
+    ".opencode/templates/genres/\u76f4\u64ad\u6587.md": {
       "sha256": "b85f87d8728bfe951a48ab7f98f08fa10f7df11377fa4e686c87e42bd8c98d67",
       "size": 3886
     },
-    ".opencode/templates/genres/知乎短篇.md": {
+    ".opencode/templates/genres/\u77e5\u4e4e\u77ed\u7bc7.md": {
       "sha256": "e2515afe0c317553a307c19454d8c45c06ffb5213a1839268ec1c4765fe9ff55",
       "size": 6025
     },
-    ".opencode/templates/genres/种田.md": {
+    ".opencode/templates/genres/\u79cd\u7530.md": {
       "sha256": "028b8729244c854c5f02d1576e9a14242b583d183c822b87eaee76960ffe7fba",
       "size": 8355
     },
-    ".opencode/templates/genres/科幻.md": {
+    ".opencode/templates/genres/\u79d1\u5e7b.md": {
       "sha256": "0d9ac6a7d089bb99a9d5599c45f544937185d0d552b5bc1377267d8a4f3e9675",
       "size": 6512
     },
-    ".opencode/templates/genres/系统流.md": {
+    ".opencode/templates/genres/\u7cfb\u7edf\u6d41.md": {
       "sha256": "bf04aa63bed601b75dd1d9853004838a7eac808575afa13e5c66964aab0b464b",
       "size": 4002
     },
-    ".opencode/templates/genres/职场婚恋.md": {
+    ".opencode/templates/genres/\u804c\u573a\u5a5a\u604b.md": {
       "sha256": "c0c9e7b9c6bd9328e41a18690d07b525fe769b7234a8a0deca77a17b20433523",
       "size": 6167
     },
-    ".opencode/templates/genres/西幻.md": {
+    ".opencode/templates/genres/\u897f\u5e7b.md": {
       "sha256": "593607e1c590b67ac58e01e374243cfed9ee00fe30d4eade59304c3c21270224",
       "size": 6745
     },
-    ".opencode/templates/genres/规则怪谈.md": {
+    ".opencode/templates/genres/\u89c4\u5219\u602a\u8c08.md": {
       "sha256": "be8bb1fd07186d9f77afca0fcbd4f6a40edf197aec691f5b2f747d8504c80e49",
       "size": 7608
     },
-    ".opencode/templates/genres/豪门总裁.md": {
+    ".opencode/templates/genres/\u8c6a\u95e8\u603b\u88c1.md": {
       "sha256": "c2bfad7b1e3fb0f908ffba2cb423b24c62ce3b27be5a6f7f48c2eb7c5221feed",
       "size": 5638
     },
-    ".opencode/templates/genres/都市异能.md": {
+    ".opencode/templates/genres/\u90fd\u5e02\u5f02\u80fd.md": {
       "sha256": "498f11ceb983b82ba0d53a5b597ef0287f497af69b2e60753ccc36c7185cce2e",
       "size": 4060
     },
-    ".opencode/templates/genres/都市日常.md": {
+    ".opencode/templates/genres/\u90fd\u5e02\u65e5\u5e38.md": {
       "sha256": "ca04c862448c31b8d0166a232b79783e8670b3fbbe96b1d60cf826861cb31fcd",
       "size": 5518
     },
-    ".opencode/templates/genres/都市脑洞.md": {
+    ".opencode/templates/genres/\u90fd\u5e02\u8111\u6d1e.md": {
       "sha256": "66847d7239520ed44ed3640f8e8f2e1ac5b05c74e383df1158474c8e7509a4b3",
       "size": 6399
     },
-    ".opencode/templates/genres/青春甜宠.md": {
+    ".opencode/templates/genres/\u9752\u6625\u751c\u5ba0.md": {
       "sha256": "75da58876ba8f5f6bbe6b5ea7b4a25baeb86f869cc91f7a3cf3a3e9925470054",
       "size": 5913
     },
-    ".opencode/templates/genres/高武.md": {
+    ".opencode/templates/genres/\u9ad8\u6b66.md": {
       "sha256": "cd1fb66b0c2c4a2fe67f298dbe627ec1d64fc5dcf6adcc38995b24d54852e238",
       "size": 5922
     },
-    ".opencode/templates/genres/黑暗题材.md": {
+    ".opencode/templates/genres/\u9ed1\u6697\u9898\u6750.md": {
       "sha256": "361fc10bd9f3948d911aaae984da9eab86f29a808b6556332aa59fb4f6bf5597",
       "size": 5054
     },
@@ -2216,47 +2261,47 @@
       "sha256": "5eddb28ae9c40a6de66d361a46d18d874411716423ebf8d106883f1fdccd4e53",
       "size": 1760
     },
-    ".opencode/templates/output/复合题材-融合逻辑.md": {
+    ".opencode/templates/output/\u590d\u5408\u9898\u6750-\u878d\u5408\u903b\u8f91.md": {
       "sha256": "3f47dcb868a087073bd70832fe394acc4e7613a4cedc940b438a40a8a5090d3d",
       "size": 683
     },
-    ".opencode/templates/output/大纲-卷时间线.md": {
+    ".opencode/templates/output/\u5927\u7eb2-\u5377\u65f6\u95f4\u7ebf.md": {
       "sha256": "eceabd8fef73ed45f53e03eca0e283f24cc5361dbc294e7b101cec7f1d785647",
       "size": 1991
     },
-    ".opencode/templates/output/大纲-卷节拍表.md": {
+    ".opencode/templates/output/\u5927\u7eb2-\u5377\u8282\u62cd\u8868.md": {
       "sha256": "8b553cb72cd2be0c22211f4bc9d5b905599d98a6e38786b856800c4e64c3a04c",
       "size": 1275
     },
-    ".opencode/templates/output/大纲-总纲.md": {
+    ".opencode/templates/output/\u5927\u7eb2-\u603b\u7eb2.md": {
       "sha256": "2cb8fab8b8aba2765c5a98ba1a5e1981ccb0e1563931dc410fbae311a27fbc35",
       "size": 1061
     },
-    ".opencode/templates/output/设定集-世界观.md": {
+    ".opencode/templates/output/\u8bbe\u5b9a\u96c6-\u4e16\u754c\u89c2.md": {
       "sha256": "78c5ba312b8531b0f19b300986806ed34b633540a6b3a956b29029127ebb3db1",
       "size": 1682
     },
-    ".opencode/templates/output/设定集-主角卡.md": {
+    ".opencode/templates/output/\u8bbe\u5b9a\u96c6-\u4e3b\u89d2\u5361.md": {
       "sha256": "56ef0b8a76d2796c2b6755fc91bdf6a90909b37e0ae509484c156c19096240bb",
       "size": 1050
     },
-    ".opencode/templates/output/设定集-主角组.md": {
+    ".opencode/templates/output/\u8bbe\u5b9a\u96c6-\u4e3b\u89d2\u7ec4.md": {
       "sha256": "40dc2629cb37f816173eb6d6e65eef7891391b59bf3e75796c3e7b17ba2b4437",
       "size": 700
     },
-    ".opencode/templates/output/设定集-力量体系.md": {
+    ".opencode/templates/output/\u8bbe\u5b9a\u96c6-\u529b\u91cf\u4f53\u7cfb.md": {
       "sha256": "e2e78414f5e806f3786be2fbee2e446913cdde10aff921f477886dde5f26d040",
       "size": 1414
     },
-    ".opencode/templates/output/设定集-反派设计.md": {
+    ".opencode/templates/output/\u8bbe\u5b9a\u96c6-\u53cd\u6d3e\u8bbe\u8ba1.md": {
       "sha256": "e81b01dd2240aadeff2bf15a12e1375c311c18fbe21758ab0564593cbfaadf27",
       "size": 941
     },
-    ".opencode/templates/output/设定集-女主卡.md": {
+    ".opencode/templates/output/\u8bbe\u5b9a\u96c6-\u5973\u4e3b\u5361.md": {
       "sha256": "41f00f0248643e1d43fefbd420a8606ce92abdc38236b18cb5a3de5b188b83bd",
       "size": 878
     },
-    ".opencode/templates/output/设定集-金手指.md": {
+    ".opencode/templates/output/\u8bbe\u5b9a\u96c6-\u91d1\u624b\u6307.md": {
       "sha256": "f22fcf6a9f842bf86e42eb30a534745cd48e04e6a612678adb73d07f7a187aeb",
       "size": 1011
     }
