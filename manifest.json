@@ -969,8 +969,8 @@
       "size": 13444
     },
     ".opencode/scripts/data_modules/style_sampler.py": {
-      "sha256": "9b60de91c67d22e426b46dcff4be38cc69b1913b9a4e028b5758ba408e6a1f57",
-      "size": 14364
+      "sha256": "62d6b5fa19dc05cb6249c1bffe3f43abb365a277a9e07b77ed0fcb79858f6899",
+      "size": 16374
     },
     ".opencode/scripts/data_modules/summary_projection_writer.py": {
       "sha256": "da6a92a1bcac9e3c3edfc26251fdafca2c0c4d0f87f40d1d69e296ccbbf6beae",
@@ -1555,6 +1555,10 @@
     ".opencode/scripts/data_modules/tests/test_structural_checker_failure.py": {
       "sha256": "70840b1576e1ebaebfab1d51e7a7a231465fdd40ee9d94e2d9703b4c508fb9af",
       "size": 6326
+    },
+    ".opencode/scripts/data_modules/tests/test_style_sampler.py": {
+      "sha256": "f63fdc31781407a16894ae326f348626555994a9caae898e861de6666b1e8aed",
+      "size": 8352
     },
     ".opencode/scripts/data_modules/tests/test_style_sampler_cli.py": {
       "sha256": "ddaf9ca395eb05032c23652e084d6e8070d24b1ffbdee04a8c2312ab01332e73",

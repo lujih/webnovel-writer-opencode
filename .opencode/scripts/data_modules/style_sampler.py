@@ -124,7 +124,10 @@ class StyleSampler:
                 SELECT id, chapter, scene_type, content, score, tags, created_at
                 FROM samples
                 WHERE scene_type = ? AND score >= ?
-                ORDER BY score DESC
+                -- 次级键 chapter/id 保证同分时顺序确定。
+                -- 只有 score 一个键时，同分顺序由 SQL 实现细节决定——
+                -- 实测 20 条同分样本永远只取到前 5 条，后 15 条选不到。
+                ORDER BY score DESC, chapter ASC, id ASC
                 LIMIT ?
             """, (scene_type, min_score, limit))
 
@@ -137,7 +140,7 @@ class StyleSampler:
             cursor.execute("""
                 SELECT id, chapter, scene_type, content, score, tags, created_at
                 FROM samples
-                ORDER BY score DESC
+                ORDER BY score DESC, chapter ASC, id ASC
                 LIMIT ?
             """, (limit,))
 
@@ -262,12 +265,49 @@ class StyleSampler:
             # 根据大纲推断需要的场景类型
             target_types = self._infer_scene_types(chapter_outline)
 
-        samples = []
-        per_type = max(1, max_samples // len(target_types)) if target_types else max_samples
+        if not target_types:
+            return []
 
+        # 先按类型均分取一轮，**再补一轮**直到取满 max_samples。
+        #
+        # 此前只做 `per_type = max_samples // len(target_types)`（向下取整）：
+        # 两类时 `3 // 2 = 1`，每类取 1 条合计 2 条，请求 3 条得到 2 条。
+        # max_samples 是调用方为 token 预算设的上限——"最多 N 条"与"有余量时
+        # 尽量给满 N 条"并不矛盾。
+        samples: List[StyleSample] = []
+        seen_ids = set()
+
+        def _take(scene_type: str, limit: int) -> None:
+            for sample in self.get_samples_by_type(
+                    scene_type, limit=limit, min_score=0.8):
+                if len(samples) >= max_samples:
+                    return
+                # 用 (chapter, scene_type, content) 做去重键。
+                #
+                # 不能用 `sample.id`：`_row_to_sample()` 不回填 id（恒为 None），
+                # 而 `id(sample)` 每次都是新对象、值不同——两种写法都会让去重
+                # 失效，补取阶段就会把同一条样本重复塞进来。
+                key = (sample.chapter, sample.scene_type, sample.content)
+                if key in seen_ids:
+                    continue
+                seen_ids.add(key)
+                samples.append(sample)
+
+        per_type = max(1, max_samples // len(target_types))
         for scene_type in target_types:
-            type_samples = self.get_samples_by_type(scene_type, limit=per_type, min_score=0.8)
-            samples.extend(type_samples)
+            _take(scene_type, per_type)
+
+        # 补足：逐类型再多取一些，直到够数或用尽
+        round_size = per_type
+        while len(samples) < max_samples and round_size < max_samples * 4:
+            round_size *= 2
+            before = len(samples)
+            for scene_type in target_types:
+                _take(scene_type, round_size)
+                if len(samples) >= max_samples:
+                    break
+            if len(samples) == before:
+                break           # 库里的样本已经用尽
 
         return samples[:max_samples]
 
