@@ -745,8 +745,8 @@
       "size": 12198
     },
     ".opencode/scripts/data_modules/entity_cleanup.py": {
-      "sha256": "16819289ab0de159c95c71d92f9dd120a9a31ec8b35d5c644854a341bce27545",
-      "size": 4129
+      "sha256": "6cb56c22235e64951e68ff3a1acecb73fe9c224124aa324b7ce408a53a8cf53d",
+      "size": 5627
     },
     ".opencode/scripts/data_modules/entity_index_utils.py": {
       "sha256": "048e174f426a395cbdffa51f27a2f3ffd0747fa9409299b89ce2d912b8298f43",
@@ -1163,6 +1163,10 @@
     ".opencode/scripts/data_modules/tests/test_entity_alias_ambiguity.py": {
       "sha256": "001bb54f4806a0af3b2169094c2b6c91f13cf8ca54c39acbd5a668ae8b965aea",
       "size": 7215
+    },
+    ".opencode/scripts/data_modules/tests/test_entity_cleanup.py": {
+      "sha256": "95d1da1f3bdcb2f631a06aa8dfad65054224b2bc603217c4096cd25e45567337",
+      "size": 8120
     },
     ".opencode/scripts/data_modules/tests/test_entity_linker_cli.py": {
       "sha256": "d0938e64880dc5ffb4d5c91578b3036f777e0f0944cdd782128d8ae221bcda12",

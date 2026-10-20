@@ -74,10 +74,29 @@ def _mark_invalid(db_path: Path, entities: list[dict]) -> int:
         """)
         count = 0
         for e in entities:
+            eid = e["entity_id"]
+            # 幂等：已存在未处理的同一条就不重复插入。
+            #
+            # 此前无条件 INSERT，连跑三次会让 invalid_facts 变成 1→2→3 条，
+            # 人工复核时看到多条一模一样的记录，无从判断是真问题还是重复标记。
+            existing = conn.execute(
+                "SELECT 1 FROM invalid_facts WHERE entity_id = ? AND resolved = 0",
+                (eid,),
+            ).fetchone()
+            if existing:
+                continue
+            # 已 resolved 的也不再标记：用户已经处理过这条，重新插入未处理记录
+            # 等于推翻他的复核结论。
+            resolved = conn.execute(
+                "SELECT 1 FROM invalid_facts WHERE entity_id = ? AND resolved = 1",
+                (eid,),
+            ).fetchone()
+            if resolved:
+                continue
             conn.execute(
                 "INSERT INTO invalid_facts (entity_id, entity_type, entity_name, chapter, reason) "
                 "VALUES (?, ?, ?, ?, ?)",
-                (e["entity_id"], e["entity_type"], e["entity_name"],
+                (eid, e["entity_type"], e["entity_name"],
                  e["chapter_first_seen"], "dirty_entity_id: non-CJK")
             )
             count += 1
@@ -90,6 +109,18 @@ def _mark_invalid(db_path: Path, entities: list[dict]) -> int:
 def cmd_entity_clean(args) -> int:
     project_root = Path(args.project_root).expanduser().resolve()
     db_path = project_root / ".webnovel" / "index.db"
+
+    # 「index.db 不存在」与「数据库里没有脏实体」是两件事。前者说明项目还没
+    # 建索引或路径不对，直接返回 0 会让脚本链误以为检查通过。
+    if not db_path.is_file():
+        print(
+            f"ERROR: 未找到 index.db（{db_path}）。\n"
+            f"   entity-clean 需要索引库才能检查实体 ID。\n"
+            f"   修复：先运行 `webnovel.py index rebuild` 建立索引，"
+            f"或用 --project-root 指定正确的书项目根目录。",
+            file=sys.stderr,
+        )
+        return 1
 
     dirty = _scan_dirty_entities(db_path)
     if not dirty:
