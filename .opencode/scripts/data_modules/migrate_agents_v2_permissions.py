@@ -81,7 +81,9 @@ def parse_tools(frontmatter: str) -> list[str]:
     m = re.search(r"^tools:\s*$(.*?)(?=^\S|\Z)", frontmatter, re.M | re.S)
     if not m:
         return []
-    return re.findall(r"^\s+([a-z_]+):\s*(?:true|false)\s*$", m.group(1), re.M)
+    # 只收 `true`。此前 `(?:true|false)` 会把 `edit: false` 也当成需要的工具——
+    # 于是用户显式关掉的工具在迁移后反而被放行。
+    return re.findall(r"^\s+([a-z_]+):\s*true\s*$", m.group(1), re.M)
 
 
 def render_permissions(tools: list[str]) -> str:
@@ -151,15 +153,69 @@ def parse_allowed_actions(fm: str) -> list[str]:
     return sorted(allowed)
 
 
+#: V2 动作 → V1 工具名。**显式写死**而不是从 `_ACTION` 反向构造。
+#:
+#: 为什么不能反推：`_ACTION` 是**多对一**的（`read` 和 `edit` 都映射到 V2 的
+#: `edit`；`write` 也映射到 `edit`）。反向构造时 `{v: k}` 只会留下最后一个，
+#: 于是 `read` 反查成 `edit`——用户配的只读权限被悄悄提权成可写。
+#: 同时 `_ACTION` 里的 `write`/`edit` 若被排除（原实现如此），`edit` 又反查
+#: 不到，只能原样透传。两种错误叠加，迁移后权限语义就变了。
+_V2_TO_V1 = {
+    "read": "read",
+    "glob": "glob",
+    "grep": "grep",
+    "shell": "bash",
+    "edit": "edit",
+    "subagent": "task",
+    "skill": "skill",
+    "question": "question",
+    "webfetch": "webfetch",
+    "websearch": "websearch",
+}
+
+
 def _v1_tools_for(allowed: list[str]) -> list[str]:
-    """把 V2 动作名反推回 V1 工具名，供 render_permissions 复用同一套渲染。"""
-    inverse = {v: k for k, v in _ACTION.items() if k not in ("write", "edit")}
-    out = []
+    """把 V2 动作名反推回 V1 工具名，供 render_permissions 复用同一套渲染。
+
+    映射写死（见 `_V2_TO_V1`），不依赖 `_ACTION` 反向构造——那是多对一的，
+    反推会把 `read` 变成 `edit`。
+    """
+    out: list[str] = []
     for action in allowed:
-        out.append(inverse.get(action, action))
-    if "edit" in allowed:
-        out.append("write")
+        tool = _V2_TO_V1.get(action)
+        if tool and tool not in out:
+            out.append(tool)
     return out
+
+
+def _has_unpreservable_rules(fm: str, allowed: list[str]) -> bool:
+    """现有 permissions 里是否有本脚本无法无损重建的规则。
+
+    渲染器只会产出 `action/resource/effect` 三件套，且 `parse_allowed_actions`
+    只认 `resource: "*"`。以下情况重写会丢信息：
+
+    1. 有带 resource 限定的 allow（如 `resource: "正文/**"`）——反推不出工具名，
+       重写后这条限定消失，权限被放宽。
+    2. 有本脚本不认识的 action（不在 `_V2_TO_V1` 里）——渲染器不知道该怎么排，
+       重写后该规则消失。
+
+    宁可不动，也不要静默丢规则。
+    """
+    # 带 resource 限定的 allow 规则
+    for action, resource, effect in re.findall(
+        r'^\s*- action:\s*"?([^"\n]+?)"?\s*\n\s*resource:\s*"?([^"\n]+?)"?\s*\n'
+        r'\s*effect:\s*(\w+)\s*$',
+        fm, re.M,
+    ):
+        if effect == "allow" and resource != "*":
+            return True
+
+    # 不认识的 action
+    for action in re.findall(r'^\s*- action:\s*"?([^"\n]+?)"?\s*$', fm, re.M):
+        name = action.strip()
+        if name != "*" and name not in _V2_TO_V1:
+            return True
+    return False
 
 
 def convert(text: str) -> str:
@@ -172,7 +228,17 @@ def convert(text: str) -> str:
         if "permissions:" not in fm:
             raise ValueError("未找到 tools: 块")
         # 已迁移：从 allowlist 反推需要的 V1 工具名后重新渲染。
-        tools = _v1_tools_for(parse_allowed_actions(fm))
+        #
+        # 但**只有能无损重建时才可以重写**。渲染器只会产出
+        # `action/resource/effect` 三件套，而用户可能写了：
+        #   - 带 resource 限定的 allow（parse_allowed_actions 只认 resource: "*"）
+        #   - 自定义注释
+        #   - 本脚本不认识的 action
+        # 这些都无法保留，重写等于静默丢规则。此时原样返回，交给人工处理。
+        allowed = parse_allowed_actions(fm)
+        tools = _v1_tools_for(allowed)
+        if _has_unpreservable_rules(fm, allowed):
+            return text
     if _already_current(fm, tools):
         return text  # 幂等
     block = render_permissions(tools) + "\n"

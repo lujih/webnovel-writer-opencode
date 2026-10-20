@@ -853,8 +853,8 @@
       "size": 848
     },
     ".opencode/scripts/data_modules/migrate_agents_v2_permissions.py": {
-      "sha256": "bc1eeb0c7be2ef7ca57a647d8acce589751abee6ab282f32928a16cf2c314f77",
-      "size": 8488
+      "sha256": "ade61fc46dec6bf57b42279e3ae406352efe51730e5a97fdce9546549ca8a52f",
+      "size": 11260
     },
     ".opencode/scripts/data_modules/migrate_state_to_sqlite.py": {
       "sha256": "1434de71612db3f06004a4fe1b4665248448d4db912d6a9c2f68f56b0d7df4ba",
@@ -1275,6 +1275,10 @@
     ".opencode/scripts/data_modules/tests/test_memory_writer.py": {
       "sha256": "51bad9b054c6d0948975037f85d51f888c8f02bb9555ef87d6eaca5643435dc3",
       "size": 2320
+    },
+    ".opencode/scripts/data_modules/tests/test_migrate_agents_permissions.py": {
+      "sha256": "43f631855f566ad9b535f90553c59a4eeafc2896e905ea27c5ce91e6dff737c3",
+      "size": 8018
     },
     ".opencode/scripts/data_modules/tests/test_migrate_state_to_sqlite.py": {
       "sha256": "1f08e27746f92ee0b3183a154c16cc34b26f49853c68dc05bd7b478630acecfa",
