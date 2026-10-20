@@ -124,14 +124,26 @@ def find_chapter_file(project_root: Path, chapter_num: int) -> Optional[Path]:
 
     vol_dir = chapters_dir / f"第{volume_num_for_chapter(chapter_num)}卷"
     if vol_dir.exists():
-        candidates = sorted(vol_dir.glob(f"第{chapter_num:03d}章*.md")) + sorted(vol_dir.glob(f"第{chapter_num:04d}章*.md"))
-        for c in candidates:
+        for c in (sorted(vol_dir.glob(f"第{chapter_num:04d}章*.md"))
+                  + sorted(vol_dir.glob(f"第{chapter_num:03d}章*.md"))
+                  + sorted(vol_dir.glob(f"第{chapter_num}章*.md"))):
             if c.is_file():
                 return c
 
     # Fallback: search anywhere under 正文/ (supports custom layouts)
-    candidates = sorted(chapters_dir.rglob(f"第{chapter_num:03d}章*.md")) + sorted(chapters_dir.rglob(f"第{chapter_num:04d}章*.md"))
-    for c in candidates:
+    #
+    # 三组 glob 按**规范程度**排序：4 位（项目标准，`default_chapter_draft_path`
+    # 与 `chapter_rename` 都以此为目标）→ 3 位 → 1-2 位旧格式。
+    #
+    # 此前顺序是 3 位在前，于是同一章同时存在 `第007章.md` 与 `第0007章.md`
+    # 时选中的是前者——与"4 位是标准"矛盾。
+    #
+    # 1-2 位那一组覆盖旧格式文件（如 `第7章-旧格式.md`）：此前完全漏掉，
+    # 而 `chapter_rename` 需要用户主动跑，在那之前这些章节对依赖本章定位的
+    # 功能（字数统计、CED 计算）而言就是"定位不到"。
+    for c in (sorted(chapters_dir.rglob(f"第{chapter_num:04d}章*.md"))
+              + sorted(chapters_dir.rglob(f"第{chapter_num:03d}章*.md"))
+              + sorted(chapters_dir.rglob(f"第{chapter_num}章*.md"))):
         if c.is_file():
             return c
 
