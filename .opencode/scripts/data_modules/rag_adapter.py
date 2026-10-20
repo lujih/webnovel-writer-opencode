@@ -1358,7 +1358,11 @@ class RAGAdapter:
         )
         parent_ids = sorted({r.parent_chunk_id for r in child_results if r.parent_chunk_id})
         parents = self._get_chunks_by_ids(parent_ids) if parent_ids else []
-        merged = self._merge_results(parents, child_results[:top_k])
+        # `_merge_results` 对每个命中 parent 的 child 会追加**两条**（parent + child），
+        # 所以合并结果可能是 child 数的 2 倍。`top_k` 是调用方控制上下文体量的
+        # 参数，必须截断——否则同一本书在有 parent 的章节上注入 2 倍内容，
+        # 按 top_k 估算的 token 预算全部失准。
+        merged = self._merge_results(parents, child_results[:top_k])[:top_k]
         latency_ms = int((time.perf_counter() - start_time) * 1000)
         self._log_query(query, "backtrack", merged, latency_ms)
         return merged
