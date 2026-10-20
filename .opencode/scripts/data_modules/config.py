@@ -373,6 +373,19 @@ class DataModulesConfig:
 
     @classmethod
     def from_project_root(cls, project_root: str | Path) -> "DataModulesConfig":
+        """从项目根构造配置。
+
+        空值必须显式拒绝：`normalize_windows_path("")` 返回 `Path("")`，而
+        Python 的 `Path("")` 恒等于 `Path(".")`——**当前工作目录**。环境变量
+        留空（`export WEBNOVEL_PROJECT_ROOT=`）、配置项留空、CLI 传空串都会
+        走到这里；若静默接受，后续所有读写都作用在 CWD 上，而作者以为在操作
+        自己的书。这类"写错书"比报错难发现得多。
+        """
+        if project_root is None or not str(project_root).strip():
+            raise ValueError(
+                "项目根路径为空。请通过 --project-root 指定书项目根目录，"
+                "或设置 WEBNOVEL_PROJECT_ROOT 环境变量（不能为空串）。"
+            )
         root = normalize_windows_path(project_root).expanduser().resolve()
         # 在构造配置前加载项目级 `.env`，以确保 EMBED_*/RERANK_* 等字段可生效
         _load_project_dotenv(root)

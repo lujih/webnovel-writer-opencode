@@ -721,8 +721,8 @@
       "size": 1980
     },
     ".opencode/scripts/data_modules/config.py": {
-      "sha256": "2d7669ef42b2fa3a5d0ae3aff251b27a2d95fb94d9cdff8630c162bde9d5f788",
-      "size": 14938
+      "sha256": "ad43c218da9a408f690ea44826df4d8feafacf010a4e51b11d484e95407d94f4",
+      "size": 15732
     },
     ".opencode/scripts/data_modules/context_manager.py": {
       "sha256": "e06c1200623d300c69c17577a0ee21995a9cc85c66b8d3a66edfef7c828051d6",
@@ -1428,6 +1428,10 @@
       "sha256": "fad52f6cf3aeffb64bc54956438677457ad2083d98a79f39a6c24fe7b90d7bf4",
       "size": 5687
     },
+    ".opencode/scripts/data_modules/tests/test_runtime_compat.py": {
+      "sha256": "167e0f3439f7950bc6bad9f0cc0f46518530c5e2d22080e1ca1e173d7cfd5047",
+      "size": 7775
+    },
     ".opencode/scripts/data_modules/tests/test_runtime_contract_builder.py": {
       "sha256": "c79f9aa9e17cdce0e4b7031aea820e6273e6decf7762e4d1b13fc4536ceb61e1",
       "size": 4010
@@ -1749,8 +1753,8 @@
       "size": 2245
     },
     ".opencode/scripts/runtime_compat.py": {
-      "sha256": "50e7132f825c31a17c705d257713a12e6e89c13d2421c544f227569811e9cdfa",
-      "size": 2105
+      "sha256": "974dcf2149eaa3240c2971b54579b62a01e4cad0c36c85e418e542c9e16c2c79",
+      "size": 2727
     },
     ".opencode/scripts/security_utils.py": {
       "sha256": "7c1578dbad9ab8729bf85bd464668a1c1634e33477934ce962c9d3ea8532470c",
