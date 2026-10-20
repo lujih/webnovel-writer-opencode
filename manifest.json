@@ -1,67 +1,22 @@
 {
-  "version": "v2.9.2-20261020.0728",
+  "version": "v2.9.2-20261019.1220",
   "tag": "v2.9.2",
-  "updated": "2026-10-20T07:28:25Z",
+  "updated": "2026-10-19T12:20:23Z",
   "changelog": [
     {
-      "hash": "40b3911",
+      "hash": "02ab891",
       "type": "fix",
-      "message": "fix: manifest \u6f0f\u6536 6 \u4e2a\u65b0\u6d4b\u8bd5\u6587\u4ef6"
+      "message": "fix: \u540c\u540d\u6b67\u4e49\u4e0a\u62a5\u5230\u63d0\u53d6\u9636\u6bb5\u2014\u2014data-agent \u7684\u7f6e\u4fe1\u5ea6\u5206\u7ea7\u62ff\u4e0d\u5230\u89e6\u53d1\u6761\u4ef6"
     },
     {
-      "hash": "4b8d93b",
-      "type": "test",
-      "message": "test: \u524d\u7aef\u8865\u7ec4\u4ef6\u5c42\u6d4b\u8bd5\u2014\u2014\u8986\u76d6 loading/\u7a7a\u6001/\u9519\u8bef\u6001/\u7ade\u6001"
-    },
-    {
-      "hash": "b0e874e",
+      "hash": "89c9658",
       "type": "feat",
-      "message": "feat: \u8865\u5b8c\u8ba1\u5212\u5185 3 \u9879\u9057\u6f0f + \u8fd0\u7ef4\u8bca\u65ad\u9875\uff08\u7b2c 11 \u4e2a\u9875\u9762\uff09"
+      "message": "feat: \u8ffd\u8bfb\u503a\u8ba1\u606f\u63a5\u5165\u63d0\u4ea4\u94fe\u8def\u2014\u2014\u6b64\u524d\u53ea\u6709\u624b\u5de5 CLI\uff0c\u9ed8\u8ba4\u8def\u5f84\u4e0a\u673a\u5236\u4e0d\u5b58\u5728"
     },
     {
-      "hash": "ef4ca72",
-      "type": "fix",
-      "message": "fix: \u7b2c\u4e8c\u8f6e\u6df1\u5ea6\u5ba1\u67e5\u2014\u2014\u8865 --host \u7ef4\u5ea6\u3001totals \u88ab LIMIT \u622a\u65ad\u3001HttpError \u672a\u8986\u76d6\u5199\u65b9\u6cd5"
-    },
-    {
-      "hash": "ff87f83",
-      "type": "fix",
-      "message": "fix: \u4e0a\u4e0b\u6587\u7a7a\u6001\u5f15\u5bfc\u6587\u6848\u7684\u4e2d\u82f1\u6587\u7c98\u8fde"
-    },
-    {
-      "hash": "0e818bb",
-      "type": "docs",
-      "message": "docs: dashboard \u52a0\u56fa\u4e0e\u8865\u5168\u8ba1\u5212\uff08Phase 1-5\uff0c\u542b\u5b9e\u6d4b\u8bc1\u636e\uff09"
-    },
-    {
-      "hash": "9fce407",
-      "type": "fix",
-      "message": "fix: \u4e0a\u4e0b\u6587\u9875\u533a\u5206\u7a7a\u6001\u4e0e\u9519\u8bef\u3001\u4e09\u5904\u89c6\u89c9\u7455\u75b5\u3001\u6587\u6863\u4e0e\u5b9e\u73b0\u5bf9\u9f50"
-    },
-    {
-      "hash": "6da15d6",
-      "type": "test",
-      "message": "test: \u524d\u7aef\u5f15\u5165 vitest + eslint + CI\uff0c\u5e76\u4fee\u6389 lint \u6293\u51fa\u7684\u4e24\u4e2a\u771f bug"
-    },
-    {
-      "hash": "cd49290",
-      "type": "feat",
-      "message": "feat: \u8ffd\u8bfb\u503a\u9762\u677f\u2014\u2014\u6570\u636e\u5c42\u6709\u3001\u770b\u677f\u4e00\u76f4\u6ca1\u6709\u5165\u53e3\u7684\u5b50\u7cfb\u7edf"
-    },
-    {
-      "hash": "d8b075f",
-      "type": "test",
-      "message": "test: dashboard \u5199\u7aef\u70b9\u65ad\u8a00\u526f\u4f5c\u7528\uff0c\u5835\u4f4f\u300c500 \u4e5f\u7b97\u901a\u8fc7\u300d\u7684\u76f2\u533a"
-    },
-    {
-      "hash": "fa6a660",
-      "type": "fix",
-      "message": "fix: dashboard \u4e09\u4e2a P0\u2014\u2014\u53cd\u6a21\u5f0f\u5199\u5165\u81ea\u9501\u3001\u96f7\u8fbe\u56fe\u7a7a\u767d\u3001\u6362\u7aef\u53e3\u540e\u5199\u64cd\u4f5c\u5168\u6302"
-    },
-    {
-      "hash": "db49af4",
+      "hash": "ac66e00",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261019.1220 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261019.1204 [skip ci]"
     }
   ],
   "files": {
@@ -1585,6 +1540,10 @@
       "sha256": "ccfa2d486d995110692e0a12fc27e9052ad27d1e41055f1560e187c356774d18",
       "size": 16827
     },
+    ".opencode/scripts/data_modules/tests/test_writing_checklist_completion.py": {
+      "sha256": "8ffb7ec37f00619047088f60fa530939795d54b0afa8d3c4d6a4b19aba094d26",
+      "size": 7003
+    },
     ".opencode/scripts/data_modules/urgency_utils.py": {
       "sha256": "5fb322dec875230a3fc40f700474d58505f3126b55d13924a594ed1471ee6875",
       "size": 1013
@@ -1618,8 +1577,8 @@
       "size": 6700
     },
     ".opencode/scripts/data_modules/writing_guidance_builder.py": {
-      "sha256": "85e439ded80f6114f5001fc841afb5ec7e89f63df917569d64ecbc53de0dc9d4",
-      "size": 18444
+      "sha256": "79dd0cdd7b37e75e229ee6622dd68bf74d86c1fc1faea12a53e3e10adb2799db",
+      "size": 19416
     },
     ".opencode/scripts/export_manager/__init__.py": {
       "sha256": "896de43b9991d52965a41c072c879f985b557323ee00e7b96afa03d34266c55d",

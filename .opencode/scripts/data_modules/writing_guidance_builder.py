@@ -465,11 +465,24 @@ def is_checklist_item_completed(item: Dict[str, Any], reader_signal: Dict[str, A
         return len(pattern_usage) >= 2
 
     if item_id == "genre_anchor_consistency":
-        return True
+        # 此前无条件 True。题材锚点一致性是**可验证**的：有信号时按信号判，
+        # 没有信号时无从验证——无从验证不等于做到。
+        anchor = reader_signal.get("genre_anchor") or {}
+        if not isinstance(anchor, dict):
+            return False
+        return bool(anchor.get("consistent"))
 
     source = str(item.get("source") or "")
     if source.startswith("fallback"):
-        return True
+        # 此前无条件 True。fallback 项是**通用建议**（"开篇有冲突"、"段末
+        # 留钩"），不是"已经做到的事"。无条件为真会让新书第一章（读者信号
+        # 全空、检查项全是 fallback）拿到满分 100，而这个分数会落库成为后续
+        # 章节的比较基线，把整条趋势线抬到虚高位。
+        #
+        # 无从验证时应算**未完成**，由作者/agent 实际检查后确认。
+        # 注意与下面的 methodology. 分支区别：那是**有意**的软提示豁免
+        # （有注释说明"不参与扣分"），fallback 没有这个理由。
+        return False
 
     if source.startswith("methodology."):
         # 方法论条目当前作为软提示，仅做观察与引导，不参与扣分。
