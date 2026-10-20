@@ -1172,9 +1172,15 @@ class RAGAdapter:
         3. RRF 融合
         4. Rerank 精排
         """
-        vector_top_k = vector_top_k or self.config.vector_top_k
-        bm25_top_k = bm25_top_k or self.config.bm25_top_k
-        rerank_top_n = rerank_top_n or self.config.rerank_top_n
+        # `None` = 用配置默认值；`0` = 真的要 0 条。
+        #
+        # 此前写的是 `vector_top_k = vector_top_k or self.config.vector_top_k`，
+        # 而 `0 or X` 在 Python 里等于 `X`——**显式传 0 会被静默替换成默认值**。
+        # 调用方想「这一路不要结果」时，实际召回了配置默认条数（如 20），
+        # 而且读代码看不出来。
+        vector_top_k = self.config.vector_top_k if vector_top_k is None else max(0, int(vector_top_k))
+        bm25_top_k = self.config.bm25_top_k if bm25_top_k is None else max(0, int(bm25_top_k))
+        rerank_top_n = self.config.rerank_top_n if rerank_top_n is None else max(0, int(rerank_top_n))
         start_time = time.perf_counter()
 
         # 小规模：全表向量扫描（召回更稳）；大规模：预筛选避免 O(n) 扫描拖慢
