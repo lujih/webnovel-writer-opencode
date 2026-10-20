@@ -153,9 +153,10 @@ def main():
     import uvicorn
     from .app import create_app
 
-    # 必须把实际端口传进 create_app：CSRF/CORS 的允许源要跟着端口走，
-    # 否则 `--port 8766`（端口占用提示推荐的做法）会让面板静默变成只读。
-    app = create_app(project_root, port=args.port)
+    # 必须把实际**地址**传进 create_app：CSRF/CORS 的允许源要跟着监听地址走。
+    # 少传 port → 换端口后 Origin 端口对不上；少传 host → `--host 0.0.0.0`
+    # 后从局域网 IP 访问时 Origin 主机名对不上。两者都是「读得到、写全废」。
+    app = create_app(project_root, port=args.port, host=args.host)
 
     url = f"http://{args.host}:{args.port}"
     print(f"Dashboard 启动: {url}")

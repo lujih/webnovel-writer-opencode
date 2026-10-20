@@ -22,6 +22,16 @@ export class HttpError extends Error {
     }
 }
 
+/** 从非 2xx 响应构造 HttpError；读不到 JSON 时退回状态文本。 */
+async function _throwHttpError(response) {
+    let detail = ''
+    try {
+        const body = await response.json()
+        detail = typeof body?.detail === 'string' ? body.detail : ''
+    } catch { /* 非 JSON 响应（HTML 错误页等） */ }
+    throw new HttpError(response.status, response.statusText, detail)
+}
+
 export async function fetchJSON(path, params = {}) {
     const url = new URL(`${BASE}${path}`, window.location.origin)
     for (const [key, value] of Object.entries(params)) {
@@ -32,14 +42,7 @@ export async function fetchJSON(path, params = {}) {
 
     const response = await fetch(url.toString())
     if (!response.ok) {
-        // FastAPI 的错误体形如 {"detail": "..."}，能读到就用它，
-        // 读不到（HTML 错误页）就退回状态文本。
-        let detail = ''
-        try {
-            const body = await response.json()
-            detail = typeof body?.detail === 'string' ? body.detail : ''
-        } catch { /* 非 JSON 响应，忽略 */ }
-        throw new HttpError(response.status, response.statusText, detail)
+        await _throwHttpError(response)
     }
     return response.json()
 }
@@ -113,8 +116,7 @@ export async function apiPost(path, body = {}) {
         body: JSON.stringify(body),
     })
     if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.detail || `${response.status} ${response.statusText}`)
+        await _throwHttpError(response)
     }
     return response.json()
 }
@@ -126,8 +128,7 @@ export async function apiPut(path, body = {}) {
         body: JSON.stringify(body),
     })
     if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.detail || `${response.status} ${response.statusText}`)
+        await _throwHttpError(response)
     }
     return response.json()
 }
@@ -135,8 +136,7 @@ export async function apiPut(path, body = {}) {
 export async function apiDelete(path) {
     const response = await fetch(`${BASE}${path}`, { method: 'DELETE' })
     if (!response.ok) {
-        const err = await response.json().catch(() => ({}))
-        throw new Error(err.detail || `${response.status} ${response.statusText}`)
+        await _throwHttpError(response)
     }
     return response.json()
 }

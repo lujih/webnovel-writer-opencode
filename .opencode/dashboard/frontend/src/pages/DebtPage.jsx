@@ -234,7 +234,11 @@ export default function DebtPage() {
                 <StatCard
                     label="未结债务"
                     value={formatShortNumber(totals.count || 0)}
-                    sub={`涉及 ${activeTypeCount} 种类型`}
+                    // totals 是全表口径，items 只有当前页；截断时要说清楚，
+                    // 否则作者会以为「最大单笔」也是全表的最大值。
+                    sub={summary?.truncated
+                        ? `涉及 ${activeTypeCount} 种类型 · 列表仅显示前 ${items.length} 笔`
+                        : `涉及 ${activeTypeCount} 种类型`}
                 />
                 <StatCard
                     label="总余额"

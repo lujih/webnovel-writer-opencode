@@ -238,3 +238,66 @@ class TestRouteOrdering:
         assert "items" in response.json(), (
             "summary 被当成 debt_id 解析了——检查路由注册顺序"
         )
+
+
+class TestTotalsIgnoreLimit:
+    """totals 必须是**全表**口径，不能随 limit 变化。
+
+    2026-10-20 第二轮审查发现：早先实现用同一条带 LIMIT 的查询既算统计又出
+    明细，于是 limit=10 时「总余额」从 60 变成 10——作者看到的是随分页参数
+    跳动的总额。统计与明细现在分开查。
+    """
+
+    def _seed_many(self, project: Path, count: int) -> None:
+        conn = _make_db(project)
+        for i in range(count):
+            conn.execute(
+                """INSERT INTO chase_debt
+                   (debt_type, original_amount, current_amount, interest_rate,
+                    source_chapter, due_chapter, status)
+                   VALUES (?,?,?,?,?,?,?)""",
+                ("foreshadowing", 1.0, 2.0, 0.1, i + 1, 50 + i, "active"),
+            )
+        conn.commit()
+        conn.close()
+
+    def test_totals_do_not_shrink_with_limit(self, tmp_path: Path):
+        (tmp_path / ".webnovel").mkdir(parents=True)
+        (tmp_path / ".webnovel" / "state.json").write_text(
+            json.dumps({"progress": {"current_chapter": 100}}), encoding="utf-8"
+        )
+        self._seed_many(tmp_path, 60)
+
+        client = TestClient(create_app(project_root=tmp_path), base_url=BASE_URL,
+                            raise_server_exceptions=False)
+
+        small = client.get("/api/debts/summary", params={"limit": 10}).json()
+        large = client.get("/api/debts/summary", params={"limit": 500}).json()
+
+        assert small["totals"]["count"] == 60, "totals.count 被 limit 截断了"
+        assert small["totals"]["balance"] == pytest.approx(120.0), "totals.balance 被 limit 截断了"
+        assert small["totals"] == large["totals"], "totals 不应随 limit 变化"
+
+    def test_items_are_still_truncated(self, tmp_path: Path):
+        (tmp_path / ".webnovel").mkdir(parents=True)
+        (tmp_path / ".webnovel" / "state.json").write_text(
+            json.dumps({"progress": {"current_chapter": 100}}), encoding="utf-8"
+        )
+        self._seed_many(tmp_path, 30)
+
+        client = TestClient(create_app(project_root=tmp_path), base_url=BASE_URL,
+                            raise_server_exceptions=False)
+        data = client.get("/api/debts/summary", params={"limit": 5}).json()
+        assert len(data["items"]) == 5
+
+    def test_truncated_flag_reports_state(self, tmp_path: Path):
+        (tmp_path / ".webnovel").mkdir(parents=True)
+        (tmp_path / ".webnovel" / "state.json").write_text(
+            json.dumps({"progress": {"current_chapter": 100}}), encoding="utf-8"
+        )
+        self._seed_many(tmp_path, 12)
+
+        client = TestClient(create_app(project_root=tmp_path), base_url=BASE_URL,
+                            raise_server_exceptions=False)
+        assert client.get("/api/debts/summary", params={"limit": 5}).json()["truncated"] is True
+        assert client.get("/api/debts/summary", params={"limit": 500}).json()["truncated"] is False

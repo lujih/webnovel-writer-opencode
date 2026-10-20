@@ -28,6 +28,7 @@ from datetime import datetime, timezone
 from contextlib import asynccontextmanager, closing
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -54,28 +55,99 @@ _watcher = FileWatcher()
 _DEFAULT_PORT = 8765
 _VITE_DEV_PORT = 5173
 
+# IP 字面量判定：Host 守卫与 Origin 守卫共用，定义在两者之前。
+#
+# 每段限制 0-255。早先用 `\d{1,3}` 匹配每段，于是 `999.999.999.999` 也会被
+# 当成 IP 字面量放行——Origin 守卫会把这种畸形值当作"本机 IP"接受。真实
+# 浏览器不会产生这种值，但守卫不该建立在"攻击者守规矩"之上。
+_IPV4_OCTET = r"(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)"
+_IPV4_RE = re.compile(rf"^{_IPV4_OCTET}(?:\.{_IPV4_OCTET}){{3}}$")
+_LOOPBACK_V6 = frozenset({"::1", "0:0:0:0:0:0:0:1"})
+
 _LOCAL_ORIGINS = frozenset({
     f"http://127.0.0.1:{_DEFAULT_PORT}", f"http://localhost:{_DEFAULT_PORT}",
     f"http://127.0.0.1:{_VITE_DEV_PORT}", f"http://localhost:{_VITE_DEV_PORT}",
 })
 
 
-def _build_local_origins(port: int | None) -> frozenset[str]:
-    """把实际监听端口并入允许源集合。
+def _build_local_origins(
+    port: int | None,
+    host: str | None = None,
+) -> tuple[frozenset[str], bool]:
+    """算出允许源名单，并返回是否放行「任意 IP 字面量」。
 
-    传 None 时返回默认名单（8765 + Vite 5173），供不关心端口的调用方
-    （测试、嵌入式调用）沿用旧行为。传了端口则**追加**而非替换——
-    Vite 开发服务器仍可能从 5173 反向代理过来。
+    返回二元组 `(origins, allow_any_ip)`：
+
+    * 传 `port=None` → 默认名单（8765 + Vite 5173），`allow_any_ip=False`。
+      供测试与嵌入式调用沿用旧行为。
+    * 传了 `port` → 把 127.0.0.1/localhost + 该端口并入。
+    * `host` 是**具体**地址（127.0.0.1 / localhost / 某个局域网 IP）→
+      只精确加入该地址，`allow_any_ip=False`。别人用另一个 IP 访问仍被拒。
+    * `host` 是**通配**地址（0.0.0.0 / :: / 空）→ 无法预先枚举本机网卡，
+      于是放行「任意 IP 字面量 + 本次端口」，`allow_any_ip=True`。
+
+    为什么通配场景放行任意 IP 不扩大攻击面：DNS rebinding 的攻击前提是
+    **域名**——攻击者把自己的 evil.com 解析到 127.0.0.1，浏览器随后带着
+    `Host: evil.com` / `Origin: http://evil.com` 发请求。IP 字面量在浏览器
+    里不可能由攻击者指定（它来自地址栏，用户看到的就是 IP）。因此域名仍
+    必须精确匹配，IP 可以放宽。
+
+    ⚠️ `host` 必须一起传，否则会重演「面板读得到、写全废」：
+    `--host 0.0.0.0` 后从 `192.168.x.x:8766` 访问时，Host 守卫放行 IP
+    字面量（读正常），但 Origin 主机名不在名单里 → 所有写操作 403。
     """
-    if port is None:
-        return _LOCAL_ORIGINS
-    if not isinstance(port, int) or not (0 < port < 65536):
-        return _LOCAL_ORIGINS
-    if port in (_DEFAULT_PORT, _VITE_DEV_PORT):
-        return _LOCAL_ORIGINS
-    return _LOCAL_ORIGINS | {
+    if port is None or not isinstance(port, int) or not (0 < port < 65536):
+        return _LOCAL_ORIGINS, False
+
+    origins = _LOCAL_ORIGINS | {
         f"http://127.0.0.1:{port}", f"http://localhost:{port}",
     }
+
+    host = (host or "").strip().lower()
+    if host in ("0.0.0.0", "::", "[::]", ""):
+        # 通配绑定：本机任意网卡都可访问，交给 allow_any_ip 判断
+        return origins, True
+    if host in ("127.0.0.1", "localhost", "::1", "0:0:0:0:0:0:0:1"):
+        return origins, False
+
+    # 具体地址（如 192.168.1.5）：精确加入，不放宽
+    origins = origins | {f"http://{host}:{port}", f"https://{host}:{port}"}
+    return origins, False
+
+
+def _origin_allowed(
+    origin: str | None,
+    local_origins: frozenset[str],
+    allow_any_ip: bool = False,
+) -> bool:
+    """判断 Origin 是否放行。无 Origin（curl/脚本）放行——见 _csrf_guard 注释。
+
+    精确匹配优先。`allow_any_ip=True`（服务以 0.0.0.0 监听）时，额外放行
+    「任意 IP 字面量 + 已知端口」；**域名永远要求精确匹配**。
+    """
+    if not origin:
+        return True
+    if origin in local_origins:
+        return True
+    if not allow_any_ip:
+        return False
+
+    try:
+        parsed = urlsplit(origin)
+    except ValueError:
+        return False
+    if parsed.scheme not in ("http", "https"):
+        return False
+
+    hostname = parsed.hostname or ""
+    is_ip_literal = bool(_IPV4_RE.match(hostname)) or hostname in _LOOPBACK_V6
+    if not is_ip_literal:
+        return False
+
+    allowed_ports = {
+        int(u.rsplit(":", 1)[-1]) for u in local_origins if u.rsplit(":", 1)[-1].isdigit()
+    }
+    return parsed.port is not None and parsed.port in allowed_ports
 
 # Host 头白名单里除了固定名字，还允许任何 IP 字面量（见 _host_is_local）。
 # 原因：`--host 0.0.0.0` 时用户会用 192.168.x.x 访问，把 IP 写死会误伤；
@@ -85,10 +157,6 @@ _ALLOWED_HOSTNAMES = frozenset({"localhost"})
 
 # 反向代理 / 自定义域名的逃生口，逗号分隔。
 _ALLOW_HOSTS_ENV = "WEBNOVEL_DASHBOARD_ALLOW_HOSTS"
-
-_IPV4_RE = re.compile(r"^\d{1,3}(?:\.\d{1,3}){3}$")
-_LOOPBACK_V6 = frozenset({"::1", "0:0:0:0:0:0:0:1"})
-
 
 def _host_is_local(host_header: str) -> bool:
     """判断 Host 头是否指向本机。
@@ -325,12 +393,23 @@ def _build_env_status(project_root: Path) -> dict:
 # 应用工厂
 # ---------------------------------------------------------------------------
 
-def create_app(project_root: str | Path | None = None, *, port: int | None = None) -> FastAPI:
+def create_app(
+    project_root: str | Path | None = None,
+    *,
+    port: int | None = None,
+    host: str | None = None,
+) -> FastAPI:
     """构建 FastAPI 应用。
 
-    `port` 用于把实际监听端口并入 CSRF/CORS 的允许源——`server.py --port`
-    换端口后若不传，面板会静默变成只读（见 `_build_local_origins` 注释）。
-    不传则沿用 8765 + Vite 5173 的默认名单，既有调用方与测试零改动。
+    `port` / `host` 用于把实际监听地址并入 CSRF/CORS 的允许源。两者不传时
+    沿用 8765 + Vite 5173 的默认名单，既有调用方与测试零改动。
+
+    为什么两个都要传：`server.py` 同时暴露 `--port` 与 `--host`，任一维度
+    漏传都会让面板**读得到、写全废**——
+      * 漏 `port`：换端口后 Origin 端口对不上 → 403；
+      * 漏 `host`：`--host 0.0.0.0` 后从局域网 IP 访问，Origin 主机名对不上
+        （而 Host 守卫恰恰放行 IP 字面量）→ 403。
+    两者都是静默故障：GET 一切正常，只有编辑动作失效。
     """
     global _project_root
 
@@ -340,7 +419,7 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
             warnings.warn(f"Dashboard project_root 被覆盖: {_project_root} → {project_root}", stacklevel=2)
         _project_root = Path(project_root).resolve()
 
-    local_origins = _build_local_origins(port)
+    local_origins, allow_any_ip = _build_local_origins(port, host)
 
     _ensure_scripts_dir_on_path()
 
@@ -432,7 +511,7 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
         """
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
             origin = request.headers.get("origin")
-            if origin and origin not in local_origins:
+            if not _origin_allowed(origin, local_origins, allow_any_ip):
                 return JSONResponse(
                     {"detail": f"拒绝跨站写请求: {origin}"}, status_code=403
                 )
@@ -951,6 +1030,18 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
         current_chapter = int((state.get("progress") or {}).get("current_chapter") or 0)
 
         with closing(_get_db()) as conn:
+            # ⚠️ 统计与明细必须分开查。
+            # 早先版本对同一批行既算 totals 又 LIMIT，于是 totals 只覆盖前 N 条：
+            # 传入 limit=10 时「总余额」会从 60 变成 10，作者看到的是**随分页
+            # 参数变化的总额**。统计走聚合 SQL（全表），明细才 LIMIT。
+            all_rows = _fetchall_safe(
+                conn,
+                """
+                SELECT id, debt_type, original_amount, current_amount, interest_rate,
+                       source_chapter, due_chapter, status
+                FROM chase_debt
+                """,
+            )
             rows = _fetchall_safe(
                 conn,
                 """
@@ -966,24 +1057,25 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
                 (limit,),
             )
 
-        items = []
+        def _is_overdue_row(status: str, due: int) -> bool:
+            # 真实到期判定：当前章已越过 due_chapter 且债仍未结。
+            # 不用库里的 status —— 它只在 accrue_interest 被调用时才推进。
+            return status in ("active", "overdue") and due > 0 and current_chapter > due
+
+        # ---- 统计：覆盖**全表**，不受 limit 影响 ----
         by_type: dict[str, dict] = {}
         by_status: dict[str, int] = {}
         total_balance = 0.0
         overdue_count = 0
-
-        for row in rows:
+        for row in all_rows:
             status = str(row.get("status") or "active")
             due = _to_int(row.get("due_chapter"))
             balance = float(row.get("current_amount") or 0.0)
-            original = float(row.get("original_amount") or 0.0)
 
-            # 真实到期判定：当前章已越过 due_chapter 且债仍未结
-            is_overdue = status in ("active", "overdue") and due > 0 and current_chapter > due
-            if is_overdue:
+            if _is_overdue_row(status, due):
                 overdue_count += 1
-
             by_status[status] = by_status.get(status, 0) + 1
+
             dtype = str(row.get("debt_type") or "unknown")
             bucket = by_type.setdefault(dtype, {"count": 0, "total": 0.0})
             bucket["count"] += 1
@@ -991,6 +1083,16 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
 
             if status in ("active", "overdue"):
                 total_balance += balance
+
+        # ---- 明细：受 limit 限制 ----
+        items = []
+        for row in rows:
+            status = str(row.get("status") or "active")
+            due = _to_int(row.get("due_chapter"))
+            balance = float(row.get("current_amount") or 0.0)
+            original = float(row.get("original_amount") or 0.0)
+            is_overdue = _is_overdue_row(status, due)
+            dtype = str(row.get("debt_type") or "unknown")
 
             items.append({
                 "id": row.get("id"),
@@ -1013,10 +1115,13 @@ def create_app(project_root: str | Path | None = None, *, port: int | None = Non
             "items": items,
             "current_chapter": current_chapter,
             "totals": {
-                "count": len(items),
+                # 全表口径，与 limit 无关；items 只有当前页
+                "count": len(all_rows),
                 "balance": round(total_balance, 4),
                 "overdue": overdue_count,
             },
+            # 让调用方知道"明细被截断了吗"
+            "truncated": len(all_rows) > len(items),
             "by_status": by_status,
             "by_type": by_type,
             "limit": limit,

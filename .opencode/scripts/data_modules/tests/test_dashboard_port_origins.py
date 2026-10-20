@@ -31,42 +31,115 @@ pytest.importorskip("httpx")
 
 from fastapi.testclient import TestClient  # noqa: E402
 
-from dashboard.app import _LOCAL_ORIGINS, _build_local_origins, create_app  # noqa: E402
+from dashboard.app import (
+    _LOCAL_ORIGINS,
+    _build_local_origins,
+    _origin_allowed,
+    create_app,
+)  # noqa: E402
 
 _DEFAULT_BASE_URL = "http://127.0.0.1:8765"
 
 
-def _client(tmp_path: Path, *, base_url: str, port: int | None = None) -> TestClient:
+def _client(
+    tmp_path: Path,
+    *,
+    base_url: str,
+    port: int | None = None,
+    host: str | None = None,
+) -> TestClient:
     (tmp_path / ".webnovel").mkdir(parents=True, exist_ok=True)
     (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
-    app = create_app(project_root=tmp_path, port=port)
+    app = create_app(project_root=tmp_path, port=port, host=host)
     return TestClient(app, base_url=base_url, raise_server_exceptions=False)
 
 
 class TestLocalOriginsBuilder:
-    """纯函数层：端口如何并入允许源。"""
+    """纯函数层：`_build_local_origins` 返回 (origins, allow_any_ip)。"""
 
     def test_none_returns_default_set(self):
-        assert _build_local_origins(None) == _LOCAL_ORIGINS
+        origins, any_ip = _build_local_origins(None)
+        assert origins == _LOCAL_ORIGINS
+        assert any_ip is False
 
     def test_custom_port_is_added(self):
-        origins = _build_local_origins(8799)
+        origins, _ = _build_local_origins(8799)
         assert "http://127.0.0.1:8799" in origins
         assert "http://localhost:8799" in origins
 
     def test_custom_port_keeps_existing_origins(self):
         """追加而非替换：Vite 5173 反向代理仍要能用。"""
-        origins = _build_local_origins(8799)
+        origins, _ = _build_local_origins(8799)
         assert _LOCAL_ORIGINS <= origins
 
-    def test_default_port_does_not_duplicate(self):
-        assert _build_local_origins(8765) == _LOCAL_ORIGINS
-        assert _build_local_origins(5173) == _LOCAL_ORIGINS
+    def test_default_port_does_not_grow(self):
+        origins, _ = _build_local_origins(8765)
+        assert origins == _LOCAL_ORIGINS
+        origins2, _ = _build_local_origins(5173)
+        assert origins2 == _LOCAL_ORIGINS
 
     @pytest.mark.parametrize("bad", [0, -1, 70000, 999999])
     def test_invalid_port_falls_back_to_default(self, bad):
         """端口越界不该让服务起不来，退回默认名单即可。"""
-        assert _build_local_origins(bad) == _LOCAL_ORIGINS
+        origins, any_ip = _build_local_origins(bad)
+        assert origins == _LOCAL_ORIGINS
+        assert any_ip is False
+
+    # ---- host 维度 ----
+
+    @pytest.mark.parametrize("wildcard", ["0.0.0.0", "::", "", None])
+    def test_wildcard_host_enables_any_ip(self, wildcard):
+        """通配绑定无法枚举网卡，只能放行任意 IP 字面量。"""
+        origins, any_ip = _build_local_origins(8799, wildcard)
+        assert any_ip is True
+        assert "http://127.0.0.1:8799" in origins
+
+    @pytest.mark.parametrize("loopback", ["127.0.0.1", "localhost", "::1"])
+    def test_loopback_host_does_not_enable_any_ip(self, loopback):
+        """只监听本机时，别的 IP 访问必须仍被拒。"""
+        _, any_ip = _build_local_origins(8799, loopback)
+        assert any_ip is False
+
+    def test_specific_lan_host_is_added_exactly(self):
+        origins, any_ip = _build_local_origins(8799, "192.168.1.5")
+        assert "http://192.168.1.5:8799" in origins
+        # 绑具体 IP 不应放宽到任意 IP
+        assert any_ip is False
+
+    # ---- _origin_allowed 判定 ----
+
+    def test_no_origin_is_allowed(self):
+        """curl / 脚本不带 Origin —— 守卫防的不是它。"""
+        origins, any_ip = _build_local_origins(8799)
+        assert _origin_allowed(None, origins, any_ip) is True
+        assert _origin_allowed("", origins, any_ip) is True
+
+    def test_exact_match_allowed(self):
+        origins, any_ip = _build_local_origins(8799)
+        assert _origin_allowed("http://127.0.0.1:8799", origins, any_ip) is True
+
+    def test_lan_ip_rejected_when_bound_to_loopback(self):
+        origins, any_ip = _build_local_origins(8799, "127.0.0.1")
+        assert _origin_allowed("http://192.168.1.5:8799", origins, any_ip) is False
+
+    def test_lan_ip_allowed_when_bound_to_wildcard(self):
+        origins, any_ip = _build_local_origins(8799, "0.0.0.0")
+        assert _origin_allowed("http://192.168.1.5:8799", origins, any_ip) is True
+        assert _origin_allowed("http://10.0.0.9:8799", origins, any_ip) is True
+
+    def test_domain_never_allowed_even_with_wildcard(self):
+        """DNS rebinding 的攻击前提是域名——域名必须精确匹配。"""
+        origins, any_ip = _build_local_origins(8799, "0.0.0.0")
+        assert _origin_allowed("https://evil.example", origins, any_ip) is False
+        assert _origin_allowed("http://evil.example:8799", origins, any_ip) is False
+
+    def test_wrong_port_rejected_even_with_wildcard(self):
+        origins, any_ip = _build_local_origins(8799, "0.0.0.0")
+        assert _origin_allowed("http://192.168.1.5:9999", origins, any_ip) is False
+
+    def test_non_http_scheme_rejected(self):
+        origins, any_ip = _build_local_origins(8799, "0.0.0.0")
+        assert _origin_allowed("file://192.168.1.5:8799", origins, any_ip) is False
 
 
 class TestCustomPortAllowsWrites:
@@ -147,3 +220,74 @@ class TestDefaultBehaviourUnchanged:
             json={"text": "Vite 代理仍可用"},
         )
         assert response.status_code == 200
+
+
+class TestCustomHostAllowsWrites:
+    """端到端：`--host 0.0.0.0` 后从局域网 IP 访问，写操作必须能用。
+
+    这是与「端口写死」并列的第二个静默故障：Host 守卫放行任意 IP 字面量
+    （GET 正常），但若 Origin 主机名不在名单里，所有编辑都被 CSRF 守卫拒死。
+    """
+
+    def test_lan_ip_write_allowed_with_wildcard_host(self, tmp_path):
+        base = "http://192.168.1.5:8799"
+        client = _client(tmp_path, base_url=base, port=8799, host="0.0.0.0")
+        response = client.post(
+            "/api/style/anti-patterns",
+            headers={"Origin": base},
+            json={"text": "局域网写入"},
+        )
+        assert response.status_code == 200, (
+            f"0.0.0.0 监听时局域网 origin 被拒（{response.status_code}）：{response.text[:200]}"
+        )
+
+    def test_lan_ip_write_rejected_when_bound_to_loopback(self, tmp_path):
+        """只监听本机却用局域网 origin —— 必须拒绝，别把放宽当默认。"""
+        base = "http://192.168.1.5:8799"
+        client = _client(tmp_path, base_url=base, port=8799, host="127.0.0.1")
+        response = client.post(
+            "/api/style/anti-patterns",
+            headers={"Origin": base},
+            json={"text": "不该成功"},
+        )
+        assert response.status_code == 403
+
+    def test_wildcard_host_still_rejects_domains(self, tmp_path):
+        client = _client(tmp_path, base_url="http://127.0.0.1:8799",
+                         port=8799, host="0.0.0.0")
+        response = client.post(
+            "/api/style/anti-patterns",
+            headers={"Origin": "https://evil.example"},
+            json={"text": "不该成功"},
+        )
+        assert response.status_code == 403
+        assert "跨站" in response.text
+
+
+class TestMalformedIpLiterals:
+    """每段必须 0-255：畸形 IP 不能被当成"本机 IP"放行。
+
+    早先 `\d{1,3}` 每段，`999.999.999.999` 也能过——真实浏览器不会产生这种
+    Origin，但守卫不该建立在"攻击者守规矩"之上。
+    """
+
+    @pytest.mark.parametrize("bad", [
+        "999.999.999.999", "256.1.1.1", "1.2.3.999", "300.0.0.1",
+    ])
+    def test_out_of_range_ip_rejected(self, bad):
+        origins, any_ip = _build_local_origins(8799, "0.0.0.0")
+        assert _origin_allowed(f"http://{bad}:8799", origins, any_ip) is False
+
+    @pytest.mark.parametrize("ok", ["0.0.0.0", "10.0.0.5", "192.168.1.5", "255.255.255.255"])
+    def test_valid_ip_still_allowed(self, ok):
+        origins, any_ip = _build_local_origins(8799, "0.0.0.0")
+        assert _origin_allowed(f"http://{ok}:8799", origins, any_ip) is True
+
+    @pytest.mark.parametrize("weird", [
+        "null", "http://", "http://:", "://evil", "http://[::1",
+        "chrome-extension://abc", "file://192.168.1.5:8799",
+    ])
+    def test_malformed_origins_never_raise(self, weird):
+        """畸形 Origin 只能返回 False，不能让守卫抛异常变成 500。"""
+        origins, any_ip = _build_local_origins(8799, "0.0.0.0")
+        assert _origin_allowed(weird, origins, any_ip) is False

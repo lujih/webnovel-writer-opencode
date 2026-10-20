@@ -274,3 +274,60 @@ Phase 5 (收尾)
 - 把 FastAPI 面板迁进 OpenCode（`AGENTS.md` 已论证不可行：插件无 webview 宿主）
 - 重写 9 个页面为更细粒度组件（当前 640/648/845 行虽大，但拆分的收益低于本次修复价值；留待 Phase 3 后按实际痛点再议）
 - 认证/多用户（本面板设计前提是单机本地）
+
+---
+
+## 七、第二轮深度审查（2026-10-20 下午）
+
+第一轮只跑了 `test_dashboard*.py` 子集就宣布完成，**漏掉了 3 个真问题**。
+第二轮改为跑全仓库套件 + 重新审视自己写的代码。
+
+### 7.1 第一轮遗留：全量测试暴露 2 个失败
+
+| 失败 | 原因 | 修法 |
+|------|------|------|
+| `test_every_manifest_entry_is_git_tracked` | 重建前端后 dist 的 hash 文件名整批轮换，`manifest.json` 仍列着 18 个已删除的旧文件 | 重新生成 `files` 字段（**只取 files**，`tag`/`updated`/`changelog` 由 CI 写入，本地重生成会清空） |
+| `test_module_and_test_counts` | README 写「135 个测试文件」，实际 139（我新增了 4 个） | 同步为 139 文件 / 1703 用例 |
+
+教训：**子集全绿不等于仓库全绿**。这两个测试恰好是"防止文档与代码漂移"的守门人，
+而我上一轮恰恰在制造漂移。
+
+### 7.2 我上一轮引入的 3 个新缺陷
+
+| # | 缺陷 | 严重度 | 证据 |
+|---|------|--------|------|
+| A | **`--host` 维度漏了**：`--host 0.0.0.0` 后从局域网 IP 访问，读正常、写全 403 | P0 | 实测 `Origin: http://192.168.1.5:8766` → 403。与端口写死是同一类故障，我修了端口却漏了 host，而 `_host_is_local` 的注释恰恰写明"放行局域网 IP" |
+| B | **`/api/debts/summary` 的 totals 被 LIMIT 截断** | P1 | 60 笔债时传 `limit=10`，"总余额"从 60 变 10。同一批行既算统计又 LIMIT |
+| C | **`apiPost/Put/Delete` 没跟进 HttpError** | P2 | 只有 `fetchJSON` 换成 HttpError，三种写方法仍抛裸 Error |
+
+另修一处自造的宽松：`_IPV4_RE` 用 `\d{1,3}` 每段，`999.999.999.999` 也被当 IP
+字面量放行。收窄为 0-255。
+
+### 7.3 修法与验证
+
+- A：`_build_local_origins(port, host)` 改为返回 `(origins, allow_any_ip)`，
+  显式区分「绑定通配地址」与「绑定具体 IP」；新增 `_origin_allowed()`。
+  **通配才放行任意 IP，域名永远精确匹配**——DNS rebinding 的前提是域名。
+  新增 32 例测试（含 4 个负例）+ 真机验证：本机 `192.168.3.57:8799` 写入 200，
+  恶意域名 403。
+- B：统计走全表查询、明细才 LIMIT；响应加 `truncated`；前端在统计卡上明示
+  "列表仅显示前 N 笔"。
+- C：抽出 `_throwHttpError()`，四种方法共用。新增 `api.test.js` 20 例钉住
+  status/isNotFound/非 JSON 降级/参数拼接（含 `0` 与 `false` 不被当空值丢）。
+
+### 7.4 最终状态
+
+- 全仓库：**1724 passed, 2 skipped**（零失败）
+- 前端：85 测试通过，lint 0 error，构建通过
+- 真机：`--host 0.0.0.0 --port 8799` 下局域网 IP 读写均正常
+
+### 7.5 发现但未修（留给下一轮）
+
+1. **SSE 消息类型前端零消费**。后端推送 5 种类型
+   （`workflow-status`/`file-saved`/`style-updated`/`action-done`/`batch-done`），
+   `App.jsx` 一律只递增 `refreshToken` 触发全量重取。后果：
+   - `workflow-status` 每 30s 推一次，即使用户停在无关页面也会重新拉数据；
+   - `style-updated` 与 watchdog 的 `file-saved` 是重复通知。
+   不是 bug（数据最终一致），但属于过度设计 + 无谓流量。
+2. **15 个后端端点仍无 UI**（只补了追读债两个）。需要判断是死代码还是漏接。
+3. **9 个页面零组件测试**。当前只测纯函数；组件层（loading/空态/竞态）靠人工截图。
