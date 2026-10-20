@@ -106,12 +106,54 @@ def _ensure_object_list(artifact_name: str, field_name: str, value: Any) -> Any:
     return value
 
 
+def _coerce_blocking_count(value: Any) -> int:
+    """把 ``blocking_count`` 归成非负整数。
+
+    为什么不能直接用 ``strict=True``：LLM 输出里 ``blocking_count: "3"`` 与
+    ``3.0`` 都非常常见（JSON 里数字被写成字符串，或从 Markdown 抄了个带引号
+    的值）。严格模式下它们会报 ``Input should be a valid integer``，而
+    ``artifact_validator`` 的 error 会经 ``precommit`` 门禁**阻断整章提交**。
+
+    但同一个值在 ``review_schema.parse_review_output``（真正决定阻断与否的
+    那条路径）里是完全能处理的——两条路对同一份产物给出相反结论。
+
+    所以这里做归一：接受 int / 数字字符串 / 浮点（截断），拒绝 bool（是 int
+    子类但语义上不是计数）、负数、非数字。
+    """
+    if isinstance(value, bool):
+        raise ValueError("blocking_count 必须是整数，不能是布尔值")
+    if isinstance(value, int):
+        number = value
+    elif isinstance(value, float):
+        number = int(value)
+    elif isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            raise ValueError("blocking_count 不能为空字符串")
+        try:
+            number = int(float(stripped))
+        except ValueError as exc:
+            raise ValueError(
+                f"blocking_count 必须是整数，收到 {value!r}"
+            ) from exc
+    else:
+        raise ValueError(f"blocking_count 必须是整数，收到 {type(value).__name__}")
+    if number < 0:
+        raise ValueError(f"blocking_count 不能为负，收到 {number}")
+    return number
+
+
 class ReviewResult(CommitArtifactModel):
     artifact_name: ClassVar[str] = "review_result"
     wrapper_key: ClassVar[str | None] = "review"
     required_top_level_fields: ClassVar[tuple[str, ...]] = ("blocking_count",)
 
-    blocking_count: int = Field(ge=0, strict=True)
+    blocking_count: int = Field(ge=0)
+
+    @field_validator("blocking_count", mode="before")
+    @classmethod
+    def normalize_blocking_count(cls, value: Any) -> Any:
+        return _coerce_blocking_count(value)
 
 
 class FulfillmentResult(CommitArtifactModel):

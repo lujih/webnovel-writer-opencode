@@ -693,8 +693,8 @@
       "size": 17586
     },
     ".opencode/scripts/data_modules/chapter_commit_schema.py": {
-      "sha256": "f9031de2ac9e27bbbfbe146da28d45815a0601f7492018a70eb574c77d2d6c0b",
-      "size": 9824
+      "sha256": "d6e36ff413c0602218d63e6e307f9e121c62c85168492ef57aa12770f18958cc",
+      "size": 11630
     },
     ".opencode/scripts/data_modules/chapter_commit_service.py": {
       "sha256": "f8ce9e8b6c1239ffaed92d7a52d57d4a5ec3389a9210c8942ac0db11eb68e0a3",
@@ -1059,6 +1059,10 @@
     ".opencode/scripts/data_modules/tests/test_commit_artifacts.py": {
       "sha256": "a940825f46f6989444fb860cefdb36dba39ff271652f8015806f3427aeb3bd26",
       "size": 5861
+    },
+    ".opencode/scripts/data_modules/tests/test_commit_schema_consistency.py": {
+      "sha256": "67cb49d05536b92b12034db2295d76e7ac4d666aef7777a528ffb8dc6096cba0",
+      "size": 6505
     },
     ".opencode/scripts/data_modules/tests/test_compactor_lone_timeline.py": {
       "sha256": "ec7c8bf84c26bb11300d3f10ecd5b1308345374d3b75c4f424386a514b5229be",
