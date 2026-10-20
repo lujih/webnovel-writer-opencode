@@ -216,7 +216,7 @@ python -X utf8 "<OPENCODE_ROOT>/scripts/webnovel.py" --project-root "<PROJECT_RO
 
 | 脚本 | 说明 |
 |------|------|
-| `data_modules/chapter_rename.py` | 章节文件名编号统一（`第060章` → `第0060章`）。`--dry-run` 预览，`--recursive` 递归子目录 |
+| `data_modules/chapter_rename.py` | 章节文件名编号统一（`第060章` → `第0060章`）。**只处理 `正文/`**（`chapter_paths.find_chapter_file` 的权威位置），不碰 `story/` 投影目录；编号位数超 4 位会报警而非静默跳过。`--dry-run` 预览，`--recursive` 递归子目录 |
 
 ### 运维子命令
 

@@ -705,8 +705,8 @@
       "size": 8126
     },
     ".opencode/scripts/data_modules/chapter_rename.py": {
-      "sha256": "18130f096b098a9e34355ff0ed81c64eaf12de16a227e1cdfe4c355cecd97e30",
-      "size": 4575
+      "sha256": "b9321bf6bfbc71f3c6e33a06cdb2e88f53958d6e92950c7fcb0dc8b60003b0d3",
+      "size": 7080
     },
     ".opencode/scripts/data_modules/cli_args.py": {
       "sha256": "8f64d2734f4d08e6f70a311ff18db8f3513cbd19c07283e9f9f364350f3e50f2",
@@ -1035,6 +1035,10 @@
     ".opencode/scripts/data_modules/tests/test_chapter_range_parsing.py": {
       "sha256": "e1e0a67dd17cfa1828aa5c9f669188cd96ce8d3228c31b73910dc52c71310177",
       "size": 5251
+    },
+    ".opencode/scripts/data_modules/tests/test_chapter_rename.py": {
+      "sha256": "289b6843e665d0988c85a4059141a7dfe05c9662d74e3309bdba23864fd99b30",
+      "size": 9045
     },
     ".opencode/scripts/data_modules/tests/test_chapter_status.py": {
       "sha256": "df2499adceb695a0f41ff6b6fc50d392738ab8d7f8727a76721731b50f627b2f",
