@@ -168,3 +168,30 @@ class TestNoBlockOnFormatIssue:
         report = validate_artifact_payload(
             "review_result", {"blocking_count": -1, "issues": []})
         assert not report["ok"], "负数计数应仍被拒绝"
+
+
+class TestCustomErrorMessage:
+    """负数必须由**自定义校验**拒绝，错误信息要能读。
+
+    Pydantic 的 `Field(ge=0)` 也能拦住负数——所以删掉自定义的 `if number < 0`
+    后功能测试仍然通过（突变测试证实）。这里钉住错误信息：自定义校验给的
+    是中文可读提示，Pydantic 给的是 "Input should be greater than or equal to 0"。
+    靠它保证作者看到的是修复建议而不是解析器术语。
+    """
+
+    @pytest.mark.parametrize("value", [-1, -100, "-3"])
+    def test_negative_has_chinese_message(self, value):
+        with pytest.raises(Exception) as excinfo:
+            StrictReview(blocking_count=value)
+        blob = str(excinfo.value)
+        # 必须含中文提示，不能只含字段名——Pydantic 的 `ge=0` 兜底时错误信息
+        # 是 "Input should be greater than or equal to 0"，也含 blocking_count，
+        # 用 `or` 会漏放。（突变测试证实：删掉自定义校验后 or 版本仍通过。）
+        assert "不能为负" in blob, (
+            f"负数的错误信息不是自定义的中文提示：{blob[:200]}"
+        )
+
+    def test_garbage_message_names_field(self):
+        with pytest.raises(Exception) as excinfo:
+            StrictReview(blocking_count="abc")
+        assert "blocking_count" in str(excinfo.value)

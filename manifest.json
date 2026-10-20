@@ -1073,8 +1073,8 @@
       "size": 5861
     },
     ".opencode/scripts/data_modules/tests/test_commit_schema_consistency.py": {
-      "sha256": "67cb49d05536b92b12034db2295d76e7ac4d666aef7777a528ffb8dc6096cba0",
-      "size": 6505
+      "sha256": "a50f36009ad0459ef27add2c6f2e5421cf4c71d9fdad0c618ea57ee1d43be442",
+      "size": 7864
     },
     ".opencode/scripts/data_modules/tests/test_compactor_lone_timeline.py": {
       "sha256": "ec7c8bf84c26bb11300d3f10ecd5b1308345374d3b75c4f424386a514b5229be",
