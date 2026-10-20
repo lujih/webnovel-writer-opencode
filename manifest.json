@@ -216,6 +216,10 @@
       "sha256": "dfdf540e2d7799c0c787335aa09650f1029e282cdd6ea29fc68d15f95c9fec24",
       "size": 499
     },
+    ".opencode/dashboard/frontend/src/components/Badge.test.jsx": {
+      "sha256": "35290a1aa4a5a859c0ea2960f052c0785abc42fda6d18fa19059238576d7b953",
+      "size": 4069
+    },
     ".opencode/dashboard/frontend/src/components/ChartWrapper.jsx": {
       "sha256": "7661456c60f50ce6713aabbd821251bf8076a0abbb4f9e92b7f98bca0babdbd1",
       "size": 814
@@ -223,6 +227,10 @@
     ".opencode/dashboard/frontend/src/components/DataTable.jsx": {
       "sha256": "07cf59e8861a84f111055e918e8e1e7e5c17627800b779d33e545a6244df7e04",
       "size": 3257
+    },
+    ".opencode/dashboard/frontend/src/components/DataTable.test.jsx": {
+      "sha256": "2d3f4e65c53cf4b0029d6d64f75ca088ff4a683684409ce13fd444fdb297d5a8",
+      "size": 5974
     },
     ".opencode/dashboard/frontend/src/components/EditorPanel.jsx": {
       "sha256": "3ea734aa97d96e91c9ad8a80ca6e4fc74185bdefbea57e8ac294733f4711b00d",
@@ -284,9 +292,17 @@
       "sha256": "ea1357e9f3655e27ad87f3f5bea498cc53505b27fe2961d589970283bbf53cd2",
       "size": 17430
     },
+    ".opencode/dashboard/frontend/src/pages/ContextHealthPage.test.jsx": {
+      "sha256": "29482802859eb748f471fdd9224c7e289b841f3c4d780a6d0f6a6b11e896363f",
+      "size": 6006
+    },
     ".opencode/dashboard/frontend/src/pages/DebtPage.jsx": {
       "sha256": "2c8b9b22425ad2e4f255f46a1bc72a5953d1315a73e78a6f2a3ec7035a9d80a7",
       "size": 13097
+    },
+    ".opencode/dashboard/frontend/src/pages/DebtPage.test.jsx": {
+      "sha256": "fc85573f64c755c27e1a796770468c93358a3fe2f4287f583225e1790501e6f4",
+      "size": 9439
     },
     ".opencode/dashboard/frontend/src/pages/DiagnosticsPage.jsx": {
       "sha256": "289d4b621cbc72c69253ef726d7b136f5f10b2e109049d013d54916cf9e67ee6",
@@ -319,6 +335,14 @@
     ".opencode/dashboard/frontend/src/pages/SystemPage.jsx": {
       "sha256": "2d18f773bf9614e70333c2065a116bd7e6a9058c416f495526c727614f5d8f03",
       "size": 21601
+    },
+    ".opencode/dashboard/frontend/src/test-setup.js": {
+      "sha256": "41cc34a4e0f0543c09c39ada797fdc44877a04a47f15182c6fd5292bd0a83c0c",
+      "size": 2945
+    },
+    ".opencode/dashboard/frontend/src/test-utils.jsx": {
+      "sha256": "c290524c180aabed702c9f1674769580ad4842ad3b5d11b314ffe571ca520834",
+      "size": 1660
     },
     ".opencode/dashboard/frontend/vite.config.js": {
       "sha256": "58fb64107a46ddca7be062736bc07522acfabf435417f6e1b6d86d122a7afe32",
