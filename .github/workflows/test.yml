@@ -68,7 +68,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Unit tests
+      # 两个 project：unit（node 环境跑纯函数）+ component（jsdom 跑组件渲染）。
+      # 组件层覆盖 loading/空态/错误态/竞态——这些以前只靠人工看截图。
+      - name: Tests (unit + component)
         run: npm run test
 
       - name: Build

@@ -126,3 +126,22 @@ npm ci          # 必须用 ci：lock 与 package.json 脱节会当场报错
 npm run check   # lint + test + build，与 CI 一致
 npm run dev     # 开发服务器，/api 代理到 8765
 ```
+
+测试分两个 project（`vitest.config.js`）：
+
+| project | 环境 | 范围 |
+|---------|------|------|
+| `unit` | node | `src/lib/**`、`src/api.js` 的纯函数——格式化、分箱、伏笔聚合、错误语义 |
+| `component` | jsdom | `src/components/**`、`src/pages/**` 的渲染与状态 |
+
+组件测试覆盖的是**状态与渲染的对应关系**：loading / 空态 / 错误态 / 竞态，
+以及"给了什么数据该显示什么"。它**不**验证 ECharts 画布像素——那需要真浏览器，
+用 Playwright 截图 + 统计 canvas 非空像素比例来验证（雷达图空白事故就是这么查出来的）。
+
+`src/test-setup.js` 提供 jsdom 缺的三个 API（canvas 2D 上下文桩、ResizeObserver、
+matchMedia）。canvas 桩返回最小可用的上下文而不是 `null`——返回 null 会让 ECharts
+在卸载时炸出 `Cannot read properties of null (reading 'clearRect')`，把被测页面
+本身的问题淹没在无关报错里。
+
+`src/test-utils.jsx` 的 `renderPage(Page, context)` 把页面放在带 `Outlet context`
+的路由里——所有页面都通过 `useOutletContext()` 取数据，直接 render 会崩在解构上。

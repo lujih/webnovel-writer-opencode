@@ -72,8 +72,9 @@ export default [
         },
     },
     {
-        // 测试文件允许 describe/it/expect 等全局
-        files: ['src/**/*.test.js', 'vitest.config.js'],
+        // 测试文件与测试脚手架：允许 describe/it/expect 等全局，
+        // 以及 jsdom 提供但不在手写 globals 表里的 DOM 构造器。
+        files: ['src/**/*.test.js', 'src/**/*.test.jsx', 'src/test-setup.js', 'vitest.config.js'],
         languageOptions: {
             globals: {
                 describe: 'readonly',
@@ -81,7 +82,17 @@ export default [
                 expect: 'readonly',
                 beforeEach: 'readonly',
                 afterEach: 'readonly',
+                beforeAll: 'readonly',
+                afterAll: 'readonly',
                 vi: 'readonly',
+                // jsdom 全局构造器
+                HTMLCanvasElement: 'readonly',
+                HTMLElement: 'readonly',
+                Element: 'readonly',
+                Node: 'readonly',
+                window: 'readonly',
+                document: 'readonly',
+                globalThis: 'readonly',
             },
         },
     },
