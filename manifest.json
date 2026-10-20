@@ -1,167 +1,27 @@
 {
-  "version": "v2.9.2-20261020.1521",
+  "version": "v2.9.2-20261020.1844",
   "tag": "v2.9.2",
-  "updated": "2026-10-20T15:21:53Z",
+  "updated": "2026-10-20T18:44:32Z",
   "changelog": [
     {
-      "hash": "e40b9c0",
-      "type": "test",
-      "message": "test: \u7a81\u53d8\u6d4b\u8bd5\u53d1\u73b0\u4e00\u5904\u65ad\u8a00\u8fc7\u5bbd\u2014\u2014\u8d1f\u6570\u63d0\u793a\u88ab Pydantic \u515c\u5e95\u540e\u4ecd\u5224\u901a\u8fc7"
-    },
-    {
-      "hash": "7807cfc",
-      "type": "fix",
-      "message": "fix: \u6b67\u4e49\u4fe1\u53f7\u7ec8\u4e8e\u63a5\u5230\u5904\u7f6e\u94fe\u8def\u2014\u2014settler \u7b97\u51fa\u7684\u540c\u540d\u6b67\u4e49\u6b64\u524d\u53ea\u5199\u4e0d\u8bfb"
-    },
-    {
-      "hash": "9dc77f9",
-      "type": "fix",
-      "message": "fix: \u89d2\u8272\u72b6\u6001\u53d8\u5316\u5168\u4e22\u2014\u2014settler \u53ea\u7ed9 description\uff0c\u4e0b\u6e38\u8981 field\uff0c1 \u6761\u4e8b\u4ef6\u63d0\u53d6\u51fa 0 \u6761 delta"
-    },
-    {
-      "hash": "d6a2302",
-      "type": "fix",
-      "message": "fix: \u6587\u98ce\u6837\u672c\u8bf7\u6c42 3 \u6761\u53ea\u7ed9 2 \u6761\uff0c\u4e14 20 \u4e2a\u6837\u672c\u6c38\u8fdc\u53ea\u7528\u524d 5 \u4e2a"
-    },
-    {
-      "hash": "690fa20",
-      "type": "fix",
-      "message": "fix: hybrid_search \u628a\u663e\u5f0f\u4f20\u7684 0 \u5f53\u6210\u300c\u6ca1\u4f20\u300d\u2014\u2014\u9759\u9ed8\u6362\u6210\u914d\u7f6e\u9ed8\u8ba4\u503c"
-    },
-    {
-      "hash": "a795d0b",
-      "type": "fix",
-      "message": "fix: RAG backtrack \u7684 top_k \u88ab\u7ed5\u8fc7\u2014\u2014\u6709 parent \u65f6\u8fd4\u56de 2 \u500d\uff0ctoken \u9884\u7b97\u5168\u5931\u51c6"
-    },
-    {
-      "hash": "e7730c4",
-      "type": "fix",
-      "message": "fix: \u8d8b\u52bf\u62a5\u8868\u7684 required \u5b8c\u6210\u7387\u5bf9\u65b0\u4e66\u6052\u4e3a 100%\uff0c\u4e14\u810f\u6570\u636e\u80fd\u7b97\u51fa 250%"
-    },
-    {
-      "hash": "e2507ef",
-      "type": "fix",
-      "message": "fix: \u7a7a\u6e05\u5355\u5f97\u6ee1\u5206\u3001\u65e0 required \u9879\u767d\u9001 30% \u2014\u2014 \u8bc4\u5206\u516c\u5f0f\u628a\u300c\u6ca1\u6709\u4f9d\u636e\u300d\u5f53\u6210\u300c\u5168\u90e8\u8fbe\u6210\u300d"
-    },
-    {
-      "hash": "cf477a7",
-      "type": "fix",
-      "message": "fix: \u7a7a\u9879\u76ee\u6839\u88ab\u89e3\u6790\u6210\u5f53\u524d\u76ee\u5f55\u2014\u2014\u73af\u5883\u53d8\u91cf\u7559\u7a7a\u5c31\u4f1a\u300c\u5199\u9519\u4e66\u300d"
-    },
-    {
-      "hash": "0c85f7b",
-      "type": "fix",
-      "message": "fix: \u4e03\u732b\u53d1\u5e03\u5339\u914d\u4e0d\u5230\u5206\u7c7b\u5c31\u9759\u9ed8\u5f52\u5230\u7b2c\u4e00\u4e2a\u2014\u2014\u79d1\u5e7b\u4f1a\u88ab\u53d1\u5230\u7384\u5e7b\u5206\u7c7b\u4e0b"
-    },
-    {
-      "hash": "a3da3ce",
-      "type": "fix",
-      "message": "fix: \u8bb0\u5fc6\u9884\u7b97\u6f0f\u4e86 strip()\u2014\u2014\u4e00\u4e2a\u524d\u5bfc\u7a7a\u683c\u5c31\u8ba9 review \u7684\u914d\u7f6e\u9759\u9ed8\u5931\u6548"
-    },
-    {
-      "hash": "2d5a227",
-      "type": "fix",
-      "message": "fix: blocking_count \u5199\u6210\u5b57\u7b26\u4e32\u5c31\u963b\u65ad\u6574\u7ae0\u63d0\u4ea4\u2014\u2014\u4e24\u6761\u6821\u9a8c\u8def\u5f84\u7ed3\u8bba\u76f8\u53cd"
-    },
-    {
-      "hash": "dea4e32",
-      "type": "fix",
-      "message": "fix: \u9898\u6750\u5206\u8282\u7528\u5b50\u4e32\u5339\u914d\u2014\u2014\u5199\u300c\u90fd\u5e02\u300d\u62ff\u5230\u300c\u90fd\u5e02\u5f02\u80fd\u300d\u7684\u5199\u4f5c\u89c4\u5219"
-    },
-    {
-      "hash": "4d98b09",
-      "type": "fix",
-      "message": "fix: 15 \u4e2a\u89c4\u8303\u9898\u6750\u91cc 13 \u4e2a\u62ff\u4e0d\u5230\u82f1\u6587 profile key\u2014\u2014\u65b9\u6cd5\u8bba\u7b56\u7565\u5361\u5bf9\u5b83\u4eec\u9759\u9ed8\u4e0d\u751f\u6548"
-    },
-    {
-      "hash": "6730484",
-      "type": "fix",
-      "message": "fix: \u6743\u9650\u8fc1\u79fb\u811a\u672c\u4f1a\u628a read \u63d0\u6743\u6210 edit\uff0c\u5e76\u9759\u9ed8\u4e22\u6389\u81ea\u5b9a\u4e49 resource \u89c4\u5219"
-    },
-    {
-      "hash": "df2744e",
-      "type": "fix",
-      "message": "fix: chapter-rename \u626b\u9519\u76ee\u5f55\u2014\u2014\u5bf9\u7740\u6295\u5f71\u76ee\u5f55\u505a\u7ae0\u8282\u7f16\u53f7\u7edf\u4e00\uff0c\u6c38\u8fdc\u627e\u4e0d\u5230\u6b63\u6587"
-    },
-    {
-      "hash": "e11e53f",
-      "type": "fix",
-      "message": "fix: entity-clean \u91cd\u590d\u8fd0\u884c\u8ba9 invalid_facts \u65e0\u9650\u81a8\u80c0\uff0c\u4e14\u4f1a\u63a8\u7ffb\u5df2\u5b8c\u6210\u7684\u590d\u6838"
-    },
-    {
-      "hash": "b7f9422",
-      "type": "fix",
-      "message": "fix: \u7d27\u6025\u4f0f\u7b14\u7b5b\u9009\u9047\u810f urgency \u76f4\u63a5\u5d29\u6389\u6574\u7ae0\u5199\u4f5c\u2014\u2014'80' \u4e0e None \u90fd\u4f1a\u629b TypeError"
-    },
-    {
-      "hash": "a5e5c97",
-      "type": "fix",
-      "message": "fix: \u5199\u4f5c\u68c0\u67e5\u6e05\u5355\u7684\u5b8c\u6210\u5224\u5b9a\u65e0\u6761\u4ef6\u4e3a\u771f\u2014\u2014\u65b0\u4e66\u7b2c\u4e00\u7ae0\u62ff\u5230\u6ee1\u5206 100"
-    },
-    {
-      "hash": "0f5f81f",
-      "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261020.0728 [skip ci]"
-    },
-    {
-      "hash": "40b3911",
-      "type": "fix",
-      "message": "fix: manifest \u6f0f\u6536 6 \u4e2a\u65b0\u6d4b\u8bd5\u6587\u4ef6"
-    },
-    {
-      "hash": "4b8d93b",
-      "type": "test",
-      "message": "test: \u524d\u7aef\u8865\u7ec4\u4ef6\u5c42\u6d4b\u8bd5\u2014\u2014\u8986\u76d6 loading/\u7a7a\u6001/\u9519\u8bef\u6001/\u7ade\u6001"
-    },
-    {
-      "hash": "b0e874e",
+      "hash": "8291894",
       "type": "feat",
-      "message": "feat: \u8865\u5b8c\u8ba1\u5212\u5185 3 \u9879\u9057\u6f0f + \u8fd0\u7ef4\u8bca\u65ad\u9875\uff08\u7b2c 11 \u4e2a\u9875\u9762\uff09"
+      "message": "feat: dashboard \u5ba1\u67e5\u5206\u6790\u9875\u5c55\u793a CED \u8d8b\u52bf\u2014\u2014\u4e09\u4e2a\u53e3\u5f84\u53ef\u5207\u6362\uff0c\u6392\u9664\u7ae0\u53ef\u89c1"
     },
     {
-      "hash": "ef4ca72",
-      "type": "fix",
-      "message": "fix: \u7b2c\u4e8c\u8f6e\u6df1\u5ea6\u5ba1\u67e5\u2014\u2014\u8865 --host \u7ef4\u5ea6\u3001totals \u88ab LIMIT \u622a\u65ad\u3001HttpError \u672a\u8986\u76d6\u5199\u65b9\u6cd5"
-    },
-    {
-      "hash": "ff87f83",
-      "type": "fix",
-      "message": "fix: \u4e0a\u4e0b\u6587\u7a7a\u6001\u5f15\u5bfc\u6587\u6848\u7684\u4e2d\u82f1\u6587\u7c98\u8fde"
-    },
-    {
-      "hash": "0e818bb",
-      "type": "docs",
-      "message": "docs: dashboard \u52a0\u56fa\u4e0e\u8865\u5168\u8ba1\u5212\uff08Phase 1-5\uff0c\u542b\u5b9e\u6d4b\u8bc1\u636e\uff09"
-    },
-    {
-      "hash": "9fce407",
-      "type": "fix",
-      "message": "fix: \u4e0a\u4e0b\u6587\u9875\u533a\u5206\u7a7a\u6001\u4e0e\u9519\u8bef\u3001\u4e09\u5904\u89c6\u89c9\u7455\u75b5\u3001\u6587\u6863\u4e0e\u5b9e\u73b0\u5bf9\u9f50"
-    },
-    {
-      "hash": "6da15d6",
-      "type": "test",
-      "message": "test: \u524d\u7aef\u5f15\u5165 vitest + eslint + CI\uff0c\u5e76\u4fee\u6389 lint \u6293\u51fa\u7684\u4e24\u4e2a\u771f bug"
-    },
-    {
-      "hash": "cd49290",
+      "hash": "656d3ed",
       "type": "feat",
-      "message": "feat: \u8ffd\u8bfb\u503a\u9762\u677f\u2014\u2014\u6570\u636e\u5c42\u6709\u3001\u770b\u677f\u4e00\u76f4\u6ca1\u6709\u5165\u53e3\u7684\u5b50\u7cfb\u7edf"
+      "message": "feat: \u96c6\u6210 CED \u4e00\u81f4\u6027\u9519\u8bef\u5bc6\u5ea6\u6307\u6807\u2014\u2014\u5ba1\u67e5\u4ece\u8fc7\u7a0b\u6307\u6807\u5347\u7ea7\u4e3a\u8d28\u91cf\u6307\u6807"
     },
     {
-      "hash": "d8b075f",
-      "type": "test",
-      "message": "test: dashboard \u5199\u7aef\u70b9\u65ad\u8a00\u526f\u4f5c\u7528\uff0c\u5835\u4f4f\u300c500 \u4e5f\u7b97\u901a\u8fc7\u300d\u7684\u76f2\u533a"
-    },
-    {
-      "hash": "fa6a660",
+      "hash": "251bca0",
       "type": "fix",
-      "message": "fix: dashboard \u4e09\u4e2a P0\u2014\u2014\u53cd\u6a21\u5f0f\u5199\u5165\u81ea\u9501\u3001\u96f7\u8fbe\u56fe\u7a7a\u767d\u3001\u6362\u7aef\u53e3\u540e\u5199\u64cd\u4f5c\u5168\u6302"
+      "message": "fix: find_chapter_file \u6f0f\u6389 1-2 \u4f4d\u7f16\u53f7\uff0c\u4e14 3 \u4f4d\u4f18\u5148\u4e8e 4 \u4f4d\u2014\u2014\u5b9a\u4f4d\u4e0d\u5230\u5c31\u6ca1\u6709\u5b57\u6570\u5206\u6bcd"
     },
     {
-      "hash": "db49af4",
+      "hash": "e978cd4",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261019.1220 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261020.1521 [skip ci]"
     }
   ],
   "files": {
@@ -233,6 +93,134 @@
       "sha256": "b5a7daf46c399e91c969f19946fbcdf2c8ae531fa0e612f0ea1bf61ca6d7095e",
       "size": 9629
     },
+    ".opencode/dashboard/frontend/dist/assets/Badge-DXa-Irhe.js": {
+      "sha256": "e2bbb37d5c44b128248e820f90ec97ed0a6ae26af354b06bbae66c0a9380344c",
+      "size": 373
+    },
+    ".opencode/dashboard/frontend/dist/assets/Badge-zNPeMxfB.js": {
+      "sha256": "55c0b6305a3ac924f91c71f2bfa9f5f72f3021aea760338ede723a121aa59b54",
+      "size": 373
+    },
+    ".opencode/dashboard/frontend/dist/assets/CharactersPage-BZZuKMLZ.js": {
+      "sha256": "a5bd3181143f854da0c59686318337a6c3dfc1c252fba083c170ea20762d429b",
+      "size": 13099
+    },
+    ".opencode/dashboard/frontend/dist/assets/CharactersPage-BgN5-JYB.js": {
+      "sha256": "b195d0ad5447b4f408494d3d4f71021f5fdba24ffbbd0500daa756b36beab45b",
+      "size": 13099
+    },
+    ".opencode/dashboard/frontend/dist/assets/ChartWrapper-C4EZ6_uS.js": {
+      "sha256": "2af34e712cd2d019d93205588f601dc0acdf9b751726f8af7e70feb70119084f",
+      "size": 9153
+    },
+    ".opencode/dashboard/frontend/dist/assets/ChartWrapper-CCupkY2L.js": {
+      "sha256": "5d1d15d2c9b83bdd882fe6b8687a7062696d1c474f03b0a8ceb905e2d30d9835",
+      "size": 9153
+    },
+    ".opencode/dashboard/frontend/dist/assets/ContextHealthPage-D3qsHgMO.js": {
+      "sha256": "ba729b7f4743c44d895787d9102cb683f4d7513663534bbd59334f59d1cd79de",
+      "size": 8637
+    },
+    ".opencode/dashboard/frontend/dist/assets/ContextHealthPage-DjaqYQ2r.js": {
+      "sha256": "831d15f234f4c6b77f759a5bc4819ac4581f06adfff0709a66a62b418289ae7c",
+      "size": 8637
+    },
+    ".opencode/dashboard/frontend/dist/assets/DataTable-B9SPpbIN.js": {
+      "sha256": "713aba0cab0e43b92e9905c5e28459ab1536eec67b1ca98362cccddb78f7c0f0",
+      "size": 1469
+    },
+    ".opencode/dashboard/frontend/dist/assets/DataTable-DVJqG7dT.js": {
+      "sha256": "4da6fddc06632ccd32ecafc9193caffa24db88c2f289595d3a6e02eb303a28aa",
+      "size": 1469
+    },
+    ".opencode/dashboard/frontend/dist/assets/DebtPage-4JShNo6b.js": {
+      "sha256": "475465439ecefcf0515730bb52dc40d5f8bf338310becef1ca41ae87a1e0cc19",
+      "size": 6317
+    },
+    ".opencode/dashboard/frontend/dist/assets/DebtPage-lXau10Ew.js": {
+      "sha256": "ab08fec89b76d3ed0fc3f725a719bd0dfc449c293a9d4ad0de2d7c99cd3bfc15",
+      "size": 6317
+    },
+    ".opencode/dashboard/frontend/dist/assets/DiagnosticsPage-BCmmEJiJ.js": {
+      "sha256": "8975f15e630b8f079b939622486d18cc0db3d5c660e38fe1d06b55c8846be7ca",
+      "size": 6261
+    },
+    ".opencode/dashboard/frontend/dist/assets/DiagnosticsPage-D3YyLtkD.js": {
+      "sha256": "e487e8f016ab4348869f6fe43c1b4ca7faf991651bf7c106fdaee7b63db8ba88",
+      "size": 6261
+    },
+    ".opencode/dashboard/frontend/dist/assets/EditorPanel-B6TFGPMe.js": {
+      "sha256": "08f84eab8ffad9b5c32bd2f0013e933b428e49bfcd92fad9eac031c9c2bbcfd2",
+      "size": 618392
+    },
+    ".opencode/dashboard/frontend/dist/assets/EditorPanel-C3BRwXaX.js": {
+      "sha256": "1feb5ca1d8c39d332e4663259b80bb8e82a07a079f18e1d6ef2a68c10ddecba0",
+      "size": 618392
+    },
+    ".opencode/dashboard/frontend/dist/assets/FilesPage-5PKkaRbZ.js": {
+      "sha256": "c041cd573e1216dafae6f89408abef89c7b98dfd34ce2d6fc068dacb55808417",
+      "size": 4553
+    },
+    ".opencode/dashboard/frontend/dist/assets/FilesPage-qWf1_Ear.js": {
+      "sha256": "53f0ff5fdf04919b8037563ee3b865f2367e25692aadc8691aaa6e267c380544",
+      "size": 4553
+    },
+    ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-B1mLZziJ.js": {
+      "sha256": "0b0b638404a71ec03da7ff7af704b0eabe9ae93a38381710da3ed18647c57a8d",
+      "size": 5574
+    },
+    ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-uFHIqpqg.js": {
+      "sha256": "fe715118e30ad4c17ee7ef23b56b9c9893290ecc115712a72ebfb336b9a5519d",
+      "size": 5574
+    },
+    ".opencode/dashboard/frontend/dist/assets/OverviewPage-B3Ilc4CZ.js": {
+      "sha256": "44bc0f1e2c557259e7b60297e60e45610c8730ebeaf9a49ba6c771ce8944bc1b",
+      "size": 13208
+    },
+    ".opencode/dashboard/frontend/dist/assets/OverviewPage-BbWSuTKV.js": {
+      "sha256": "6a510a7150fde0695546410ff89971e6810d62bd5cff452379bc3269b1a55fff",
+      "size": 13208
+    },
+    ".opencode/dashboard/frontend/dist/assets/PacingPage-B8abupb3.js": {
+      "sha256": "e0caf5ea394bf46fa7502dfc11c400b62f2ebdc0d0d045b7f155fdf789702812",
+      "size": 5325
+    },
+    ".opencode/dashboard/frontend/dist/assets/PacingPage-eJAUGIzI.js": {
+      "sha256": "e4637f432d08ca255a290abde69a8bdaaff48eae4b01f84edf9a9475dbc0af3f",
+      "size": 5325
+    },
+    ".opencode/dashboard/frontend/dist/assets/Pager-BTvtuMtD.js": {
+      "sha256": "4c10ad2e2cf08c3c281e0721ce01bac050d021098caea4e7b92ad4103ac9b4c9",
+      "size": 700
+    },
+    ".opencode/dashboard/frontend/dist/assets/Pager-DBqMV_ab.js": {
+      "sha256": "57267907953c95ab59e952db49cf8887ec48cb042b90d6d8de9d166df34fe46c",
+      "size": 700
+    },
+    ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-6nFNeb76.js": {
+      "sha256": "5039ccf9b6a88934b538e3b0d668b3399f0c6a42c685f042b85c2416e8097c6a",
+      "size": 6511
+    },
+    ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-Bh28rWEC.js": {
+      "sha256": "1ab32a037a7441e8b237044715e6bc66539a3be6a68a07c2a67d4f426cf7f22e",
+      "size": 5009
+    },
+    ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-CYYiAq41.js": {
+      "sha256": "9526b53138de5ac5991dd1ee64969961a1e7ccf1183def3dd71c65c036c90484",
+      "size": 22057
+    },
+    ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-Fji2T7Q0.js": {
+      "sha256": "9c03e7cfee689ea827eb2d0c7208c649b05945385a1467b8dbee752c40eee8a3",
+      "size": 22057
+    },
+    ".opencode/dashboard/frontend/dist/assets/SystemPage-BhRP_N66.js": {
+      "sha256": "7365c030744718b72e84808d2db04acd3f0c4467ffb0e0843245a9240b47897c",
+      "size": 10985
+    },
+    ".opencode/dashboard/frontend/dist/assets/SystemPage-CgVAgY5W.js": {
+      "sha256": "ef2fc0de3b6456b2dda4d0d3d466432c949ccba6452d2c07311c965a0378c3c8",
+      "size": 10985
+    },
     ".opencode/dashboard/frontend/dist/assets/echarts-vendor-CCZFUTXT.js": {
       "sha256": "afbdbda1d918861640343bb397f2eb457b2a2db6b415cdc3cb3208a155bb8f2a",
       "size": 632750
@@ -249,6 +237,14 @@
       "sha256": "dd6135d3e1a9aefab3e2e4ad8aaab357d4a25fd1840e313f039859fd75df2a65",
       "size": 16893
     },
+    ".opencode/dashboard/frontend/dist/assets/index-BcF0KDLm.js": {
+      "sha256": "08c6f446f40c0757f9a700d9fa2e80801ee462d50f43fa9984faa2a4eefcd237",
+      "size": 197090
+    },
+    ".opencode/dashboard/frontend/dist/assets/index-T3ikhKGX.js": {
+      "sha256": "37e744cac37884bd618e8bab72910710f65080cbbea85c0a397827473aa308fc",
+      "size": 197090
+    },
     ".opencode/dashboard/frontend/dist/assets/react-vendor-CjpoAPrF.js": {
       "sha256": "a73ee4c48bf1694465cb392489e61ba3dc5b229f360cb22298dc0fb9181b843e",
       "size": 49774
@@ -258,7 +254,7 @@
       "size": 1099
     },
     ".opencode/dashboard/frontend/dist/index.html": {
-      "sha256": "4452a3f17f5b8432a55203a328d065237dcf77419da8e77556b21c2d65dccde4",
+      "sha256": "9790c84b2eeec288bc56940c01161b782a67dac50cff2ed28cf90a70b0e71f3a",
       "size": 919
     },
     ".opencode/dashboard/frontend/eslint.config.js": {
@@ -1200,6 +1196,10 @@
     ".opencode/scripts/data_modules/tests/test_dashboard_app.py": {
       "sha256": "6e4d15179ee5fa5e44265b2f7e325b41e9d62be8eb9b955c6f3401b3b8a4f32e",
       "size": 14952
+    },
+    ".opencode/scripts/data_modules/tests/test_dashboard_ced.py": {
+      "sha256": "dad0a46fd48806300a32577eea18e3c82382071e94fddc837f9bb82051dfbf17",
+      "size": 8913
     },
     ".opencode/scripts/data_modules/tests/test_dashboard_csrf.py": {
       "sha256": "77c7197db2f7b56985a33b50f830f33a1f0d950e4b0982000addf51176afa985",
