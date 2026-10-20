@@ -1396,6 +1396,10 @@
       "sha256": "d8f827be90156113d2f0f641566b1104dff4e353f9d3aa9b3f40f5ea7c42b168",
       "size": 6098
     },
+    ".opencode/scripts/data_modules/tests/test_quality_trend_report.py": {
+      "sha256": "97bb84ea5274835f41d330d2ead777c24f22aa9bc49ba42e6fa768376487585c",
+      "size": 5592
+    },
     ".opencode/scripts/data_modules/tests/test_rag_adapter.py": {
       "sha256": "d44d7c1a1744e5f870ff9a447f8b4c952dc94d4b4a8192fc8e3c0b175d7f24c5",
       "size": 17217
@@ -1729,8 +1733,8 @@
       "size": 3290
     },
     ".opencode/scripts/quality_trend_report.py": {
-      "sha256": "d1635eecaa5cc9679e98afe398b8bd31e3e340c8181b314423e18430c40ae975",
-      "size": 8711
+      "sha256": "a5858f54101b0f3382532fe279df662aa9cbc959a884662d9ba8aafd427b2e9e",
+      "size": 9653
     },
     ".opencode/scripts/reference_search.py": {
       "sha256": "1f67391a9a7437452f594342cdf383cee3e1ef018d8064a2a6f4cb20456f6548",

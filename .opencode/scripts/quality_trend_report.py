@@ -84,11 +84,25 @@ def _build_checklist_rows(records: List[Dict[str, Any]]) -> List[str]:
         required_items = _to_int(row.get("required_items"))
         completed_required = _to_int(row.get("completed_required"))
         if required_items > 0:
-            required_rate = completed_required / required_items
+            # 夹到 [0, 1]：脏数据里 completed_required 可能大于 required_items
+            # （例如清单模板换过、旧记录混进来），直接相除会产出 250% 这种
+            # 荒谬值，把作者吓一跳却看不出是数据问题。
+            required_rate = min(1.0, max(0.0, completed_required / required_items))
+            required_cell = _percent(required_rate)
         else:
-            required_rate = 1.0
+            # 没有 required 项 ≠ required 项全部完成。
+            #
+            # 此前这里取 1.0，于是新书场景（build_writing_checklist 产出的全是
+            # fallback 项，required_items 恒为 0）报表里那一列**永远是 100%**：
+            #
+            #     | 1 | 30.0 | 0.0% | 100.0% |
+            #
+            # 「完成率 0%」旁边并排着「required 完成率 100%」，自相矛盾。而且
+            # 会让作者以为必做项都做到了，实际系统里根本没有必做项——那是
+            # "没有约束"，不是"约束已满足"。
+            required_cell = "—"
         rows.append(
-            f"| {chapter} | {score:.1f} | {_percent(completion)} | {_percent(required_rate)} |"
+            f"| {chapter} | {score:.1f} | {_percent(completion)} | {required_cell} |"
         )
     return rows
 
