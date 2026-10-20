@@ -88,6 +88,54 @@ function buildTrendOption(trends) {
     }
 }
 
+// CED（一致性错误密度）趋势。三条口径各一条线。
+// 注意：后端已排除不可解析与算不出（分母 0）的章节，所以曲线天然有断点——
+// 用 connectNulls: false 让缺口显示出来，而不是把断点两端连成一根线。
+const CED_LABELS = {
+    ced_raw: '原始密度',
+    ced_weighted: '加权密度',
+    ced_blocking: '阻断密度',
+}
+
+function buildCedOption(cedTrends) {
+    if (!cedTrends) return null
+    const keys = Object.keys(cedTrends).filter(k => k.startsWith('ced_') && cedTrends[k]?.length)
+    if (!keys.length) return null
+
+    const allChapters = new Set()
+    for (const key of keys) {
+        for (const p of cedTrends[key]) allChapters.add(p.chapter)
+    }
+    const chapters = [...allChapters].sort((a, b) => a - b)
+    const colors = { ced_raw: '#26a8ff', ced_weighted: '#7f5af0', ced_blocking: '#d7263d' }
+
+    const series = keys.map(key => {
+        const byChapter = new Map(cedTrends[key].map(p => [p.chapter, p.ced]))
+        return {
+            name: CED_LABELS[key] || key,
+            type: 'line',
+            smooth: true,
+            symbolSize: 6,
+            connectNulls: false,
+            data: chapters.map(ch => (byChapter.has(ch) ? byChapter.get(ch) : null)),
+            lineStyle: { color: colors[key] },
+            itemStyle: { color: colors[key] },
+        }
+    })
+
+    return {
+        tooltip: {
+            trigger: 'axis',
+            valueFormatter: v => (v === null ? '无数据' : v.toFixed(2)),
+        },
+        legend: { bottom: 0, type: 'scroll', data: keys.map(k => CED_LABELS[k] || k) },
+        grid: { left: 52, right: 24, top: 36, bottom: 46 },
+        xAxis: { type: 'category', data: chapters, boundaryGap: false },
+        yAxis: { type: 'value', name: '每万字', minInterval: 1 },
+        series,
+    }
+}
+
 function buildSeverityOption(severityTotals) {
     const entries = Object.entries(severityTotals || {}).filter(([, v]) => v > 0)
     if (!entries.length) return null
@@ -141,6 +189,7 @@ export default function ReviewAnalyticsPage() {
     const radarOption = useMemo(() => buildRadarOption(data?.dimension_averages), [data])
     const trendOption = useMemo(() => buildTrendOption(data?.dimension_trends), [data])
     const severityOption = useMemo(() => buildSeverityOption(data?.severity_totals), [data])
+    const cedOption = useMemo(() => buildCedOption(data?.ced_trends), [data])
 
     // 维度数是**数据驱动**的，不是固定 8 个：旧书可能只跑过 plot/pacing/character
     // 三个维度，硬写「8 维度」会与图上的实际顶点数不符（2026-10 实测暴露）。
@@ -191,6 +240,19 @@ export default function ReviewAnalyticsPage() {
                                     <Badge tone="amber">累计</Badge>
                                 </div>
                                 <ChartWrapper option={severityOption} height={320} />
+                    {cedOption && (
+                        <>
+                            <h3>一致性错误密度（CED）</h3>
+                            <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13, marginTop: -8 }}>
+                                每万字的一致性错误数，数值越低越好。曲线断开表示该章未计入
+                                （审查输出不可解析，或取不到正文字数）。
+                                {data?.ced_summary?.chapters_skipped > 0 && (
+                                    <>已排除 {data.ced_summary.chapters_skipped} 章。</>
+                                )}
+                            </p>
+                            <ChartWrapper option={cedOption} height={320} />
+                        </>
+                    )}
                             </article>
                         )}
                     </div>

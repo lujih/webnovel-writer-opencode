@@ -292,6 +292,47 @@ def _resolve_volume_for_chapter(state: dict, chapter: int) -> int | None:
     return best[1] if best else None
 
 
+def _build_ced_summary(ced_trends: dict, skipped: int) -> dict:
+    """汇总三个 CED 口径，供界面显示趋势方向。
+
+    返回 `{<口径>: {avg, latest, trend}}`：
+      - avg    该口径平均值（无可算章节时为 None）
+      - latest 最新一章的值
+      - trend  与平均值的相对变化："up" / "down" / "flat" / None
+                （错误密度**下降**是改善，故 trend 方向按"变好/变差"给）
+
+    `skipped` 是被排除的章数（解析失败或算不出），原样透出——
+    让界面能提示"有 N 章未计入"，而不是让读者以为曲线覆盖了全部章节。
+    """
+    summary: dict = {}
+    # 显式遍历三个口径，而非 iteritems(ced_trends)：空 trends 时后者
+    # 一个 key 都产不出，响应就缺 ced_raw 等字段，前端只能判两处形状。
+    for key in ("ced_raw", "ced_weighted", "ced_blocking"):
+        points = (ced_trends or {}).get(key) or []
+        values = [p["ced"] for p in points if p.get("ced") is not None]
+        if not values:
+            summary[key] = {"avg": None, "latest": None, "trend": None}
+            continue
+
+        avg = round(sum(values) / len(values), 4)
+        latest = round(values[0], 4)        # 按章倒序插入，首条即最新
+        delta = latest - avg
+        if abs(delta) < 1e-9:
+            trend = "flat"
+        elif delta < 0:
+            trend = "down"       # 错误密度下降 = 改善
+        else:
+            trend = "up"
+
+        summary[key] = {"avg": avg, "latest": latest, "trend": trend}
+
+    counted = [len((ced_trends or {}).get(k) or [])
+               for k in ("ced_raw", "ced_weighted", "ced_blocking")]
+    summary["chapters_counted"] = (sum(counted) // len(counted)) if counted else 0
+    summary["chapters_skipped"] = skipped
+    return summary
+
+
 def _build_strand_map(state: dict) -> dict[int, str]:
     tracker = state.get("strand_tracker") if isinstance(state, dict) else {}
     history = tracker.get("history") if isinstance(tracker, dict) else []
@@ -724,11 +765,22 @@ def create_app(
                 "SELECT * FROM review_metrics ORDER BY end_chapter DESC LIMIT ?", (limit,))
 
         if not rows:
-            return {"items": [], "summary": {}}
+            # 空库也要返回与有数据时一致的键集合——否则前端得判两处形状，
+            # 而 CED 区块的 builder 已能处理全空 trends。
+            return {
+                "items": [],
+                "summary": {},
+                "ced_trends": {"ced_raw": [], "ced_weighted": [], "ced_blocking": []},
+                "ced_summary": _build_ced_summary({}, 0),
+            }
 
         dimension_trends = {}
         severity_totals = {}
         all_critical_issues = []
+        # CED（一致性错误密度）趋势。三个口径各一条曲线。
+        # 仅纳入 review_parseable=1 且分子/分母齐备的章节——见下。
+        ced_trends = {"ced_raw": [], "ced_weighted": [], "ced_blocking": []}
+        ced_chapters_skipped = 0
 
         for row in rows:
             chapter = row.get("end_chapter", 0)
@@ -745,6 +797,21 @@ def create_app(
             issues = _parse_json_value(row.get("critical_issues"), [])
             all_critical_issues.extend(issues)
 
+            # CED 收集。跳过两类章：
+            #   1) review_parseable=0 —— 审查输出不可解析，
+            #      那一章没有可信的 issue 数据，画上去就是虚假尖峰
+            #   2) CED 为 NULL —— 分母为 0（章节文件缺失/空文件），算不出来。
+            #      NULL 与 0 是两件事：后者意味着"真的没发现问题"。
+            if not row.get("review_parseable"):
+                ced_chapters_skipped += 1
+                continue
+            for key in ced_trends:
+                value = row.get(key)
+                if value is None:
+                    ced_chapters_skipped += 1
+                    break
+                ced_trends[key].append({"chapter": chapter, "ced": value})
+
         dimension_averages = {}
         for dim, points in dimension_trends.items():
             valid_scores = [p["score"] for p in points if p["score"] is not None]
@@ -759,6 +826,8 @@ def create_app(
             "severity_totals": severity_totals,
             "critical_issues": all_critical_issues[:20],
             "total_reviews": len(rows),
+            "ced_trends": ced_trends,
+            "ced_summary": _build_ced_summary(ced_trends, ced_chapters_skipped),
         }
 
     @app.get("/api/stats/chapter-trend")

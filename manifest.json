@@ -226,76 +226,12 @@
       "size": 79
     },
     ".opencode/dashboard/app.py": {
-      "sha256": "ecc1d0c1d81cb5f54b86aaf58f3e43c8d9a20c86da98c46493c6179a4a6f9662",
-      "size": 97224
+      "sha256": "f737d6e65beeb22db5b8b66b34e74c596e21f6860fa8d704443551e69c830885",
+      "size": 100581
     },
     ".opencode/dashboard/frontend/design.md": {
       "sha256": "b5a7daf46c399e91c969f19946fbcdf2c8ae531fa0e612f0ea1bf61ca6d7095e",
       "size": 9629
-    },
-    ".opencode/dashboard/frontend/dist/assets/Badge-zNPeMxfB.js": {
-      "sha256": "55c0b6305a3ac924f91c71f2bfa9f5f72f3021aea760338ede723a121aa59b54",
-      "size": 373
-    },
-    ".opencode/dashboard/frontend/dist/assets/CharactersPage-BgN5-JYB.js": {
-      "sha256": "b195d0ad5447b4f408494d3d4f71021f5fdba24ffbbd0500daa756b36beab45b",
-      "size": 13099
-    },
-    ".opencode/dashboard/frontend/dist/assets/ChartWrapper-C4EZ6_uS.js": {
-      "sha256": "2af34e712cd2d019d93205588f601dc0acdf9b751726f8af7e70feb70119084f",
-      "size": 9153
-    },
-    ".opencode/dashboard/frontend/dist/assets/ContextHealthPage-D3qsHgMO.js": {
-      "sha256": "ba729b7f4743c44d895787d9102cb683f4d7513663534bbd59334f59d1cd79de",
-      "size": 8637
-    },
-    ".opencode/dashboard/frontend/dist/assets/DataTable-B9SPpbIN.js": {
-      "sha256": "713aba0cab0e43b92e9905c5e28459ab1536eec67b1ca98362cccddb78f7c0f0",
-      "size": 1469
-    },
-    ".opencode/dashboard/frontend/dist/assets/DebtPage-lXau10Ew.js": {
-      "sha256": "ab08fec89b76d3ed0fc3f725a719bd0dfc449c293a9d4ad0de2d7c99cd3bfc15",
-      "size": 6317
-    },
-    ".opencode/dashboard/frontend/dist/assets/DiagnosticsPage-BCmmEJiJ.js": {
-      "sha256": "8975f15e630b8f079b939622486d18cc0db3d5c660e38fe1d06b55c8846be7ca",
-      "size": 6261
-    },
-    ".opencode/dashboard/frontend/dist/assets/EditorPanel-C3BRwXaX.js": {
-      "sha256": "1feb5ca1d8c39d332e4663259b80bb8e82a07a079f18e1d6ef2a68c10ddecba0",
-      "size": 618392
-    },
-    ".opencode/dashboard/frontend/dist/assets/FilesPage-5PKkaRbZ.js": {
-      "sha256": "c041cd573e1216dafae6f89408abef89c7b98dfd34ce2d6fc068dacb55808417",
-      "size": 4553
-    },
-    ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-uFHIqpqg.js": {
-      "sha256": "fe715118e30ad4c17ee7ef23b56b9c9893290ecc115712a72ebfb336b9a5519d",
-      "size": 5574
-    },
-    ".opencode/dashboard/frontend/dist/assets/OverviewPage-B3Ilc4CZ.js": {
-      "sha256": "44bc0f1e2c557259e7b60297e60e45610c8730ebeaf9a49ba6c771ce8944bc1b",
-      "size": 13208
-    },
-    ".opencode/dashboard/frontend/dist/assets/PacingPage-B8abupb3.js": {
-      "sha256": "e0caf5ea394bf46fa7502dfc11c400b62f2ebdc0d0d045b7f155fdf789702812",
-      "size": 5325
-    },
-    ".opencode/dashboard/frontend/dist/assets/Pager-DBqMV_ab.js": {
-      "sha256": "57267907953c95ab59e952db49cf8887ec48cb042b90d6d8de9d166df34fe46c",
-      "size": 700
-    },
-    ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-Bh28rWEC.js": {
-      "sha256": "1ab32a037a7441e8b237044715e6bc66539a3be6a68a07c2a67d4f426cf7f22e",
-      "size": 5009
-    },
-    ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-Fji2T7Q0.js": {
-      "sha256": "9c03e7cfee689ea827eb2d0c7208c649b05945385a1467b8dbee752c40eee8a3",
-      "size": 22057
-    },
-    ".opencode/dashboard/frontend/dist/assets/SystemPage-BhRP_N66.js": {
-      "sha256": "7365c030744718b72e84808d2db04acd3f0c4467ffb0e0843245a9240b47897c",
-      "size": 10985
     },
     ".opencode/dashboard/frontend/dist/assets/echarts-vendor-CCZFUTXT.js": {
       "sha256": "afbdbda1d918861640343bb397f2eb457b2a2db6b415cdc3cb3208a155bb8f2a",
@@ -313,10 +249,6 @@
       "sha256": "dd6135d3e1a9aefab3e2e4ad8aaab357d4a25fd1840e313f039859fd75df2a65",
       "size": 16893
     },
-    ".opencode/dashboard/frontend/dist/assets/index-BcF0KDLm.js": {
-      "sha256": "08c6f446f40c0757f9a700d9fa2e80801ee462d50f43fa9984faa2a4eefcd237",
-      "size": 197090
-    },
     ".opencode/dashboard/frontend/dist/assets/react-vendor-CjpoAPrF.js": {
       "sha256": "a73ee4c48bf1694465cb392489e61ba3dc5b229f360cb22298dc0fb9181b843e",
       "size": 49774
@@ -326,7 +258,7 @@
       "size": 1099
     },
     ".opencode/dashboard/frontend/dist/index.html": {
-      "sha256": "9790c84b2eeec288bc56940c01161b782a67dac50cff2ed28cf90a70b0e71f3a",
+      "sha256": "4452a3f17f5b8432a55203a328d065237dcf77419da8e77556b21c2d65dccde4",
       "size": 919
     },
     ".opencode/dashboard/frontend/eslint.config.js": {
@@ -470,8 +402,8 @@
       "size": 11328
     },
     ".opencode/dashboard/frontend/src/pages/ReviewAnalyticsPage.jsx": {
-      "sha256": "4c650659d63145c7ab140b5ac5f207ba724c1f9b0a121c179654f1d90eeba5a9",
-      "size": 9304
+      "sha256": "ec83f6187e9850279866604aaaf610cab0e1120809167194d8a656b31807bbea",
+      "size": 12039
     },
     ".opencode/dashboard/frontend/src/pages/StyleEditorPage.jsx": {
       "sha256": "53d832553deaa8c48ccc0f5782a7e75db7b43213a7d9c59dd8c3bb3278dff588",
@@ -1160,6 +1092,10 @@
     ".opencode/scripts/data_modules/tests/test_bom_tolerance.py": {
       "sha256": "e7e80ef701d4759c7eab114604b3d62ca0e89c629812f7ff0f909b685b88bb52",
       "size": 5898
+    },
+    ".opencode/scripts/data_modules/tests/test_ced_integration.py": {
+      "sha256": "089dad6fba462c3ad6c92ce5545e564d7979000df5ed9202f384eb29f62ecc7f",
+      "size": 12310
     },
     ".opencode/scripts/data_modules/tests/test_chapter_commit_service.py": {
       "sha256": "9b9ba7b7b175d4c9f2157f892c87a6f7e1d5a41511bdcd5dac83598d4d9b7fcb",
