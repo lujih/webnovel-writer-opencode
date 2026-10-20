@@ -773,8 +773,8 @@
       "size": 4495
     },
     ".opencode/scripts/data_modules/genre_profile_builder.py": {
-      "sha256": "566998c5d774737a441221152cfe82f152743cb01a72cfcb7a7b7169b0d1cd15",
-      "size": 3003
+      "sha256": "e4c15872b14718e5cd642939950fc4c9dbe95bdf017fc7a33bfb9740a20374d8",
+      "size": 4763
     },
     ".opencode/scripts/data_modules/index_chapter_mixin.py": {
       "sha256": "c8fc778515b8c19aaf927debbe2c55b9994c40cc3ae21ec7f3810c48bb712e7a",
@@ -1215,6 +1215,10 @@
     ".opencode/scripts/data_modules/tests/test_genre_aliases.py": {
       "sha256": "4cd55176ab63b241688deaefc0f58ea64cd37ff66a05519eda939126a8f51958",
       "size": 6694
+    },
+    ".opencode/scripts/data_modules/tests/test_genre_profile_builder.py": {
+      "sha256": "acef46bf3eccf3cbe39655b093bd943d9c62dc9caac15b87b2ff53af4780ee14",
+      "size": 6317
     },
     ".opencode/scripts/data_modules/tests/test_index_debt_mixin.py": {
       "sha256": "701342a26f127a56dda5658c0e8b9a511e7379c0ab5c119f149da61ec42d87a6",

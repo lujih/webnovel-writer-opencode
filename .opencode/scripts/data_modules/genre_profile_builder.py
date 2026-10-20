@@ -50,7 +50,50 @@ def parse_genre_tokens(
     return [fallback_token] if fallback_token else [text]
 
 
+#: 分节标题里"标题本体"与"补充说明"之间的分隔符。
+#:
+#: `## 都市（含异能）` 这类写法很常见：标题本体是题材名，括号里是说明。
+#: 匹配时只看本体，否则 `都市` 永远匹配不到带括号的标题。
+_HEADING_NOTE_SEPARATORS = ("（", "(", "：", ":", "—", "–", "-", " ", "\t")
+
+
+def _heading_genre_title(line: str) -> str:
+    """从一行标题里取出"题材名"部分（去掉 `##`、补充说明、空白）。"""
+    stripped = line.strip()
+    for prefix in ("###", "##", "#"):
+        if stripped.startswith(prefix):
+            stripped = stripped[len(prefix):]
+            break
+    title = stripped.strip()
+    # 按第一个分隔符截断：`都市（含异能）` → `都市`
+    cut = len(title)
+    for sep in _HEADING_NOTE_SEPARATORS:
+        idx = title.find(sep)
+        if idx != -1:
+            cut = min(cut, idx)
+    return title[:cut].strip().lower()
+
+
 def extract_genre_section(text: str, genre: str) -> str:
+    """摘出与 ``genre`` 对应的分节。
+
+    匹配的是**标题本体**，不是子串包含。此前用 `target in normalized`：
+
+        active = target in normalized      # normalized 是 "## 都市异能"
+
+    题材名互为前缀时，谁在前就匹配谁。实测：
+
+        ## 都市异能      ← 排在前
+        - 异能规则
+        ## 都市
+        - 都市规则
+
+        extract_genre_section(doc, "都市")
+        → "## 都市异能\n- 异能规则"    ❌ 拿到「都市异能」的规则
+
+    作者写「都市」，上下文里注入的却是「都市异能」的写作要求，不报错、无提示。
+    同类前缀对：都市/都市异能、游戏/游戏电竞、悬疑/悬疑脑洞、修仙/修仙玄幻。
+    """
     if not text:
         return ""
     lines = text.splitlines()
@@ -59,11 +102,12 @@ def extract_genre_section(text: str, genre: str) -> str:
     target = genre.strip().lower()
 
     for line in lines:
-        normalized = line.strip().lower()
-        if normalized.startswith("## ") or normalized.startswith("### "):
+        normalized = line.strip()
+        if normalized.startswith("#"):
             if active:
                 break
-            active = target in normalized
+            # 精确比较标题本体，避免前缀碰撞
+            active = bool(target) and _heading_genre_title(normalized) == target
             if active:
                 capture.append(line)
             continue
