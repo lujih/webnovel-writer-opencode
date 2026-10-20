@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from chapter_outline_loader import load_chapter_outline, load_chapter_plot_structure
+from data_modules.urgency_utils import coerce_urgency
 
 from runtime_compat import enable_windows_utf8_stdio
 
@@ -155,7 +156,12 @@ def extract_state_summary(project_root: Path) -> str:
     foreshadowing = plot_threads.get("foreshadowing", [])
     if isinstance(foreshadowing, list) and foreshadowing:
         active = [row for row in foreshadowing if row.get("status") in {"active", "未回收"}]
-        urgent = [row for row in active if row.get("urgency", 0) > 50]
+        # 用 coerce_urgency 归一后再比较：state.json 是用户可编辑的历史数据，
+        # `urgency` 可能是 "80" / None / "nan" / "high"。裸比较会抛
+        # TypeError（'80' > 50）让 build_context 整个崩掉——而那是每章
+        # 写作的必经之路；nan 则恒为 False，让标了紧急的伏笔静默消失。
+        urgent = [row for row in active
+                  if coerce_urgency(row.get("urgency")) > 50]
         if urgent:
             urgent_list = [
                 f"{row.get('content', '?')[:30]}... (紧急度:{row.get('urgency')})"
