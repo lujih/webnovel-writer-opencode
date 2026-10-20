@@ -67,6 +67,21 @@ export function CoinsIcon(props) {
     )
 }
 
+// 运维诊断：心电图脉冲。与"系统状态"的推子区分开——后者是配置，
+// 前者是运行时观测。
+export function PulseIcon(props) {
+    return (
+        <IconBase {...props}>
+            <rect x="2" y="11" width="4" height="2" />
+            <rect x="6" y="7" width="3" height="10" />
+            <rect x="9" y="14" width="3" height="3" />
+            <rect x="12" y="5" width="3" height="12" />
+            <rect x="15" y="11" width="4" height="2" />
+            <rect x="19" y="9" width="3" height="2" />
+        </IconBase>
+    )
+}
+
 export function FolderIcon(props) {
     return (
         <IconBase {...props}>

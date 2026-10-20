@@ -230,6 +230,33 @@ async function buildBundle() {
   }
   if (!distStat.isFile()) throw new Error(`前端产物不是普通文件: ${FRONTEND_INDEX}`);
 
+  // 陈旧检测：源码比产物新 = 改了前端忘了重建。这里**只警告不阻断**——
+  // dist 是否真的陈旧无法从时间戳严格判定（git checkout 会把两者都刷成
+  // 检出时间），阻断会造成大量误判。但至少要让人在发布日志里看见。
+  try {
+    const FRONTEND_SRC = join(OPC_DIR, 'dashboard', 'frontend', 'src');
+    const newest = (dir) => {
+      let max = 0;
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = join(dir, entry.name);
+        if (entry.isDirectory()) max = Math.max(max, newest(full));
+        else max = Math.max(max, statSync(full).mtimeMs);
+      }
+      return max;
+    };
+    const srcMtime = newest(FRONTEND_SRC);
+    if (srcMtime > distStat.mtimeMs) {
+      const hours = ((srcMtime - distStat.mtimeMs) / 3600000).toFixed(1);
+      process.stdout.write(
+        `  ⚠️  dist/ 可能已过期：src/ 最新改动比产物新 ${hours} 小时。` +
+          `\n     若刚改过前端，请重新构建：cd .opencode/dashboard/frontend && npm run build\n`
+      );
+    }
+  } catch (e) {
+    // 时间戳探测失败不该影响出包
+    process.stdout.write(`  (dist 陈旧检测跳过: ${e.message})\n`);
+  }
+
   process.stdout.write('收集文件... ');
   // 优先只收 git 索引里的文件：发布包内容必须等于"仓库里有的东西"。
   // git 不可用时 tracked=null，退回纯遍历（并靠 LOCAL_ONLY_* 兜底）。

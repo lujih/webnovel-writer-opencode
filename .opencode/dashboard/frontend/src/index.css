@@ -606,6 +606,10 @@ pre {
   margin: 6px 0 2px;
   color: var(--accent-blue);
   font-size: 28px;
+  /* 数值 + 单位（如 "928.4 ms"）不能折成两行——卡片宽度随 grid 自适应，
+     长数值会撞到边界。超出时缩小字号而不是换行。 */
+  white-space: nowrap;
+  overflow-wrap: normal;
   font-variant-numeric: tabular-nums;
   line-height: 1.12;
 }

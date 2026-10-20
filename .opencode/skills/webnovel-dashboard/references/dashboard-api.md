@@ -74,6 +74,7 @@ IP 字面量由浏览器地址栏决定，攻击者无法指定。绑定具体 I
 | `/api/foreshadowing/reminders` | 即将到期（`threshold` 内）与无期限的活跃伏笔 |
 | `/api/debts/summary` | 追读债总览：统计 + 明细 + 按类型/状态分桶 |
 | `/api/debts/{id}` | 单笔债务 + `debt_events` 时间线 |
+| `/api/diagnostics/summary` | 运维诊断聚合：RAG 延迟 P50/P95、空命中率、工具失败率、最慢检索、最近失败 |
 | `/api/alerts` | 质量预警（分数下滑/债超期/角色久未出场/strand 单调） |
 | `/api/workflow/status` | 章节阶段进度 |
 | `/api/files/tree` · `/api/files/read` | 三目录只读浏览（越界 403） |
@@ -90,6 +91,15 @@ IP 字面量由浏览器地址栏决定，攻击者无法指定。绑定具体 I
    告诉你明细是否被截断。
 3. **缺表返回空而非 500。** 旧库可能没有 `chase_debt`，`_fetchall_safe` 会
    把 `no such table` 降级成空列表。
+
+### 运维诊断的两张数据源
+
+`rag_query_log` 与 `tool_call_stats` **一直在被写入**（`rag_adapter` 每次检索、
+`context_manager.build` 每次组装），但此前只有原始日志转储端点，信息密度太低。
+`/api/diagnostics/summary` 把它们聚合成可读指标：延迟分位数、空命中（检索无结果）
+比例、工具失败率与最近失败记录。
+
+`total` 是**全表口径**，最慢检索/最近失败各自受 `limit` 限制——与追读债同款约定。
 
 ### 审查维度数量是数据驱动的
 

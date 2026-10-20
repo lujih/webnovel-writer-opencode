@@ -208,6 +208,11 @@ export default function ContextHealthPage() {
     const tokensOption = useMemo(() => buildTokensOption(health?.section_tokens), [health])
     const historyOption = useMemo(() => buildHistoryOption(history.items || []), [history])
 
+    // 历史为空 = 这本书还没跑过 chapter-commit 的上下文组装阶段。
+    // 这是新项目的**正常状态**，不是错误（别走红色 error 分支）。
+    const historyEmpty = !loading && !error
+        && Array.isArray(history?.items) && history.items.length === 0
+
     const chapterOptions = useMemo(() => {
         const chapters = new Set()
         for (const item of (history.items || [])) {
@@ -242,6 +247,13 @@ export default function ContextHealthPage() {
                         <option key={ch} value={ch}>{formatChapterLabel(ch)}</option>
                     ))}
                 </select>
+                {historyEmpty && (
+                    // 下拉里只剩「当前章」一项时，用户不知道还有哪些章可选。
+                    // 直说"还没有任何快照"，比留一个孤立选项清楚。
+                    <span className="detail-meta" style={{ padding: 0, margin: 0 }}>
+                        尚未生成任何上下文快照
+                    </span>
+                )}
             </div>
 
             {loading && <div className="empty-state">加载中...</div>}

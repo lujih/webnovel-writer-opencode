@@ -1267,6 +1267,147 @@ def create_app(
                 (limit,),
             )
 
+    @app.get("/api/diagnostics/summary")
+    def diagnostics_summary(limit: int = Query(50, ge=1, le=500)):
+        """运维诊断总览：RAG 查询质量 + 工具调用健康度。
+
+        数据来源是 `rag_query_log` 与 `tool_call_stats` 两张表——它们**一直在
+        被写入**（`rag_adapter` 每次检索、`context_manager.build` 每次组装都会
+        落一行），但面板此前没有任何入口，作者看不到"RAG 到底检索得准不准"、
+        "上下文组装失败了几次"。
+
+        这些端点早先只是原始日志转储（`/api/rag-queries`、`/api/tool-stats`），
+        直接渲染成表格信息密度太低。这里做聚合：计数、均值、失败率、最慢查询。
+        """
+        with closing(_get_db()) as conn:
+            rag_rows = _fetchall_safe(
+                conn,
+                """
+                SELECT id, query, query_type, results_count, latency_ms, chapter, created_at
+                FROM rag_query_log
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            rag_totals = _fetchall_safe(
+                conn,
+                """
+                SELECT COUNT(*) AS total,
+                       AVG(latency_ms) AS avg_latency,
+                       SUM(CASE WHEN results_count = 0 THEN 1 ELSE 0 END) AS empty_hits
+                FROM rag_query_log
+                """,
+            )
+            tool_rows = _fetchall_safe(
+                conn,
+                """
+                SELECT id, tool_name, success, retry_count, error_code, error_message,
+                       chapter, created_at
+                FROM tool_call_stats
+                ORDER BY created_at DESC, id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            )
+            tool_totals = _fetchall_safe(
+                conn,
+                """
+                SELECT COUNT(*) AS total,
+                       SUM(CASE WHEN success = 0 THEN 1 ELSE 0 END) AS failures
+                FROM tool_call_stats
+                """,
+            )
+
+        def _num(value, default=0.0):
+            try:
+                return float(value)
+            except (TypeError, ValueError):
+                return default
+
+        rag_total = int(_num(rag_totals[0].get("total")) if rag_totals else 0)
+        tool_total = int(_num(tool_totals[0].get("total")) if tool_totals else 0)
+        tool_failures = int(_num(tool_totals[0].get("failures")) if tool_totals else 0)
+
+        # 按 query_type 分桶（rag_query_log 的分类维度）
+        by_query_type: dict[str, int] = {}
+        # 按工具名分桶，并单独统计失败次数
+        by_tool: dict[str, dict] = {}
+        latencies = []
+        empty_hits = 0
+
+        for row in rag_rows:
+            qtype = str(row.get("query_type") or "unknown")
+            by_query_type[qtype] = by_query_type.get(qtype, 0) + 1
+            latency = _num(row.get("latency_ms"))
+            if latency > 0:
+                latencies.append(latency)
+            if int(_num(row.get("results_count"))) == 0:
+                empty_hits += 1
+
+        for row in tool_rows:
+            name = str(row.get("tool_name") or "unknown")
+            bucket = by_tool.setdefault(name, {"count": 0, "failures": 0})
+            bucket["count"] += 1
+            if not row.get("success"):
+                bucket["failures"] += 1
+
+        latencies.sort()
+
+        def _percentile(values, ratio):
+            if not values:
+                return None
+            index = (len(values) - 1) * ratio
+            lower, upper = int(index), min(int(index) + 1, len(values) - 1)
+            return round(values[lower] + (values[upper] - values[lower]) * (index - lower), 1)
+
+        slowest = sorted(
+            (
+                {
+                    "query": str(row.get("query") or "")[:120],
+                    "query_type": str(row.get("query_type") or ""),
+                    "latency_ms": _num(row.get("latency_ms")),
+                    "results_count": int(_num(row.get("results_count"))),
+                    "chapter": _to_int(row.get("chapter")),
+                }
+                for row in rag_rows
+            ),
+            key=lambda item: item["latency_ms"],
+            reverse=True,
+        )[:5]
+
+        return {
+            "rag": {
+                "total": rag_total,
+                "avg_latency_ms": round(_num(rag_totals[0].get("avg_latency")) if rag_totals else 0, 1),
+                "p50_latency_ms": _percentile(latencies, 0.5),
+                "p95_latency_ms": _percentile(latencies, 0.95),
+                # 窗口内的空命中数（全表口径见 empty_hits_total）
+                "empty_hits_in_window": empty_hits,
+                "empty_hits_total": int(_num(rag_totals[0].get("empty_hits")) if rag_totals else 0),
+                "by_query_type": by_query_type,
+                "slowest": slowest,
+            },
+            "tools": {
+                "total": tool_total,
+                "failures": tool_failures,
+                "failure_rate": round(tool_failures / tool_total, 4) if tool_total else 0.0,
+                "by_tool": by_tool,
+                "recent_failures": [
+                    {
+                        "tool_name": str(row.get("tool_name") or ""),
+                        "error_code": str(row.get("error_code") or ""),
+                        "error_message": str(row.get("error_message") or "")[:200],
+                        "chapter": _to_int(row.get("chapter")),
+                        "created_at": row.get("created_at"),
+                    }
+                    for row in tool_rows
+                    if not row.get("success")
+                ][:10],
+            },
+            "limit": limit,
+        }
+
     @app.get("/api/story-events")
     def list_story_events(chapter: Optional[int] = None, limit: int = 200):
         with closing(_get_db()) as conn:

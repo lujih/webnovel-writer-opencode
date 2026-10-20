@@ -9,6 +9,7 @@ import {
     FolderIcon,
     LayersIcon,
     PenIcon,
+    PulseIcon,
     SlidersIcon,
     TrendingUpIcon,
     UsersIcon,
@@ -27,6 +28,7 @@ const NAV_ITEMS = [
     { to: '/files', label: '文档浏览', icon: FolderIcon },
     { to: '/style', label: '文风约束', icon: PenIcon },
     { to: '/system', label: '系统状态', icon: SlidersIcon },
+    { to: '/diagnostics', label: '运维诊断', icon: PulseIcon },
 ]
 
 function ThemeToggle() {
@@ -50,6 +52,9 @@ function ThemeToggle() {
     )
 }
 
+/** SSE 事件合并窗口（毫秒）：一批文件事件收敛成一次刷新。 */
+const REFRESH_DEBOUNCE_MS = 300
+
 export default function App() {
     const [projectInfo, setProjectInfo] = useState(null)
     const [refreshToken, setRefreshToken] = useState(0)
@@ -61,9 +66,17 @@ export default function App() {
             .catch(() => setProjectInfo(null))
     }, [])
 
-    // refreshToken 由**每一个** SSE 事件递增：写一章会触碰几十个文件，
-    // 于是短时间内并发发起大量 fetchProjectInfo()。不丢弃过期响应时，先发的
-    // 慢请求可能在后发的快请求之后落地，把页头字���/章数刷成旧值。
+    // refreshToken 递增即触发全量重取。但**绝不能**每个 SSE 事件都递增：
+    // 写一章会触碰几十个文件（state.json / index.db / 每个 .story-system/*.json），
+    // watchdog 逐个推送，而 9 个页面共 29 处 useEffect 依赖 refreshToken。
+    // 实测：20 次写事件 → 160 次额外 API 调用（每次事件 8 个请求）。
+    //
+    // 这里做 trailing debounce：一批紧密相连的文件事件收敛成一次刷新。
+    // 300ms 的选取——写一章的落盘事件集中在几百毫秒内，再短会漏合并，
+    // 再长会让用户觉得"改了没反应"。
+    //
+    // 与「过期响应丢弃」正交：debounce 减少的是**发起的请求数**，
+    // 取消标记防的是**乱序落地**。两者都要有。
     useEffect(() => {
         let cancelled = false
         fetchProjectInfo()
@@ -73,12 +86,20 @@ export default function App() {
     }, [refreshToken])
 
     useEffect(() => {
-        const unsubscribe = subscribeSSE(
-            () => {
+        let timer = null
+
+        const scheduleRefresh = () => {
+            if (timer !== null) clearTimeout(timer)
+            timer = setTimeout(() => {
+                timer = null
                 startTransition(() => {
                     setRefreshToken(current => current + 1)
                 })
-            },
+            }, REFRESH_DEBOUNCE_MS)
+        }
+
+        const unsubscribe = subscribeSSE(
+            scheduleRefresh,
             {
                 onOpen: () => setConnected(true),
                 onError: () => setConnected(false),
@@ -86,6 +107,7 @@ export default function App() {
         )
 
         return () => {
+            if (timer !== null) clearTimeout(timer)
             unsubscribe()
             setConnected(false)
         }

@@ -220,6 +220,12 @@ export function fetchForeshadowingReminders(threshold = 5) {
     return fetchJSON('/api/foreshadowing/reminders', { threshold })
 }
 
+// --- 运维诊断 ---
+
+export function fetchDiagnostics(limit = 100) {
+    return fetchJSON('/api/diagnostics/summary', { limit })
+}
+
 // --- 追读债 ---
 
 export function fetchDebtsSummary(limit = 50) {

@@ -408,8 +408,29 @@ def generate_index_db(project_root: Path) -> None:
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
         "CREATE TABLE IF NOT EXISTS invalid_facts (id INTEGER PRIMARY KEY AUTOINCREMENT, status TEXT, marked_at TEXT)",
-        "CREATE TABLE IF NOT EXISTS rag_query_log (id INTEGER PRIMARY KEY AUTOINCREMENT, query_type TEXT, created_at TEXT)",
-        "CREATE TABLE IF NOT EXISTS tool_call_stats (id INTEGER PRIMARY KEY AUTOINCREMENT, tool_name TEXT, created_at TEXT)",
+        # 这两张表的真实 DDL 在 index_manager.py。简化版会让任何读 query /
+        # latency_ms / success 的代码 `no such column`，而 _fetchall_safe 会把
+        # 它当"旧库缺表"静默返回空——缺口因此不可见（与 chase_debt 同款陷阱）。
+        """CREATE TABLE IF NOT EXISTS rag_query_log (
+            id INTEGER PRIMARY KEY,
+            query TEXT,
+            query_type TEXT,
+            results_count INTEGER,
+            hit_sources TEXT,
+            latency_ms INTEGER,
+            chapter INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+        """CREATE TABLE IF NOT EXISTS tool_call_stats (
+            id INTEGER PRIMARY KEY,
+            tool_name TEXT,
+            success BOOLEAN,
+            retry_count INTEGER DEFAULT 0,
+            error_code TEXT,
+            error_message TEXT,
+            chapter INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
         "CREATE TABLE IF NOT EXISTS writing_checklist_scores (id INTEGER PRIMARY KEY AUTOINCREMENT, chapter INTEGER)",
         "CREATE TABLE IF NOT EXISTS story_events (id INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, chapter INTEGER, event_type TEXT, subject TEXT, payload_json TEXT, created_at TEXT)",
     ]:
@@ -445,6 +466,31 @@ def generate_index_db(project_root: Path) -> None:
                 (debt_id, "accrue", round(current - original, 4),
                  min(due_ch, src_ch + 20), "按章节复利计息"),
             )
+
+    # 运维诊断示例：RAG 检索日志 + 工具调用日志。让 /diagnostics 页在 demo 上
+    # 有真实形状的数据（含空命中、慢查询、失败调用），便于肉眼核对聚合结果。
+    rag_types = ["entity", "foreshadow", "technique"]
+    for i in range(24):
+        cursor.execute(
+            """INSERT INTO rag_query_log
+               (query, query_type, results_count, latency_ms, chapter, created_at)
+               VALUES (?,?,?,?,?,?)""",
+            (f"林长青 金丹期 能力边界 第{i + 1}章", rag_types[i % 3],
+             0 if i % 7 == 0 else 3 + i % 5,
+             120 + (i * 37) % 900, i + 1, f"2026-10-{i % 28 + 1:02d}"),
+        )
+    tool_names = ["context_manager:build", "observer_settler", "review_pipeline"]
+    for i in range(16):
+        failed = i in (3, 9)
+        cursor.execute(
+            """INSERT INTO tool_call_stats
+               (tool_name, success, error_code, error_message, chapter, created_at)
+               VALUES (?,?,?,?,?,?)""",
+            (tool_names[i % 3], 0 if failed else 1,
+             "E_TIMEOUT" if failed else None,
+             "上下文组装超时（1500ms）" if failed else None,
+             i + 1, f"2026-10-{i + 1:02d}"),
+        )
 
     # scenes
     cursor.execute("""

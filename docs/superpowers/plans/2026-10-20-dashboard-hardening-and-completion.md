@@ -76,7 +76,7 @@
 
 **Files:** Modify `.opencode/dashboard/app.py`
 
-- [ ] **Step 1**：把 `_atomic_write_json` 加 `use_lock` 透传能力：
+- [x] **Step 1**：把 `_atomic_write_json` 加 `use_lock` 透传能力：
 
 ```python
 def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
@@ -84,9 +84,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
     _aw(path, data, backup=True, use_lock=use_lock)
 ```
 
-- [ ] **Step 2**：`add_anti_pattern` / `delete_anti_pattern` 在已持外层锁时调用 `_atomic_write_json(path, data, use_lock=False)`。
+- [x] **Step 2**：`add_anti_pattern` / `delete_anti_pattern` 在已持外层锁时调用 `_atomic_write_json(path, data, use_lock=False)`。
 
-- [ ] **Step 3**：`update_master_setting` 保持默认（无外层锁），不要误改。
+- [x] **Step 3**：`update_master_setting` 保持默认（无外层锁），不要误改。
 
 **验收**：新增 `tests/test_dashboard_style_writes.py`：
 - POST 反模式 → 200，且文件内容真的多一条
@@ -102,8 +102,8 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `.opencode/dashboard/frontend/src/lib/charts.js`
 
-- [ ] **Step 1**：`import { RadarChart } from 'echarts/charts'`，加入 `echarts.use([...])`。
-- [ ] **Step 2**：雷达图若还需 `RadarComponent`（echarts 5 的 `RadarComponent` 属于 components，radar 坐标系在 core 里由 `RadarChart` 提供），构建后真机确认图形出现。
+- [x] **Step 1**：`import { RadarChart } from 'echarts/charts'`，加入 `echarts.use([...])`。
+- [x] **Step 2**：雷达图若还需 `RadarComponent`（echarts 5 的 `RadarComponent` 属于 components，radar 坐标系在 core 里由 `RadarChart` 提供），构建后真机确认图形出现。
 
 **验收**：
 - `npm run build` 通过
@@ -116,9 +116,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `.opencode/dashboard/app.py`, `.opencode/dashboard/server.py`
 
-- [ ] **Step 1**：`create_app(project_root=None, *, port: int | None = None)`，用 port 计算 origin 集合；未传时回退到 `8765`+`5173` 的旧行为（测试与既有调用不受影响）。
-- [ ] **Step 2**：`server.py` 调 `create_app(project_root, port=args.port)`。
-- [ ] **Step 3**：同时接受 `localhost` 与 `127.0.0.1` 两种主机名，端口取自入参。
+- [x] **Step 1**：`create_app(project_root=None, *, port: int | None = None)`，用 port 计算 origin 集合；未传时回退到 `8765`+`5173` 的旧行为（测试与既有调用不受影响）。
+- [x] **Step 2**：`server.py` 调 `create_app(project_root, port=args.port)`。
+- [x] **Step 3**：同时接受 `localhost` 与 `127.0.0.1` 两种主机名，端口取自入参。
 
 **验收**：
 - 新增测试：以 `port=8799` 建 app，`Origin: http://127.0.0.1:8799` 的写请求不被 403；`Origin: http://evil.com` 仍 403；未传 port 时旧名单不变。
@@ -132,8 +132,8 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `.opencode/scripts/data_modules/tests/test_dashboard_csrf_coverage.py`
 
-- [ ] **Step 1**：`test_local_origin_is_allowed` 改为断言 `status_code < 400`（业务层的 400/409/422 属于合理拒绝，需逐条列入白名单，而不是一概放行）。
-- [ ] **Step 2**：在注释里写明为什么不能只写 `!= 403`——这正是 P0-1 藏了这么久的原因。
+- [x] **Step 1**：`test_local_origin_is_allowed` 改为断言 `status_code < 400`（业务层的 400/409/422 属于合理拒绝，需逐条列入白名单，而不是一概放行）。
+- [x] **Step 2**：在注释里写明为什么不能只写 `!= 403`——这正是 P0-1 藏了这么久的原因。
 
 **验收**：把 Task 1.1 的修复回滚，该测试必须**变红**；恢复后转绿。（先验证测试有效，再验证代码正确。）
 
@@ -141,9 +141,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Create `.opencode/scripts/data_modules/tests/test_dashboard_write_endpoints.py`
 
-- [ ] **Step 1**：参数化覆盖全部写路由：`PUT /api/style/master-setting`、`POST/DELETE /api/style/anti-patterns`、`POST/PUT/DELETE /api/style/prompts/{filename}`、`PUT /api/files/write`、`POST /api/actions/{action}`、`POST /api/batch/{action}`。
-- [ ] **Step 2**：每例断言「副作用真的发生」（文件内容变化 / 子进程被调用），而非仅状态码。
-- [ ] **Step 3**：为 `/api/files/write` 增加负例：越界路径、不在三大目录、非 UTF-8 内容。
+- [x] **Step 1**：参数化覆盖全部写路由：`PUT /api/style/master-setting`、`POST/DELETE /api/style/anti-patterns`、`POST/PUT/DELETE /api/style/prompts/{filename}`、`PUT /api/files/write`、`POST /api/actions/{action}`、`POST /api/batch/{action}`。
+- [x] **Step 2**：每例断言「副作用真的发生」（文件内容变化 / 子进程被调用），而非仅状态码。
+- [x] **Step 3**：为 `/api/files/write` 增加负例：越界路径、不在三大目录、非 UTF-8 内容。
 
 **验收**：新矩阵全绿；故意破坏任一写路径时能定位到具体端点。
 
@@ -157,9 +157,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `.opencode/dashboard/app.py`
 
-- [ ] **Step 1**：`GET /api/debts/summary` —— 返回总额、按 `status` 分桶计数、按 `debt_type` 分布、Top N 未结债务（含 `due_chapter` 与当前章的距离）、复利速率。
-- [ ] **Step 2**：`GET /api/debts/{id}` —— 单笔债务 + 其 `debt_events` 时间线。
-- [ ] **Step 3**：复用现有 `_get_db()` / `_fetchall_safe()`，**不新增连接管理方式**。
+- [x] **Step 1**：`GET /api/debts/summary` —— 返回总额、按 `status` 分桶计数、按 `debt_type` 分布、Top N 未结债务（含 `due_chapter` 与当前章的距离）、复利速率。
+- [x] **Step 2**：`GET /api/debts/{id}` —— 单笔债务 + 其 `debt_events` 时间线。
+- [x] **Step 3**：复用现有 `_get_db()` / `_fetchall_safe()`，**不新增连接管理方式**。
 
 **验收**：demo 数据上返回结构完整；表不存在（旧库）时返回空而不 500（`_fetchall_safe` 已具备该行为，需有用例钉住）。
 
@@ -167,9 +167,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Create `.opencode/dashboard/frontend/src/pages/DebtPage.jsx`; Modify `main.jsx`, `App.jsx`
 
-- [ ] **Step 1**：路由 `/debts`，侧边栏加「追读债」项。
-- [ ] **Step 2**：统计卡（未结笔数 / 总余额 / 超期笔数）+ 债务表（类型、金额、利率、到期章、状态）+ 单笔事件时间线。
-- [ ] **Step 3**：严格套 `design.md`（3px 硬边框、6px 阴影、0 圆角、ECharts pixel 主题）。
+- [x] **Step 1**：路由 `/debts`，侧边栏加「追读债」项。
+- [x] **Step 2**：统计卡（未结笔数 / 总余额 / 超期笔数）+ 债务表（类型、金额、利率、到期章、状态）+ 单笔事件时间线。
+- [x] **Step 3**：严格套 `design.md`（3px 硬边框、6px 阴影、0 圆角、ECharts pixel 主题）。
 
 **验收**：Playwright 截图非空白；表头/徽章配色符合 design.md；无 console error。
 
@@ -181,8 +181,8 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `.opencode/dashboard/frontend/package.json`; Create `.nvmrc` 或 `engines`
 
-- [ ] **Step 1**：把 rollup 平台包问题写进 `README` 或 `package.json` 的 `optionalDependencies` 说明——`rollup` 是 optionalDependencies 模式，`npm install` 应自动按平台装；当前 node_modules 是跨平台拷贝的产物。
-- [ ] **Step 2**：在 `.npm-package/scripts/build-bundle.js` 的 dist 断言旁，补一条「dist 是否比 src 旧」的时间戳提示（不阻断，仅 WARN）。
+- [x] **Step 1**：把 rollup 平台包问题写进 `README` 或 `package.json` 的 `optionalDependencies` 说明——`rollup` 是 optionalDependencies 模式，`npm install` 应自动按平台装；当前 node_modules 是跨平台拷贝的产物。
+- [x] **Step 2**：在 `.npm-package/scripts/build-bundle.js` 的 dist 断言旁，补一条「dist 是否比 src 旧」的时间戳提示（不阻断，仅 WARN）。
 
 **验收**：`rm -rf node_modules && npm install && npm run build` 成功（CI 或本地各一次）。
 
@@ -190,9 +190,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `package.json`; Create `vitest.config.js`, `.eslintrc` 等价物
 
-- [ ] **Step 1**：`vitest` + `@testing-library/react`，先只测纯函数：`lib/format.js`、`lib/foreshadowing.js`、`lib/charts.js` 的 `buildBoxplotData`/`quantile`。
-- [ ] **Step 2**：eslint（flat config）只开 `recommended` + `react-hooks` 两条规则；**不**开启会引发大规模重排的规则。
-- [ ] **Step 3**：CI 增加 job：`npm ci && npm run lint && npm test && npm run build`。
+- [x] **Step 1**：`vitest` + `@testing-library/react`，先只测纯函数：`lib/format.js`、`lib/foreshadowing.js`、`lib/charts.js` 的 `buildBoxplotData`/`quantile`。
+- [x] **Step 2**：eslint（flat config）只开 `recommended` + `react-hooks` 两条规则；**不**开启会引发大规模重排的规则。
+- [x] **Step 3**：CI 增加 job：`npm ci && npm run lint && npm test && npm run build`。
 
 **验收**：`npm test` 通过；lint 零 error（warning 可留）；CI 新 job 绿。
 
@@ -200,8 +200,8 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `.opencode/dashboard/frontend/src/App.jsx`
 
-- [ ] **Step 1**：`refreshToken` 递增改为 300ms trailing debounce（同一批文件事件只触发一轮重取）。
-- [ ] **Step 2**：保留「过期响应丢弃」的现有逻辑，两者正交。
+- [x] **Step 1**：`refreshToken` 递增改为 300ms trailing debounce（同一批文件事件只触发一轮重取）。
+- [x] **Step 2**：保留「过期响应丢弃」的现有逻辑，两者正交。
 
 **验收**：模拟连续 20 个 SSE 事件，页面只发起 1 轮请求（可用 Playwright 拦截 `/api/**` 计数）。
 
@@ -213,8 +213,8 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `.opencode/dashboard/frontend/src/pages/ContextHealthPage.jsx`; 可选 Modify `app.py`
 
-- [ ] **Step 1**：`fetchJSON` 抛出的错误带上 status；404 → 显示引导文案「第 N 章还没有上下文快照，需先执行一次 `webnovel.py chapter-commit`」+ 一键跳转文档；其他错误 → 红字报错。
-- [ ] **Step 2**：`/api/context/history` 为空时给出同样的引导，而不是留一个空下拉。
+- [x] **Step 1**：`fetchJSON` 抛出的错误带上 status；404 → 显示引导文案「第 N 章还没有上下文快照，需先执行一次 `webnovel.py chapter-commit`」+ 一键跳转文档；其他错误 → 红字报错。
+- [x] **Step 2**：`/api/context/history` 为空时给出同样的引导，而不是留一个空下拉。
 
 **验收**：空项目首开截图显示引导而非「加载失败」；断网时仍显示真错误。
 
@@ -222,9 +222,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `ForeshadowingPage.jsx`, `index.css`, `OverviewPage.jsx`
 
-- [ ] **Step 1**：甘特图当前章 `markLine.label` 改用 `position:'insideEndTop'` 并加 `distance`，避免与 x 轴撞击。
-- [ ] **Step 2**：补 `.entity-table` / `.icon-btn` / `.split-main` / `.split-side` 四个类的定义（或改用已定义类）。
-- [ ] **Step 3**：总览紧急伏笔表给「紧急度」列设最小宽度。
+- [x] **Step 1**：甘特图当前章 `markLine.label` 改用 `position:'insideEndTop'` 并加 `distance`，避免与 x 轴撞击。
+- [x] **Step 2**：补 `.entity-table` / `.icon-btn` / `.split-main` / `.split-side` 四个类的定义（或改用已定义类）。
+- [x] **Step 3**：总览紧急伏笔表给「紧急度」列设最小宽度。
 
 **验收**：三个页面 Playwright 截图对照 `design.md` 逐项核对无遮挡、无换行挤压。
 
@@ -232,9 +232,9 @@ def _atomic_write_json(path: Path, data: Any, *, use_lock: bool = True) -> None:
 
 **Files:** Modify `AGENTS.md`/`CLAUDE.md`, `.opencode/skills/webnovel-dashboard/SKILL.md`, `references/dashboard-api.md`, `frontend/design.md`
 
-- [ ] **Step 1**：`AGENTS.md` 里「仅 GET 接口（严格只读）」与 30+ 写路由矛盾——改为准确描述（只读为主 + 文风/文件/批量写，均经 Host 守卫 + CSRF 守卫 + path_guard）。
-- [ ] **Step 2**：`design.md` 图标说明改为「手写 SVG（`icons.jsx`），不依赖 pixelarticons」；导航表补到 9 页。
-- [ ] **Step 3**：`dashboard-api.md` 补全写端点与新增的债务端点。
+- [x] **Step 1**：`AGENTS.md` 里「仅 GET 接口（严格只读）」与 30+ 写路由矛盾——改为准确描述（只读为主 + 文风/文件/批量写，均经 Host 守卫 + CSRF 守卫 + path_guard）。
+- [x] **Step 2**：`design.md` 图标说明改为「手写 SVG（`icons.jsx`），不依赖 pixelarticons」；导航表补到 9 页。
+- [x] **Step 3**：`dashboard-api.md` 补全写端点与新增的债务端点。
 
 **验收**：文档描述的端点集合与 `app.py` 实际路由逐一对应（可写脚本比对，纳入 CI 更好）。
 
@@ -331,3 +331,73 @@ Phase 5 (收尾)
    不是 bug（数据最终一致），但属于过度设计 + 无谓流量。
 2. **15 个后端端点仍无 UI**（只补了追读债两个）。需要判断是死代码还是漏接。
 3. **9 个页面零组件测试**。当前只测纯函数；组件层（loading/空态/竞态）靠人工截图。
+
+---
+
+## 八、第三轮：补完计划内遗漏 + 接上诊断入口（2026-10-20 下午）
+
+第二轮末尾我列出三个"发现但未修"，用户授权继续。开工前的第一件事是
+**回头看计划本身**——结果发现计划里有 3 个 Step 从来没实现，却在 Phase 4/5
+的总结里被当成完成了。
+
+### 8.1 计划内遗漏的 3 项（已补）
+
+| 项 | 计划要求 | 实际状况 | 本轮处理 |
+|---|---|---|---|
+| Task 4.3 | SSE 节流 300ms trailing debounce | 完全没做，`refreshToken` 仍是每个事件递增 | 已实现 |
+| Task 4.1 Step 2 | dist 比 src 旧时给 WARN | 没做 | 已实现（touched src 验证过警告会响） |
+| Task 5.1 Step 2 | `/api/context/history` 为空时给引导 | 没做，下拉只剩一个孤立选项 | 已实现（"尚未生成任何上下文快照"） |
+
+**SSE 节流实测效果**（Playwright 计数 `/api/**` 请求）：
+
+| 场景 | 改造前 | 改造后 |
+|---|---|---|
+| 20 次连续写事件 | 新增 **160** 次 API 调用 | 新增 **20** 次 |
+
+同时验证了**刷新没被吞**：单次写事件仍精确触发 1 次 `/api/project/info`。
+"减少请求"与"该刷新时刷新"必须同时成立，否则就是把 bug 优化成另一个 bug。
+
+### 8.2 新页面：运维诊断 `/diagnostics`
+
+第二轮遗留的第 2 项是「15 个后端端点无 UI」。逐个核查后：
+
+**没有一个是死代码**。`rag_query_log` 与 `tool_call_stats` 都有真实写入方
+（`rag_adapter.py:507` 每次检索、`context_manager.py:1030` 每次组装），
+只是因为 demo 数据里没有对应记录才返回空。
+
+但直接把它们做成表格信息密度太低。更有价值的做法是**聚合**：
+
+- 延迟 P50 / P95（单看均值会掩盖长尾）
+- 空命中率（检索无结果 = RAG 没帮上忙，这是最该盯的指标）
+- 工具失败率 + 最近失败明细
+- 最慢的 N 次检索（定位慢查询）
+
+新增 `GET /api/diagnostics/summary` + `/diagnostics` 页面（第 11 个页面）。
+
+顺带修了 `mock_demo.py` 的同一个老毛病：`rag_query_log` / `tool_call_stats`
+也被简化成两三列，任何读 `query`/`latency_ms`/`success` 的代码都会
+`no such column`，而 `_fetchall_safe` 把它当"旧库缺表"静默返回空。
+这已经是第三次遇到同款陷阱（前两次是 `chase_debt`）。
+
+### 8.3 一个我自己犯的流程错误
+
+计划里的复选框**一个都没勾**，我却按"阶段完成"汇报了。这说明我的"完成"
+判断依据是"我做了什么"，而不是"计划要求什么"。本轮改成逐条对照计划，
+把 34 个 Step 全部核对后才勾选。
+
+### 8.4 最终状态
+
+- 全仓库 **1752 passed, 2 skipped**（零失败）
+- 前端 85 测试通过，lint 0 error，构建通过
+- 新页面截图验证：无 console error、无横向溢出、统计卡单行
+- 页面数 10 → 11，README/SKILL/AGENTS/CLAUDE 全部同步
+
+### 8.5 仍未做
+
+- **组件层测试**：9 个页面仍只有纯函数测试 + 人工截图。做组件测试需要
+  引入 jsdom + testing-library（依赖已装），成本约一轮，收益是能自动发现
+  loading/空态/竞态回归。
+- **其余 8 个无 UI 端点**（`/api/overrides`、`/api/invalid-facts`、
+  `/api/aliases`、`/api/checklist-scores`、`/api/scenes`、
+  `/api/reading-power`、`/api/review-metrics`、`/api/story-events`）：
+  都有写入方，但当前页面已覆盖其信息的 80%。是否值得单独建页需要产品判断。
