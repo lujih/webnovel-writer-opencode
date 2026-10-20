@@ -1,22 +1,167 @@
 {
-  "version": "v2.9.2-20261019.1220",
+  "version": "v2.9.2-20261020.1521",
   "tag": "v2.9.2",
-  "updated": "2026-10-19T12:20:23Z",
+  "updated": "2026-10-20T15:21:53Z",
   "changelog": [
     {
-      "hash": "02ab891",
+      "hash": "e40b9c0",
+      "type": "test",
+      "message": "test: \u7a81\u53d8\u6d4b\u8bd5\u53d1\u73b0\u4e00\u5904\u65ad\u8a00\u8fc7\u5bbd\u2014\u2014\u8d1f\u6570\u63d0\u793a\u88ab Pydantic \u515c\u5e95\u540e\u4ecd\u5224\u901a\u8fc7"
+    },
+    {
+      "hash": "7807cfc",
       "type": "fix",
-      "message": "fix: \u540c\u540d\u6b67\u4e49\u4e0a\u62a5\u5230\u63d0\u53d6\u9636\u6bb5\u2014\u2014data-agent \u7684\u7f6e\u4fe1\u5ea6\u5206\u7ea7\u62ff\u4e0d\u5230\u89e6\u53d1\u6761\u4ef6"
+      "message": "fix: \u6b67\u4e49\u4fe1\u53f7\u7ec8\u4e8e\u63a5\u5230\u5904\u7f6e\u94fe\u8def\u2014\u2014settler \u7b97\u51fa\u7684\u540c\u540d\u6b67\u4e49\u6b64\u524d\u53ea\u5199\u4e0d\u8bfb"
     },
     {
-      "hash": "89c9658",
-      "type": "feat",
-      "message": "feat: \u8ffd\u8bfb\u503a\u8ba1\u606f\u63a5\u5165\u63d0\u4ea4\u94fe\u8def\u2014\u2014\u6b64\u524d\u53ea\u6709\u624b\u5de5 CLI\uff0c\u9ed8\u8ba4\u8def\u5f84\u4e0a\u673a\u5236\u4e0d\u5b58\u5728"
+      "hash": "9dc77f9",
+      "type": "fix",
+      "message": "fix: \u89d2\u8272\u72b6\u6001\u53d8\u5316\u5168\u4e22\u2014\u2014settler \u53ea\u7ed9 description\uff0c\u4e0b\u6e38\u8981 field\uff0c1 \u6761\u4e8b\u4ef6\u63d0\u53d6\u51fa 0 \u6761 delta"
     },
     {
-      "hash": "ac66e00",
+      "hash": "d6a2302",
+      "type": "fix",
+      "message": "fix: \u6587\u98ce\u6837\u672c\u8bf7\u6c42 3 \u6761\u53ea\u7ed9 2 \u6761\uff0c\u4e14 20 \u4e2a\u6837\u672c\u6c38\u8fdc\u53ea\u7528\u524d 5 \u4e2a"
+    },
+    {
+      "hash": "690fa20",
+      "type": "fix",
+      "message": "fix: hybrid_search \u628a\u663e\u5f0f\u4f20\u7684 0 \u5f53\u6210\u300c\u6ca1\u4f20\u300d\u2014\u2014\u9759\u9ed8\u6362\u6210\u914d\u7f6e\u9ed8\u8ba4\u503c"
+    },
+    {
+      "hash": "a795d0b",
+      "type": "fix",
+      "message": "fix: RAG backtrack \u7684 top_k \u88ab\u7ed5\u8fc7\u2014\u2014\u6709 parent \u65f6\u8fd4\u56de 2 \u500d\uff0ctoken \u9884\u7b97\u5168\u5931\u51c6"
+    },
+    {
+      "hash": "e7730c4",
+      "type": "fix",
+      "message": "fix: \u8d8b\u52bf\u62a5\u8868\u7684 required \u5b8c\u6210\u7387\u5bf9\u65b0\u4e66\u6052\u4e3a 100%\uff0c\u4e14\u810f\u6570\u636e\u80fd\u7b97\u51fa 250%"
+    },
+    {
+      "hash": "e2507ef",
+      "type": "fix",
+      "message": "fix: \u7a7a\u6e05\u5355\u5f97\u6ee1\u5206\u3001\u65e0 required \u9879\u767d\u9001 30% \u2014\u2014 \u8bc4\u5206\u516c\u5f0f\u628a\u300c\u6ca1\u6709\u4f9d\u636e\u300d\u5f53\u6210\u300c\u5168\u90e8\u8fbe\u6210\u300d"
+    },
+    {
+      "hash": "cf477a7",
+      "type": "fix",
+      "message": "fix: \u7a7a\u9879\u76ee\u6839\u88ab\u89e3\u6790\u6210\u5f53\u524d\u76ee\u5f55\u2014\u2014\u73af\u5883\u53d8\u91cf\u7559\u7a7a\u5c31\u4f1a\u300c\u5199\u9519\u4e66\u300d"
+    },
+    {
+      "hash": "0c85f7b",
+      "type": "fix",
+      "message": "fix: \u4e03\u732b\u53d1\u5e03\u5339\u914d\u4e0d\u5230\u5206\u7c7b\u5c31\u9759\u9ed8\u5f52\u5230\u7b2c\u4e00\u4e2a\u2014\u2014\u79d1\u5e7b\u4f1a\u88ab\u53d1\u5230\u7384\u5e7b\u5206\u7c7b\u4e0b"
+    },
+    {
+      "hash": "a3da3ce",
+      "type": "fix",
+      "message": "fix: \u8bb0\u5fc6\u9884\u7b97\u6f0f\u4e86 strip()\u2014\u2014\u4e00\u4e2a\u524d\u5bfc\u7a7a\u683c\u5c31\u8ba9 review \u7684\u914d\u7f6e\u9759\u9ed8\u5931\u6548"
+    },
+    {
+      "hash": "2d5a227",
+      "type": "fix",
+      "message": "fix: blocking_count \u5199\u6210\u5b57\u7b26\u4e32\u5c31\u963b\u65ad\u6574\u7ae0\u63d0\u4ea4\u2014\u2014\u4e24\u6761\u6821\u9a8c\u8def\u5f84\u7ed3\u8bba\u76f8\u53cd"
+    },
+    {
+      "hash": "dea4e32",
+      "type": "fix",
+      "message": "fix: \u9898\u6750\u5206\u8282\u7528\u5b50\u4e32\u5339\u914d\u2014\u2014\u5199\u300c\u90fd\u5e02\u300d\u62ff\u5230\u300c\u90fd\u5e02\u5f02\u80fd\u300d\u7684\u5199\u4f5c\u89c4\u5219"
+    },
+    {
+      "hash": "4d98b09",
+      "type": "fix",
+      "message": "fix: 15 \u4e2a\u89c4\u8303\u9898\u6750\u91cc 13 \u4e2a\u62ff\u4e0d\u5230\u82f1\u6587 profile key\u2014\u2014\u65b9\u6cd5\u8bba\u7b56\u7565\u5361\u5bf9\u5b83\u4eec\u9759\u9ed8\u4e0d\u751f\u6548"
+    },
+    {
+      "hash": "6730484",
+      "type": "fix",
+      "message": "fix: \u6743\u9650\u8fc1\u79fb\u811a\u672c\u4f1a\u628a read \u63d0\u6743\u6210 edit\uff0c\u5e76\u9759\u9ed8\u4e22\u6389\u81ea\u5b9a\u4e49 resource \u89c4\u5219"
+    },
+    {
+      "hash": "df2744e",
+      "type": "fix",
+      "message": "fix: chapter-rename \u626b\u9519\u76ee\u5f55\u2014\u2014\u5bf9\u7740\u6295\u5f71\u76ee\u5f55\u505a\u7ae0\u8282\u7f16\u53f7\u7edf\u4e00\uff0c\u6c38\u8fdc\u627e\u4e0d\u5230\u6b63\u6587"
+    },
+    {
+      "hash": "e11e53f",
+      "type": "fix",
+      "message": "fix: entity-clean \u91cd\u590d\u8fd0\u884c\u8ba9 invalid_facts \u65e0\u9650\u81a8\u80c0\uff0c\u4e14\u4f1a\u63a8\u7ffb\u5df2\u5b8c\u6210\u7684\u590d\u6838"
+    },
+    {
+      "hash": "b7f9422",
+      "type": "fix",
+      "message": "fix: \u7d27\u6025\u4f0f\u7b14\u7b5b\u9009\u9047\u810f urgency \u76f4\u63a5\u5d29\u6389\u6574\u7ae0\u5199\u4f5c\u2014\u2014'80' \u4e0e None \u90fd\u4f1a\u629b TypeError"
+    },
+    {
+      "hash": "a5e5c97",
+      "type": "fix",
+      "message": "fix: \u5199\u4f5c\u68c0\u67e5\u6e05\u5355\u7684\u5b8c\u6210\u5224\u5b9a\u65e0\u6761\u4ef6\u4e3a\u771f\u2014\u2014\u65b0\u4e66\u7b2c\u4e00\u7ae0\u62ff\u5230\u6ee1\u5206 100"
+    },
+    {
+      "hash": "0f5f81f",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261019.1204 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261020.0728 [skip ci]"
+    },
+    {
+      "hash": "40b3911",
+      "type": "fix",
+      "message": "fix: manifest \u6f0f\u6536 6 \u4e2a\u65b0\u6d4b\u8bd5\u6587\u4ef6"
+    },
+    {
+      "hash": "4b8d93b",
+      "type": "test",
+      "message": "test: \u524d\u7aef\u8865\u7ec4\u4ef6\u5c42\u6d4b\u8bd5\u2014\u2014\u8986\u76d6 loading/\u7a7a\u6001/\u9519\u8bef\u6001/\u7ade\u6001"
+    },
+    {
+      "hash": "b0e874e",
+      "type": "feat",
+      "message": "feat: \u8865\u5b8c\u8ba1\u5212\u5185 3 \u9879\u9057\u6f0f + \u8fd0\u7ef4\u8bca\u65ad\u9875\uff08\u7b2c 11 \u4e2a\u9875\u9762\uff09"
+    },
+    {
+      "hash": "ef4ca72",
+      "type": "fix",
+      "message": "fix: \u7b2c\u4e8c\u8f6e\u6df1\u5ea6\u5ba1\u67e5\u2014\u2014\u8865 --host \u7ef4\u5ea6\u3001totals \u88ab LIMIT \u622a\u65ad\u3001HttpError \u672a\u8986\u76d6\u5199\u65b9\u6cd5"
+    },
+    {
+      "hash": "ff87f83",
+      "type": "fix",
+      "message": "fix: \u4e0a\u4e0b\u6587\u7a7a\u6001\u5f15\u5bfc\u6587\u6848\u7684\u4e2d\u82f1\u6587\u7c98\u8fde"
+    },
+    {
+      "hash": "0e818bb",
+      "type": "docs",
+      "message": "docs: dashboard \u52a0\u56fa\u4e0e\u8865\u5168\u8ba1\u5212\uff08Phase 1-5\uff0c\u542b\u5b9e\u6d4b\u8bc1\u636e\uff09"
+    },
+    {
+      "hash": "9fce407",
+      "type": "fix",
+      "message": "fix: \u4e0a\u4e0b\u6587\u9875\u533a\u5206\u7a7a\u6001\u4e0e\u9519\u8bef\u3001\u4e09\u5904\u89c6\u89c9\u7455\u75b5\u3001\u6587\u6863\u4e0e\u5b9e\u73b0\u5bf9\u9f50"
+    },
+    {
+      "hash": "6da15d6",
+      "type": "test",
+      "message": "test: \u524d\u7aef\u5f15\u5165 vitest + eslint + CI\uff0c\u5e76\u4fee\u6389 lint \u6293\u51fa\u7684\u4e24\u4e2a\u771f bug"
+    },
+    {
+      "hash": "cd49290",
+      "type": "feat",
+      "message": "feat: \u8ffd\u8bfb\u503a\u9762\u677f\u2014\u2014\u6570\u636e\u5c42\u6709\u3001\u770b\u677f\u4e00\u76f4\u6ca1\u6709\u5165\u53e3\u7684\u5b50\u7cfb\u7edf"
+    },
+    {
+      "hash": "d8b075f",
+      "type": "test",
+      "message": "test: dashboard \u5199\u7aef\u70b9\u65ad\u8a00\u526f\u4f5c\u7528\uff0c\u5835\u4f4f\u300c500 \u4e5f\u7b97\u901a\u8fc7\u300d\u7684\u76f2\u533a"
+    },
+    {
+      "hash": "fa6a660",
+      "type": "fix",
+      "message": "fix: dashboard \u4e09\u4e2a P0\u2014\u2014\u53cd\u6a21\u5f0f\u5199\u5165\u81ea\u9501\u3001\u96f7\u8fbe\u56fe\u7a7a\u767d\u3001\u6362\u7aef\u53e3\u540e\u5199\u64cd\u4f5c\u5168\u6302"
+    },
+    {
+      "hash": "db49af4",
+      "type": "chore",
+      "message": "chore: update manifest to v2.9.2-20261019.1220 [skip ci]"
     }
   ],
   "files": {
