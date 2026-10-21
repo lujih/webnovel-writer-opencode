@@ -200,3 +200,86 @@ class TestContextInjection:
         signal = cm._load_reader_signal(4)
         # 无 flag 时键可以缺席（不伪造空数组也行），但不得报错
         assert signal.get("pending_review_flags") in (None, [])
+
+
+class TestDashboardFlagEndpoints:
+    """/api/review/flags GET + /api/review/flags/triage PUT。"""
+
+    @pytest.fixture
+    def client(self, tmp_path):
+        import pytest as _pytest
+        _pytest.importorskip("fastapi")
+        _pytest.importorskip("httpx")
+
+        (tmp_path / ".webnovel").mkdir(parents=True)
+        (tmp_path / ".webnovel" / "state.json").write_text("{}", encoding="utf-8")
+        commits = tmp_path / ".story-system" / "commits"
+        commits.mkdir(parents=True)
+        import json as _json
+        (commits / "chapter_003.commit.json").write_text(
+            _json.dumps({
+                "meta": {"chapter": 3, "status": "accepted"},
+                "review_flags": [
+                    {"severity": "critical", "category": "setting",
+                     "description": "境界矛盾", "triage": None},
+                    {"severity": "high", "category": "logic",
+                     "description": "因果断裂", "triage": "confirmed"},
+                ],
+            }, ensure_ascii=False),
+            encoding="utf-8",
+        )
+
+        if str(SCRIPTS.parent) not in sys.path:
+            sys.path.insert(0, str(SCRIPTS.parent))
+        from fastapi.testclient import TestClient
+        from dashboard.app import create_app
+
+        return TestClient(create_app(project_root=tmp_path),
+                          base_url="http://127.0.0.1:8765"), tmp_path
+
+    def test_get_flags_reports_pending(self, client):
+        c, project = client
+        data = c.get("/api/review/flags").json()
+        assert data["total_pending"] == 1
+        ch3 = data["chapters"][0]
+        assert ch3["pending"] == 1 and ch3["triaged"] == 1
+        assert ch3["pending_severity"] == {"critical": 1}
+
+    def test_put_triage_writes_back(self, client):
+        c, project = client
+        r = c.put("/api/review/flags/triage",
+                  json={"chapter": 3, "index": 0, "action": "confirm"})
+        assert r.status_code == 200 and r.json()["ok"]
+        import json as _json
+        saved = _json.loads(
+            (project / ".story-system" / "commits" / "chapter_003.commit.json")
+            .read_text(encoding="utf-8"))
+        assert saved["review_flags"][0]["triage"] == "confirmed"
+        # 仲裁后 pending 归零
+        assert c.get("/api/review/flags").json()["total_pending"] == 0
+
+    def test_put_out_of_range_404(self, client):
+        c, project = client
+        r = c.put("/api/review/flags/triage",
+                  json={"chapter": 99, "index": 0, "action": "confirm"})
+        assert r.status_code == 404
+
+    def test_put_bad_index_400(self, client):
+        c, project = client
+        r = c.put("/api/review/flags/triage",
+                  json={"chapter": 3, "index": 9, "action": "confirm"})
+        assert r.status_code == 400
+
+    def test_put_bad_action_400(self, client):
+        c, project = client
+        r = c.put("/api/review/flags/triage",
+                  json={"chapter": 3, "index": 0, "action": "explode"})
+        assert r.status_code == 400
+
+    def test_get_no_commits_dir_empty(self, client):
+        c, project = client
+        # 删掉 commit 目录 → 空结构不 500
+        import shutil
+        shutil.rmtree(project / ".story-system" / "commits")
+        data = c.get("/api/review/flags").json()
+        assert data == {"chapters": [], "total_pending": 0}

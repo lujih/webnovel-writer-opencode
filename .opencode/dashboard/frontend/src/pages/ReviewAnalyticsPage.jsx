@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useDashboardContext } from '../App.jsx'
 import Badge from '../components/Badge.jsx'
 import ChartWrapper from '../components/ChartWrapper.jsx'
-import { fetchReviewAnalytics } from '../api.js'
+import { fetchReviewAnalytics, fetchReviewFlags, triageReviewFlag } from '../api.js'
 
 const DIMENSION_LABELS = {
     continuity: '叙事连贯',
@@ -165,6 +165,15 @@ function buildSeverityOption(severityTotals) {
     }
 }
 
+const flagBtnStyle = {
+    border: '1px solid var(--border, #d0d7de)',
+    background: 'var(--bg, #fff)',
+    borderRadius: 6,
+    padding: '2px 10px',
+    cursor: 'pointer',
+    fontSize: 12,
+}
+
 function scoreTone(score) {
     if (score >= 80) return 'green'
     if (score >= 60) return 'amber'
@@ -176,6 +185,7 @@ export default function ReviewAnalyticsPage() {
     const [data, setData] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
+    const [flags, setFlags] = useState(null)
 
     useEffect(() => {
         setLoading(true)
@@ -185,6 +195,23 @@ export default function ReviewAnalyticsPage() {
             .catch(e => setError(e.message))
             .finally(() => setLoading(false))
     }, [refreshToken])
+
+    useEffect(() => {
+        fetchReviewFlags(20)
+            .then(setFlags)
+            .catch(() => setFlags(null))
+    }, [refreshToken])
+
+    const pendingChapters = useMemo(() => {
+        if (!flags?.chapters) return []
+        return flags.chapters.filter(ch => ch.pending > 0)
+    }, [flags])
+
+    async function handleTriage(chapter, index, action) {
+        await triageReviewFlag(chapter, index, action)
+        const fresh = await fetchReviewFlags(20)
+        setFlags(fresh)
+    }
 
     const radarOption = useMemo(() => buildRadarOption(data?.dimension_averages), [data])
     const trendOption = useMemo(() => buildTrendOption(data?.dimension_trends), [data])
@@ -251,6 +278,47 @@ export default function ReviewAnalyticsPage() {
                                 )}
                             </p>
                             <ChartWrapper option={cedOption} height={320} />
+
+                    {/* 待仲裁审查标记（门禁分层后 LLM 语义问题的留痕出口） */}
+                    {pendingChapters.length > 0 && (
+                        <>
+                            <h3 style={{ marginTop: 24 }}>待仲裁审查标记</h3>
+                            <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13, marginTop: -6 }}>
+                                门禁分层后 LLM 报出的阻断级语义问题不拒章、降级为观察标记。
+                                逐条 confirm（确认是真问题 → 触发 webnovel-heal）或
+                                dismiss（否认是 LLM 误判）。仲裁不改章节状态。
+                            </p>
+                            {pendingChapters.map(ch => (
+                                <div key={ch.chapter} style={{ marginBottom: 12, padding: 10,
+                                    border: '1px solid var(--border, #d0d7de)', borderRadius: 8 }}>
+                                    <div style={{ fontWeight: 700, marginBottom: 6 }}>
+                                        第 {ch.chapter} 章（{ch.pending} 条待仲裁）
+                                    </div>
+                                    {ch.flags.filter(f => f.triage === null).map(f => (
+                                        <div key={f.index} style={{
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                            padding: '4px 0', fontSize: 14 }}>
+                                            <Badge tone={f.severity === 'critical' ? 'red'
+                                                : f.severity === 'high' ? 'amber' : 'blue'}>
+                                                {f.severity}
+                                            </Badge>
+                                            <span>{DIMENSION_LABELS[f.category] || f.category}</span>
+                                            <span style={{ flex: 1 }}>{f.description}</span>
+                                            <button onClick={() => handleTriage(ch.chapter, f.index, 'confirm')}
+                                                style={flagBtnStyle}>确认</button>
+                                            <button onClick={() => handleTriage(ch.chapter, f.index, 'dismiss')}
+                                                style={flagBtnStyle}>否认</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            ))}
+                        </>
+                    )}
+                    {flags && pendingChapters.length === 0 && (
+                        <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13 }}>
+                            暂无待仲裁审查标记。
+                        </p>
+                    )}
                         </>
                     )}
                             </article>

@@ -76,140 +76,12 @@
       "size": 79
     },
     ".opencode/dashboard/app.py": {
-      "sha256": "f1e815b549067399ed49d3ed2670040a5b1f0bd28ab059d76944d6db2569402a",
-      "size": 102321
+      "sha256": "20dab8742dbc07dd621ab6aa1b156aaa5dbeed76f6c03ac5f8ce30a5e0d653b3",
+      "size": 107338
     },
     ".opencode/dashboard/frontend/design.md": {
       "sha256": "b5a7daf46c399e91c969f19946fbcdf2c8ae531fa0e612f0ea1bf61ca6d7095e",
       "size": 9629
-    },
-    ".opencode/dashboard/frontend/dist/assets/Badge-DXa-Irhe.js": {
-      "sha256": "e2bbb37d5c44b128248e820f90ec97ed0a6ae26af354b06bbae66c0a9380344c",
-      "size": 373
-    },
-    ".opencode/dashboard/frontend/dist/assets/Badge-zNPeMxfB.js": {
-      "sha256": "55c0b6305a3ac924f91c71f2bfa9f5f72f3021aea760338ede723a121aa59b54",
-      "size": 373
-    },
-    ".opencode/dashboard/frontend/dist/assets/CharactersPage-BZZuKMLZ.js": {
-      "sha256": "a5bd3181143f854da0c59686318337a6c3dfc1c252fba083c170ea20762d429b",
-      "size": 13099
-    },
-    ".opencode/dashboard/frontend/dist/assets/CharactersPage-BgN5-JYB.js": {
-      "sha256": "b195d0ad5447b4f408494d3d4f71021f5fdba24ffbbd0500daa756b36beab45b",
-      "size": 13099
-    },
-    ".opencode/dashboard/frontend/dist/assets/ChartWrapper-C4EZ6_uS.js": {
-      "sha256": "2af34e712cd2d019d93205588f601dc0acdf9b751726f8af7e70feb70119084f",
-      "size": 9153
-    },
-    ".opencode/dashboard/frontend/dist/assets/ChartWrapper-CCupkY2L.js": {
-      "sha256": "5d1d15d2c9b83bdd882fe6b8687a7062696d1c474f03b0a8ceb905e2d30d9835",
-      "size": 9153
-    },
-    ".opencode/dashboard/frontend/dist/assets/ContextHealthPage-D3qsHgMO.js": {
-      "sha256": "ba729b7f4743c44d895787d9102cb683f4d7513663534bbd59334f59d1cd79de",
-      "size": 8637
-    },
-    ".opencode/dashboard/frontend/dist/assets/ContextHealthPage-DjaqYQ2r.js": {
-      "sha256": "831d15f234f4c6b77f759a5bc4819ac4581f06adfff0709a66a62b418289ae7c",
-      "size": 8637
-    },
-    ".opencode/dashboard/frontend/dist/assets/DataTable-B9SPpbIN.js": {
-      "sha256": "713aba0cab0e43b92e9905c5e28459ab1536eec67b1ca98362cccddb78f7c0f0",
-      "size": 1469
-    },
-    ".opencode/dashboard/frontend/dist/assets/DataTable-DVJqG7dT.js": {
-      "sha256": "4da6fddc06632ccd32ecafc9193caffa24db88c2f289595d3a6e02eb303a28aa",
-      "size": 1469
-    },
-    ".opencode/dashboard/frontend/dist/assets/DebtPage-4JShNo6b.js": {
-      "sha256": "475465439ecefcf0515730bb52dc40d5f8bf338310becef1ca41ae87a1e0cc19",
-      "size": 6317
-    },
-    ".opencode/dashboard/frontend/dist/assets/DebtPage-lXau10Ew.js": {
-      "sha256": "ab08fec89b76d3ed0fc3f725a719bd0dfc449c293a9d4ad0de2d7c99cd3bfc15",
-      "size": 6317
-    },
-    ".opencode/dashboard/frontend/dist/assets/DiagnosticsPage-BCmmEJiJ.js": {
-      "sha256": "8975f15e630b8f079b939622486d18cc0db3d5c660e38fe1d06b55c8846be7ca",
-      "size": 6261
-    },
-    ".opencode/dashboard/frontend/dist/assets/DiagnosticsPage-D3YyLtkD.js": {
-      "sha256": "e487e8f016ab4348869f6fe43c1b4ca7faf991651bf7c106fdaee7b63db8ba88",
-      "size": 6261
-    },
-    ".opencode/dashboard/frontend/dist/assets/EditorPanel-B6TFGPMe.js": {
-      "sha256": "08f84eab8ffad9b5c32bd2f0013e933b428e49bfcd92fad9eac031c9c2bbcfd2",
-      "size": 618392
-    },
-    ".opencode/dashboard/frontend/dist/assets/EditorPanel-C3BRwXaX.js": {
-      "sha256": "1feb5ca1d8c39d332e4663259b80bb8e82a07a079f18e1d6ef2a68c10ddecba0",
-      "size": 618392
-    },
-    ".opencode/dashboard/frontend/dist/assets/FilesPage-5PKkaRbZ.js": {
-      "sha256": "c041cd573e1216dafae6f89408abef89c7b98dfd34ce2d6fc068dacb55808417",
-      "size": 4553
-    },
-    ".opencode/dashboard/frontend/dist/assets/FilesPage-qWf1_Ear.js": {
-      "sha256": "53f0ff5fdf04919b8037563ee3b865f2367e25692aadc8691aaa6e267c380544",
-      "size": 4553
-    },
-    ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-B1mLZziJ.js": {
-      "sha256": "0b0b638404a71ec03da7ff7af704b0eabe9ae93a38381710da3ed18647c57a8d",
-      "size": 5574
-    },
-    ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-uFHIqpqg.js": {
-      "sha256": "fe715118e30ad4c17ee7ef23b56b9c9893290ecc115712a72ebfb336b9a5519d",
-      "size": 5574
-    },
-    ".opencode/dashboard/frontend/dist/assets/OverviewPage-B3Ilc4CZ.js": {
-      "sha256": "44bc0f1e2c557259e7b60297e60e45610c8730ebeaf9a49ba6c771ce8944bc1b",
-      "size": 13208
-    },
-    ".opencode/dashboard/frontend/dist/assets/OverviewPage-BbWSuTKV.js": {
-      "sha256": "6a510a7150fde0695546410ff89971e6810d62bd5cff452379bc3269b1a55fff",
-      "size": 13208
-    },
-    ".opencode/dashboard/frontend/dist/assets/PacingPage-B8abupb3.js": {
-      "sha256": "e0caf5ea394bf46fa7502dfc11c400b62f2ebdc0d0d045b7f155fdf789702812",
-      "size": 5325
-    },
-    ".opencode/dashboard/frontend/dist/assets/PacingPage-eJAUGIzI.js": {
-      "sha256": "e4637f432d08ca255a290abde69a8bdaaff48eae4b01f84edf9a9475dbc0af3f",
-      "size": 5325
-    },
-    ".opencode/dashboard/frontend/dist/assets/Pager-BTvtuMtD.js": {
-      "sha256": "4c10ad2e2cf08c3c281e0721ce01bac050d021098caea4e7b92ad4103ac9b4c9",
-      "size": 700
-    },
-    ".opencode/dashboard/frontend/dist/assets/Pager-DBqMV_ab.js": {
-      "sha256": "57267907953c95ab59e952db49cf8887ec48cb042b90d6d8de9d166df34fe46c",
-      "size": 700
-    },
-    ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-6nFNeb76.js": {
-      "sha256": "5039ccf9b6a88934b538e3b0d668b3399f0c6a42c685f042b85c2416e8097c6a",
-      "size": 6511
-    },
-    ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-Bh28rWEC.js": {
-      "sha256": "1ab32a037a7441e8b237044715e6bc66539a3be6a68a07c2a67d4f426cf7f22e",
-      "size": 5009
-    },
-    ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-CYYiAq41.js": {
-      "sha256": "9526b53138de5ac5991dd1ee64969961a1e7ccf1183def3dd71c65c036c90484",
-      "size": 22057
-    },
-    ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-Fji2T7Q0.js": {
-      "sha256": "9c03e7cfee689ea827eb2d0c7208c649b05945385a1467b8dbee752c40eee8a3",
-      "size": 22057
-    },
-    ".opencode/dashboard/frontend/dist/assets/SystemPage-BhRP_N66.js": {
-      "sha256": "7365c030744718b72e84808d2db04acd3f0c4467ffb0e0843245a9240b47897c",
-      "size": 10985
-    },
-    ".opencode/dashboard/frontend/dist/assets/SystemPage-CgVAgY5W.js": {
-      "sha256": "ef2fc0de3b6456b2dda4d0d3d466432c949ccba6452d2c07311c965a0378c3c8",
-      "size": 10985
     },
     ".opencode/dashboard/frontend/dist/assets/echarts-vendor-CCZFUTXT.js": {
       "sha256": "afbdbda1d918861640343bb397f2eb457b2a2db6b415cdc3cb3208a155bb8f2a",
@@ -227,14 +99,6 @@
       "sha256": "dd6135d3e1a9aefab3e2e4ad8aaab357d4a25fd1840e313f039859fd75df2a65",
       "size": 16893
     },
-    ".opencode/dashboard/frontend/dist/assets/index-BcF0KDLm.js": {
-      "sha256": "08c6f446f40c0757f9a700d9fa2e80801ee462d50f43fa9984faa2a4eefcd237",
-      "size": 197090
-    },
-    ".opencode/dashboard/frontend/dist/assets/index-T3ikhKGX.js": {
-      "sha256": "37e744cac37884bd618e8bab72910710f65080cbbea85c0a397827473aa308fc",
-      "size": 197090
-    },
     ".opencode/dashboard/frontend/dist/assets/react-vendor-CjpoAPrF.js": {
       "sha256": "a73ee4c48bf1694465cb392489e61ba3dc5b229f360cb22298dc0fb9181b843e",
       "size": 49774
@@ -244,7 +108,7 @@
       "size": 1099
     },
     ".opencode/dashboard/frontend/dist/index.html": {
-      "sha256": "9790c84b2eeec288bc56940c01161b782a67dac50cff2ed28cf90a70b0e71f3a",
+      "sha256": "93584b3cfebb9cd70f867743394883bf1cf1bacd601292257265c45fe152c3b9",
       "size": 919
     },
     ".opencode/dashboard/frontend/eslint.config.js": {
@@ -268,8 +132,8 @@
       "size": 6094
     },
     ".opencode/dashboard/frontend/src/api.js": {
-      "sha256": "4c2ed3e4765c3e0a5f18109f9cbc5a85bb3bcb6edfb5252e125c5e5814aefeee",
-      "size": 7084
+      "sha256": "752b41fb2261df3243aa109a63cd9221bd26a10297b3a002dcce7a967420cbb5",
+      "size": 7538
     },
     ".opencode/dashboard/frontend/src/api.test.js": {
       "sha256": "e952e4ea52739f25b2004fb8450f39a0ac33968cd1197e63e78e446d238ca60c",
@@ -388,8 +252,8 @@
       "size": 11328
     },
     ".opencode/dashboard/frontend/src/pages/ReviewAnalyticsPage.jsx": {
-      "sha256": "ec83f6187e9850279866604aaaf610cab0e1120809167194d8a656b31807bbea",
-      "size": 12039
+      "sha256": "7bab4f41fe5ac0ed3f72c0f10d7b26d227ef93247a3e3c9312dba5865c91dc0b",
+      "size": 15700
     },
     ".opencode/dashboard/frontend/src/pages/StyleEditorPage.jsx": {
       "sha256": "53d832553deaa8c48ccc0f5782a7e75db7b43213a7d9c59dd8c3bb3278dff588",
@@ -826,6 +690,10 @@
     ".opencode/scripts/data_modules/event_projection_router.py": {
       "sha256": "5b4adeb99c5e44e16922cad13a3054e71e625a820f5c06e1e8ce7150d611746b",
       "size": 2153
+    },
+    ".opencode/scripts/data_modules/flag_triage.py": {
+      "sha256": "e40be010242279e38d0f03419334f5dbe1679cfe8b6e423f0449995da16726bd",
+      "size": 6064
     },
     ".opencode/scripts/data_modules/foreshadowing_utils.py": {
       "sha256": "20c8c19aec13be71250805084cba043c21261a4b01decea1d6153f01602c39b3",
@@ -1294,6 +1162,10 @@
     ".opencode/scripts/data_modules/tests/test_extract_context_urgency.py": {
       "sha256": "cabe5ecbe489c5ba6fdf17928bb4d21049f20c1e91d8817cdbd84bc9e42dbcc4",
       "size": 5188
+    },
+    ".opencode/scripts/data_modules/tests/test_flag_triage.py": {
+      "sha256": "d0a57dd2088a712fe943cc8d9d2ffbe3126596ad1ea24ca58f613918ef51a045",
+      "size": 11599
     },
     ".opencode/scripts/data_modules/tests/test_foreshadowing_contract.py": {
       "sha256": "ad38c68a1b05fd0e67a84ead16abcb15f2f2ec24627e5cafc7fc1833f73e428d",

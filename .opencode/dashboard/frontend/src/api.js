@@ -216,6 +216,19 @@ export function fetchReviewAnalytics(limit = 50) {
     return fetchJSON('/api/review/analytics', { limit })
 }
 
+export function fetchReviewFlags(limit = 10) {
+    return fetchJSON('/api/review/flags', { limit })
+}
+
+// 仲裁一条 review flag（confirm / dismiss）——写回 commit JSON 的 triage 字段
+export function triageReviewFlag(chapter, index, action) {
+    return fetchJSON('/api/review/flags/triage', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chapter, index, action }),
+    })
+}
+
 export function fetchForeshadowingReminders(threshold = 5) {
     return fetchJSON('/api/foreshadowing/reminders', { threshold })
 }

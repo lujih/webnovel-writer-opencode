@@ -781,6 +781,105 @@ def create_app(
 
         return {"forecasts": rows, "coverage": coverage}
 
+    @app.get("/api/review/flags")
+    def review_flags(limit: int = Query(10, ge=1, le=50)):
+        """最近 N 章 commit 的 review_flags（门禁分层后的语义观察标记）。
+
+        纯读：扫描 commit JSON 的 `review_flags` 字段，聚合每章的
+        待仲裁/已仲裁 flag 数与 severity 分布。无新表、无迁移——
+        flags 是 commit 的衍生数据，随 commit JSON 走。
+        """
+        from data_modules.story_contracts import StoryContractPaths
+
+        root = _get_project_root()
+        paths = StoryContractPaths.from_project_root(root)
+        commits_dir = paths.commits_dir
+        if not commits_dir.is_dir():
+            return {"chapters": [], "total_pending": 0}
+
+        import json as _json
+        import re as _re
+        rows = []
+        for d in sorted(commits_dir.glob("chapter_*.commit.json"),
+                       key=lambda p: int(_re.search(r"chapter_(\d+)", p.name).group(1)),
+                       reverse=True)[:limit]:
+            m = _re.search(r"chapter_(\d+)", d.name)
+            chapter = int(m.group(1)) if m else 0
+            try:
+                payload = _json.loads(d.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                continue
+            flags = payload.get("review_flags") or []
+            pending = [f for f in flags if isinstance(f, dict) and f.get("triage") is None]
+            triaged = [f for f in flags if isinstance(f, dict) and f.get("triage") is not None]
+            sev_dist: Dict[str, int] = {}
+            for f in pending:
+                sev = str(f.get("severity") or "unknown")
+                sev_dist[sev] = sev_dist.get(sev, 0) + 1
+            rows.append({
+                "chapter": chapter,
+                "status": (payload.get("meta") or {}).get("status"),
+                "total_flags": len(flags),
+                "pending": len(pending),
+                "triaged": len(triaged),
+                "pending_severity": sev_dist,
+                "flags": [
+                    {"index": i, "severity": f.get("severity"),
+                     "category": f.get("category"),
+                     "description": f.get("description"),
+                     "triage": f.get("triage")}
+                    for i, f in enumerate(flags) if isinstance(f, dict)
+                ],
+            })
+        total_pending = sum(r["pending"] for r in rows)
+        return {"chapters": rows, "total_pending": total_pending}
+
+    @app.put("/api/review/flags/triage")
+    def review_flags_triage(payload: dict):
+        """仲裁一条 flag：confirm / dismiss（写回 commit JSON 的 triage 字段）。
+
+        与 CLI `flag-triage` 等价——dashboard 是给人工裁决用的 Web 入口。
+        不改 commit status（门禁分层的底线：语义问题不拒章，仲裁只留痕）。
+        """
+        from data_modules.story_contracts import StoryContractPaths
+
+        chapter = payload.get("chapter")
+        index = payload.get("index")
+        action = payload.get("action")
+        if not isinstance(chapter, int) or not isinstance(index, int) or action not in ("confirm", "dismiss"):
+            return JSONResponse({"ok": False, "error": "需 chapter(int)/index(int)/action(confirm|dismiss)"},
+                                status_code=400)
+        decision = "confirmed" if action == "confirm" else "dismissed"
+        root = _get_project_root()
+        paths = StoryContractPaths.from_project_root(root)
+        commit_file = paths.commit_json(chapter)
+        if not commit_file.is_file():
+            return JSONResponse({"ok": False, "error": f"第 {chapter} 章 commit 不存在"},
+                                status_code=404)
+        import json as _json
+        try:
+            commit_payload = _json.loads(commit_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            return JSONResponse({"ok": False, "error": f"commit 解析失败：{exc}"},
+                                status_code=400)
+        flags = commit_payload.get("review_flags") or []
+        if not isinstance(flags, list) or index < 0 or index >= len(flags):
+            return JSONResponse({"ok": False, "error": f"index {index} 越界（共 {len(flags)} 条）"},
+                                status_code=400)
+        flag = flags[index]
+        if not isinstance(flag, dict):
+            return JSONResponse({"ok": False, "error": "flag 条目形状异常"}, status_code=400)
+        previous = flag.get("triage")
+        flag["triage"] = decision
+        commit_payload["review_flags"] = flags
+        # 原子写（复用本 dashboard 内的 _atomic_write_json，与其它 PUT 端点一致）
+        try:
+            _atomic_write_json(commit_file, commit_payload)
+        except OSError as exc:
+            return JSONResponse({"ok": False, "error": f"写回失败：{exc}"}, status_code=500)
+        return {"ok": True, "chapter": chapter, "index": index,
+                "triage": decision, "previous_triage": previous}
+
     @app.get("/api/review-metrics")
     def list_review_metrics(limit: int = 20):
         with closing(_get_db()) as conn:
