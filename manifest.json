@@ -1,17 +1,27 @@
 {
-  "version": "v2.9.2-20261021.0606",
+  "version": "v2.9.2-20261021.0828",
   "tag": "v2.9.2",
-  "updated": "2026-10-21T06:06:12Z",
+  "updated": "2026-10-21T08:28:22Z",
   "changelog": [
     {
-      "hash": "8f0ad41",
+      "hash": "4ee9b0d",
       "type": "feat",
-      "message": "feat: \u53d9\u4e8b\u9884\u62a5\uff08Narrative Forecast\uff09\u2014\u2014\u5199\u7ae0\u524d\u751f\u6210\u5019\u9009\u672a\u6765\u5206\u652f\uff0c\u9009\u652f\u540e\u53ea\u8ffd\u52a0\u8fdb\u7ae0\u7eb2"
+      "message": "feat: dashboard \u5ba1\u67e5\u6807\u8bb0\u53ef\u89c2\u6d4b\u2014\u2014/api/review/flags + \u4ef2\u88c1 UI\uff0c\u95e8\u7981\u5206\u5c42\u95ed\u73af"
     },
     {
-      "hash": "af11896",
+      "hash": "e6399c5",
+      "type": "feat",
+      "message": "feat: flag-triage \u4ef2\u88c1 CLI + context \u8b66\u6212\u6bb5\u6ce8\u5165\u2014\u2014\u8bed\u4e49\u6807\u8bb0\u7684\u7559\u75d5\u51fa\u53e3"
+    },
+    {
+      "hash": "b6eceb5",
+      "type": "feat",
+      "message": "feat: \u95e8\u7981\u5206\u5c42\u2014\u2014LLM \u8bed\u4e49\u5224\u5b9a\u4e0d\u518d\u62d2\u7ae0\uff0c\u964d\u7ea7\u4e3a review_flags \u89c2\u5bdf\u6807\u8bb0"
+    },
+    {
+      "hash": "8be639c",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261020.1844 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261021.0606 [skip ci]"
     }
   ],
   "files": {
@@ -83,6 +93,70 @@
       "sha256": "b5a7daf46c399e91c969f19946fbcdf2c8ae531fa0e612f0ea1bf61ca6d7095e",
       "size": 9629
     },
+    ".opencode/dashboard/frontend/dist/assets/Badge-DEdBKcTI.js": {
+      "sha256": "b9bcc9c88eb066413a7d2304a4961d1009302ad758e2bca66d60f24b049f0ef6",
+      "size": 373
+    },
+    ".opencode/dashboard/frontend/dist/assets/CharactersPage-DMXeOyoq.js": {
+      "sha256": "531cc5fc2cf6c6c7c4bd189d0879c4867047433eb568e192323cfc6f36d187d8",
+      "size": 13099
+    },
+    ".opencode/dashboard/frontend/dist/assets/ChartWrapper-CzHPz10s.js": {
+      "sha256": "9ba8d6fc07930ad7915bf172416479908a0f6a500bc545556920e6837257b95a",
+      "size": 9153
+    },
+    ".opencode/dashboard/frontend/dist/assets/ContextHealthPage-DHftkGQW.js": {
+      "sha256": "a159d52fb675245247cdd2cdd934f493369549d86261a1d28d0c6d129d9554a0",
+      "size": 8637
+    },
+    ".opencode/dashboard/frontend/dist/assets/DataTable-BKa3s7dx.js": {
+      "sha256": "fe7e75a67dabb26ccf0445fd4b437ab85e0dbc9182237ad1911dc4f1713dbcf8",
+      "size": 1469
+    },
+    ".opencode/dashboard/frontend/dist/assets/DebtPage-CS06QTM5.js": {
+      "sha256": "ccc295cc80479791e088f76ac3d7c3463567f6b2d5749659ea7c1129289d12cc",
+      "size": 6317
+    },
+    ".opencode/dashboard/frontend/dist/assets/DiagnosticsPage-D5G0PLRx.js": {
+      "sha256": "05255f60fa2a960d4e71ea6cf577340a245c8061afcc893f72d3d714698f4594",
+      "size": 6261
+    },
+    ".opencode/dashboard/frontend/dist/assets/EditorPanel-BMRsTeaj.js": {
+      "sha256": "b7fff52809eff74bc972f9066d06d8040f5437c1aac245bfb38765552bbf0bd0",
+      "size": 618392
+    },
+    ".opencode/dashboard/frontend/dist/assets/FilesPage-CCqD3eiy.js": {
+      "sha256": "f461688f75fbed4c97d5c62bd09e22efbbe41f73bbd9ec80f83eff764a2632c3",
+      "size": 4553
+    },
+    ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-C37SCmEX.js": {
+      "sha256": "f36c4404ef97bf7e11a661b4ffd1f13dfb048be88e20d08cd5297ddf58186339",
+      "size": 5574
+    },
+    ".opencode/dashboard/frontend/dist/assets/OverviewPage-NgNWE7vb.js": {
+      "sha256": "c8dc9e39d6a81a1fd8a0cc07c2c24539343f6ebbe7d93f5db1efc9fcd77803a7",
+      "size": 13208
+    },
+    ".opencode/dashboard/frontend/dist/assets/PacingPage-HUgXwt3B.js": {
+      "sha256": "02e3793f3a42da58b90f8434f706d343e73e590a19785acfa1afb468326998d7",
+      "size": 5325
+    },
+    ".opencode/dashboard/frontend/dist/assets/Pager-DWIwS_Q2.js": {
+      "sha256": "7cb93a19bcc46ce013fea5d5a8d517c1ac64aea459e09e5c22e3a675c2a37469",
+      "size": 700
+    },
+    ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-xYpODVke.js": {
+      "sha256": "5320c656d78b7d071e1017d6a082bcf5dba776326dce4a3495966b43039002bb",
+      "size": 8240
+    },
+    ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-B6nMth4R.js": {
+      "sha256": "05ec9a74751e000ebeba82d4506009530bf6613997a8c6c9e4dcbf131e7567a2",
+      "size": 22057
+    },
+    ".opencode/dashboard/frontend/dist/assets/SystemPage-s5RbLe11.js": {
+      "sha256": "e04ddead80ca8a4d5430e13d7b59cab6200a5535be5f796df17b04db8aa8915e",
+      "size": 10985
+    },
     ".opencode/dashboard/frontend/dist/assets/echarts-vendor-CCZFUTXT.js": {
       "sha256": "afbdbda1d918861640343bb397f2eb457b2a2db6b415cdc3cb3208a155bb8f2a",
       "size": 632750
@@ -98,6 +172,10 @@
     ".opencode/dashboard/frontend/dist/assets/index-B3sPIbAP.css": {
       "sha256": "dd6135d3e1a9aefab3e2e4ad8aaab357d4a25fd1840e313f039859fd75df2a65",
       "size": 16893
+    },
+    ".opencode/dashboard/frontend/dist/assets/index-C-A_UrpW.js": {
+      "sha256": "e65a0714564d63f850a36f9ff93ade743adc788fd29a7e48aa533bbc02e49874",
+      "size": 197329
     },
     ".opencode/dashboard/frontend/dist/assets/react-vendor-CjpoAPrF.js": {
       "sha256": "a73ee4c48bf1694465cb392489e61ba3dc5b229f360cb22298dc0fb9181b843e",
