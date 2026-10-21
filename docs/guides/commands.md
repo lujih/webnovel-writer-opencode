@@ -229,6 +229,8 @@ python -X utf8 "<OPENCODE_ROOT>/scripts/webnovel.py" --project-root "<PROJECT_RO
 | `extract-context` | 提取章节上下文（`--chapter N --format json`） |
 | `placeholder-scan` | 扫描大纲/设定中的未补齐占位 |
 | `master-outline-sync` | 将规划产物同步回写总纲 |
+| `forecast` | 叙事预报（写章前生成候选未来分支：`generate --chapter N` / `select --chapter N --id X` / `list`，选支后追加进章纲） |
+| `flag-triage` | 仲裁 review_flags（门禁分层后的语义标记出口：`list --chapter N` / `confirm` / `dismiss --index I`，只写回 triage 字段、不改 commit status） |
 | `export` | 正文导出（MD/TXT/EPUB/HTML/DOCX/PDF） |
 | `publish` | 番茄小说平台发布 |
 | `clean-tmp --keep <filename>` | 清理临时文件时保留指定文件 |

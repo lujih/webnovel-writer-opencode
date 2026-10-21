@@ -51,7 +51,7 @@
 
 Webnovel Writer for OpenCode 是一个面向长篇中文网文的 AI 辅助写作系统。它通过分层 RAG 检索、故事合约引擎和结构化质量审查，解决 AI 在连载创作中的"遗忘"和"幻觉"问题，支持从项目初始化到平台发布的全流程。
 
-本项目源于 [lingfengQAQ/webnovel-writer](https://github.com/lingfengQAQ/webnovel-writer)，已深度重构为 OpenCode 架构，扩展了审查器体系、CSV 结构化知识库、故事合约引擎、记忆系统、发布通道等模块。v2.8 起借鉴 [Narcooo/inkOS](https://github.com/Narcooo/inkOS) 的核心设计，引入了 SSOT 事件溯源、Observer→Reflector 双段事实提取、运行时产物持久化和真相文件 Markdown 投影。
+本项目源于 [lingfengQAQ/webnovel-writer](https://github.com/lingfengQAQ/webnovel-writer)，已深度重构为 OpenCode 架构，扩展了审查器体系、CSV 结构化知识库、故事合约引擎、记忆系统、发布通道等模块。v2.8 起借鉴 [Narcooo/inkOS](https://github.com/Narcooo/inkOS) 的核心设计，引入了 SSOT 事件溯源、Observer→Reflector 双段事实提取、运行时产物持久化和真相文件 Markdown 投影。**v3.0 起**新增三项能力：① **一致性错误密度（CED）**——审查指标从"过程指标"升级为"质量指标"，每万字一致性错误数三口径（原始/加权/阻断）；② **叙事预报（Narrative Forecast）**——写章前生成 2-5 个相互隔离的候选未来分支（冲突升级/伏笔回收/平静过渡），选支后只把选中分支追加进章纲；③ **门禁分层**——LLM 语义审查不再自动拒章（降级为 `review_flags` 观察标记，由 `flag-triage` 人工裁决），技术故障（节点缺失/消歧未决/审查不可解析）仍 fail-closed 拒章。
 
 **核心设计理念**：不是让 AI "代替"作者，而是让 AI "理解"作者创造的世界，并在这个世界的约束下持续创作。
 
@@ -262,6 +262,9 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 | **审查管线** | `review_pipeline.py` | Code Checker 预处理 → 6 维度结构化审查（写-修循环最多 2 轮） |
 | **Graph-RAG** | `entity_linker.py` | 实体关系图谱 + SQLite 持久化 |
 | **追读债 / Override 合约** | `index_debt_mixin.py` | `chase_debt` 数值表（金额/利息/到期）+ 版本化世界规则合同；伏笔事件经 `_sync_foreshadowing` 自动建/销债 |
+| **一致性错误密度（CED）** | `review_schema.py` | 审查质量指标（区别于过程指标）：`ced_raw`/`ced_weighted`/`ced_blocking` 三口径，落库 `review_metrics`（5 新列 + 幂等 ALTER 迁移），dashboard 经 `/api/review/analytics` 的 `ced_trends`/`ced_summary` 展示 |
+| **叙事预报（Narrative Forecast）** | `narrative_forecast.py` | 写章前生成候选未来分支（确定性模板，不依赖 LLM），对齐度（字符 2-gram Jaccard），选支幂等追加章纲；`webnovel.py forecast generate\|select\|list` |
+| **门禁分层（review_flags）** | `chapter_commit_service.py` | LLM 语义问题不拒章、降级为 commit 里的观察标记；`flag_triage.py` CLI + dashboard `/api/review/flags` 仲裁入口（confirm/dismiss，不改 status） |
 | **发布模块** | `.opencode/scripts/publisher/` | Playwright 浏览器自动化（番茄 / 七猫适配器） |
 
 ## 5. 贡献指南
