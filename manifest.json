@@ -788,8 +788,8 @@
       "size": 15732
     },
     ".opencode/scripts/data_modules/context_manager.py": {
-      "sha256": "1dbf34817d4032bcfcc4041727030d5b7d9a336cb1a2ab9e72f0dd105e40baa0",
-      "size": 45738
+      "sha256": "d6c9753a3b263ec43792e0c1f692ab31805c05231c7a6fdfefb58f49d7250ee7",
+      "size": 48027
     },
     ".opencode/scripts/data_modules/context_ranker.py": {
       "sha256": "0de21e6fa2c94c9df7de88732662223577a1b9d33c14d65cf4110abe298283cd",
@@ -1708,8 +1708,8 @@
       "size": 9978
     },
     ".opencode/scripts/data_modules/webnovel.py": {
-      "sha256": "a63b1fcffcfa1ee507e6d13b392229949c0f3f54d34d6de77f25ffbbed9c3e18",
-      "size": 39198
+      "sha256": "bbf20a226ee131e198ab7da42737b8704c039e872e8203d683ff318dbefb2809",
+      "size": 40528
     },
     ".opencode/scripts/data_modules/workflow_checkpoint.py": {
       "sha256": "d4313980a6478f29b9acf12fcfd8ec1f706ddf9c21f42e4400660f034e2128ef",

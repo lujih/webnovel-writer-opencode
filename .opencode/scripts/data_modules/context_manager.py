@@ -418,10 +418,58 @@ class ContextManager:
             "next_chapter": chapter,
         }
 
+        # 上章的未仲裁 review_flags（门禁分层后 LLM 语义问题不拒章、
+        # 降级为 flags 留痕）——注入写前警戒段，让 context-agent 看到
+        # 「上一章有未确认的 critical」，在任务书里提示写作者/审查侧复核。
+        # 上限 3 条（与 debt override hints 同款 if shown >= 3: break），
+        # 避免 flag 堆积挤占 token 预算。
+        pending_flags = self._load_pending_review_flags(chapter)
+        if pending_flags:
+            signal["pending_review_flags"] = pending_flags
+
         if include_debt:
             signal["debt_summary"] = self.index_manager.get_debt_summary()
 
         return signal
+
+    def _load_pending_review_flags(self, chapter: int, limit: int = 3) -> List[Dict[str, Any]]:
+        """读上一章（chapter-1）commit JSON 里未仲裁的 review_flags。
+
+        门禁分层（2026-10）后，LLM 报的语义 critical 不拒章、降级为
+        `review_flags`（triage=None 即待仲裁）。本章写作前把上一章的待仲裁
+        flag 注入 reader signal，作为警戒段——真矛盾在写下一章时仍有出口。
+
+        只取 triage 为 None 的项（已 confirm/dismiss 的不再注入），
+        最多 `limit` 条。上一章无 commit 或无 flags 时返回 []（不阻断）。
+        """
+        prev = chapter - 1
+        if prev < 1:
+            return []
+        try:
+            from .story_contracts import StoryContractPaths
+            import json as _json
+
+            paths = StoryContractPaths.from_project_root(self.config.project_root)
+            commit_file = paths.commit_json(prev)
+            if not commit_file.is_file():
+                return []
+            payload = _json.loads(commit_file.read_text(encoding="utf-8"))
+            flags = payload.get("review_flags") or []
+            pending = [
+                {
+                    "chapter": prev,
+                    "severity": f.get("severity"),
+                    "category": f.get("category"),
+                    "description": f.get("description"),
+                }
+                for f in flags
+                if isinstance(f, dict) and f.get("triage") is None
+            ]
+            return pending[:limit]
+        except (OSError, ValueError, ImportError) as exc:
+            logger.warning("读取第 %s 章 review_flags 失败: %s", prev, exc)
+            return []
+
 
     def _load_genre_profile(self, state: Dict[str, Any]) -> Dict[str, Any]:
         if not getattr(self.config, "context_genre_profile_enabled", True):

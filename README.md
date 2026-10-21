@@ -220,9 +220,9 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   │   └── review/               # 审查规则
 │   │
 │   └── scripts/                  # Python 核心脚本
-│       ├── webnovel.py           # CLI 统一入口（39 个子命令）
-│       ├── data_modules/         # 核心数据模块（74 个）
-│       └── tests/                # 测试（163 个测试文件，2329 用例）
+│       ├── webnovel.py           # CLI 统一入口（40 个子命令）
+│       ├── data_modules/         # 核心数据模块（75 个）
+│       └── tests/                # 测试（164 个测试文件，2341 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构

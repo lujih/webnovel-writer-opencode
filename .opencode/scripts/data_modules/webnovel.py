@@ -414,6 +414,24 @@ def cmd_use(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_flag_triage(args, project_root: str) -> int:
+    """flag-triage 子命令：把 --project-root 传进 flag_triage 模块的 main。"""
+    import sys as _sys
+    from data_modules import flag_triage
+    _sys.argv = [
+        "flag_triage.py",
+        "--project-root", str(project_root),
+        args.flag_triage_action,
+        "--chapter", str(args.chapter),
+    ]
+    if args.flag_triage_action in ("confirm", "dismiss"):
+        _sys.argv.extend(["--index", str(args.index)])
+    elif getattr(args, "limit", None) is not None:
+        _sys.argv.extend(["--limit", str(args.limit)])
+    flag_triage.main()
+    return 0
+
+
 def _run_forecast(args, project_root: str) -> int:
     """叙事预报子命令分发：generate / select / list。
 
@@ -643,6 +661,16 @@ def main() -> None:
 
     # 叙事预报（Narrative Forecast）：写章前生成 2-5 个隔离候选未来分支，
     # 评估与章纲对齐度，选中后只把选支追加进章纲。纯增量、可跳过。
+    p_ft = sub.add_parser("flag-triage", help="仲裁 review_flags（门禁分层后的语义标记出口）")
+    p_ft_sub = p_ft.add_subparsers(dest="flag_triage_action")
+    ft_l = p_ft_sub.add_parser("list", help="列出本章 flags 与待仲裁项")
+    ft_l.add_argument("--chapter", type=int, required=True)
+    ft_l.add_argument("--limit", type=int, default=20)
+    for _act in ("confirm", "dismiss"):
+        p_a = p_ft_sub.add_parser(_act, help=f"{_act} 一条 flag")
+        p_a.add_argument("--chapter", type=int, required=True)
+        p_a.add_argument("--index", type=int, required=True)
+
     p_fc = sub.add_parser("forecast", help="叙事预报（写章前生成候选未来分支，选中后追加章纲）")
     p_fc_sub = p_fc.add_subparsers(dest="forecast_action")
     fc_gen = p_fc_sub.add_parser("generate", help="生成本章候选分支（确定性模板，不依赖 LLM）")
@@ -863,6 +891,9 @@ def main() -> None:
         if hasattr(args, "chapter") and args.chapter:
             return_args.extend(["--chapter", str(args.chapter)])
         raise SystemExit(_run_data_module("override_contract_engine", return_args))
+
+    if tool == "flag-triage":
+        raise SystemExit(_run_flag_triage(args, project_root))
 
     if tool == "forecast":
         raise SystemExit(_run_forecast(args, project_root))
