@@ -56,7 +56,12 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          # node 22（不是 20）：jsdom 30 的传递依赖 `@exodus/bytes` 是 ESM-only，
+          # 而 `require(ESM)` 只在 node 22.12+ / 24+ 可用。node 20 下 vitest 的
+          # component project（jsdom 环境）启动 forks worker 时抛
+          # ERR_REQUIRE_ESM——4 个组件测试文件整批无法启动（2026-10-21 三次 CI
+          # 红根因，本地 node 24 全绿而 node 20 必炸）。
+          node-version: '22'
           cache: npm
           cache-dependency-path: .opencode/dashboard/frontend/package-lock.json
 
