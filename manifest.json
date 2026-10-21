@@ -86,8 +86,8 @@
       "size": 79
     },
     ".opencode/dashboard/app.py": {
-      "sha256": "f737d6e65beeb22db5b8b66b34e74c596e21f6860fa8d704443551e69c830885",
-      "size": 100581
+      "sha256": "f1e815b549067399ed49d3ed2670040a5b1f0bd28ab059d76944d6db2569402a",
+      "size": 102321
     },
     ".opencode/dashboard/frontend/design.md": {
       "sha256": "b5a7daf46c399e91c969f19946fbcdf2c8ae531fa0e612f0ea1bf61ca6d7095e",
@@ -1710,8 +1710,8 @@
       "size": 9978
     },
     ".opencode/scripts/data_modules/webnovel.py": {
-      "sha256": "2eb536319af7336f410d25ca40ac2f05637b30dc24bf01b9edb10aad08de0b37",
-      "size": 36501
+      "sha256": "a63b1fcffcfa1ee507e6d13b392229949c0f3f54d34d6de77f25ffbbed9c3e18",
+      "size": 39198
     },
     ".opencode/scripts/data_modules/workflow_checkpoint.py": {
       "sha256": "d4313980a6478f29b9acf12fcfd8ec1f706ddf9c21f42e4400660f034e2128ef",
@@ -2154,8 +2154,8 @@
       "size": 2439
     },
     ".opencode/skills/webnovel-write/SKILL.md": {
-      "sha256": "e850ddd5424bc3fd501c667719c6f556eeca94d59a76a062418811115b58a4bb",
-      "size": 13949
+      "sha256": "9ef87041bde891a0ecc56c2a5304d8954f63391f1ecd580bdb7e183d7731da04",
+      "size": 14976
     },
     ".opencode/skills/webnovel-write/evals/evals.json": {
       "sha256": "056adc03be1e0139933040f12c60fd3e63585a4d0d7be327060ebd7738fdf250",

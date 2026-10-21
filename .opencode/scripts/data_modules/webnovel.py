@@ -414,6 +414,48 @@ def cmd_use(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_forecast(args, project_root: str) -> int:
+    """叙事预报子命令分发：generate / select / list。
+
+    独立于 `_run_data_module`——forecast 是新增功能，有自己的 CLI 形状
+    （候选 id 是动态值），直接调 `narrative_forecast` 模块。
+    """
+    import json as _json
+    from data_modules.narrative_forecast import (
+        generate_candidates,
+        list_forecasts,
+        select_candidate,
+        write_forecast,
+    )
+    action = getattr(args, "forecast_action", None)
+    if not action:
+        print("forecast 子命令：generate | select | list", file=sys.stderr)
+        return 2
+
+    if action == "generate":
+        candidates = generate_candidates(project_root, args.chapter, count=args.count)
+        # 落盘 + 打印（未选支，manifest.selected 保持 null）
+        write_forecast(project_root, args.chapter, candidates)
+        print(_json.dumps({
+            "chapter": args.chapter,
+            "candidates": [c.to_dict() for c in candidates],
+            "hint": "用 `webnovel.py forecast select --chapter N --id <id>` 选中一支",
+        }, ensure_ascii=False, indent=2))
+        return 0
+
+    if action == "select":
+        result = select_candidate(project_root, args.chapter, args.candidate_id)
+        print(_json.dumps(result, ensure_ascii=False, indent=2))
+        return 0
+
+    if action == "list":
+        rows = list_forecasts(project_root, limit=args.limit)
+        print(_json.dumps(rows, ensure_ascii=False, indent=2))
+        return 0
+
+    return 2
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="webnovel unified CLI")
     parser.add_argument("--project-root", help="书项目根目录或工作区根目录（可选，默认自动检测）")
@@ -598,6 +640,19 @@ def main() -> None:
     ovr_hist.add_argument("--constraint-id", required=True)
     ovr_ctx = p_ovr_sub.add_parser("context", help="生成上下文提示")
     ovr_ctx.add_argument("--chapter", type=int, required=True)
+
+    # 叙事预报（Narrative Forecast）：写章前生成 2-5 个隔离候选未来分支，
+    # 评估与章纲对齐度，选中后只把选支追加进章纲。纯增量、可跳过。
+    p_fc = sub.add_parser("forecast", help="叙事预报（写章前生成候选未来分支，选中后追加章纲）")
+    p_fc_sub = p_fc.add_subparsers(dest="forecast_action")
+    fc_gen = p_fc_sub.add_parser("generate", help="生成本章候选分支（确定性模板，不依赖 LLM）")
+    fc_gen.add_argument("--chapter", type=int, required=True)
+    fc_gen.add_argument("--count", type=int, default=3, help="候选数上限（默认 3）")
+    fc_sel = p_fc_sub.add_parser("select", help="选中一个候选并追加章纲（幂等）")
+    fc_sel.add_argument("--chapter", type=int, required=True)
+    fc_sel.add_argument("--id", dest="candidate_id", required=True, help="候选 id（见 generate 输出）")
+    fc_list = p_fc_sub.add_parser("list", help="列出最近 forecast 与选中记录")
+    fc_list.add_argument("--limit", type=int, default=10)
 
     p_sync_agents = sub.add_parser(
         "sync-agents-md",
@@ -808,6 +863,9 @@ def main() -> None:
         if hasattr(args, "chapter") and args.chapter:
             return_args.extend(["--chapter", str(args.chapter)])
         raise SystemExit(_run_data_module("override_contract_engine", return_args))
+
+    if tool == "forecast":
+        raise SystemExit(_run_forecast(args, project_root))
 
     raise SystemExit(2)
 

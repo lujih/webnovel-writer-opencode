@@ -117,6 +117,23 @@ python -X utf8 "${SCRIPTS_DIR}/skill_runner.py" check-structural \
   --output "${PROJECT_ROOT}/.webnovel/tmp/structural_check.json"
 ```
 
+### 可选：叙事预报（Narrative Forecast）
+
+> 默认**跳过**。仅当用户显式要求「先看看这章可能的走向」「生成几个候选分支」或任务参数带 `forecast: on` 时执行。
+> 选中一支后只追加进章纲；未选中的候选保留在 `.story-system/forecasts/` 作为参考，不被下游消费。
+
+```bash
+# 1) 生成 3 个候选未来分支（冲突升级 / 伏笔回收 / 平静过渡；无伏笔债时 2 个）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" \
+  forecast generate --chapter {chapter_num}
+# 2) 从输出里选一个 candidate id，选中并追加章纲（幂等）
+python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "${PROJECT_ROOT}" \
+  forecast select --chapter {chapter_num} --id <candidate_id>
+```
+
+- 对齐度（`alignment_score`）高 = 与既有章纲吻合；低 = 选它意味着要改章纲，需向用户说明。
+- 选支后回到 Step 1 正常生成任务书（预报已写入章纲，context-agent 会读到）。
+
 ### Step 1：context-agent 生成写作任务书
 
 必须使用 `Agent` 工具调用 `context-agent`，不得由主流程自行整理任务书。

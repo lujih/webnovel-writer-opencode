@@ -746,6 +746,41 @@ def create_app(
             return _fetchall_safe(conn,
                 "SELECT * FROM chapter_reading_power ORDER BY chapter DESC LIMIT ?", (limit,))
 
+    @app.get("/api/forecast/summary")
+    def forecast_summary(limit: int = Query(10, ge=1, le=50)):
+        """叙事预报：最近 forecast 列表 + 本卷覆盖率。
+
+        forecast 是纯增量可跳过的功能——目录不存在时返回空结构，不 404。
+        """
+        from data_modules.narrative_forecast import list_forecasts, forecast_coverage
+
+        root = _get_project_root()
+        rows = list_forecasts(root, limit=limit)
+
+        # 本卷覆盖率：从 state.json 取当前章与卷章节范围
+        state_file = _webnovel_dir() / "state.json"
+        coverage = {"total_chapters": 0, "with_forecast": 0,
+                    "with_selection": 0, "coverage": 0.0}
+        if state_file.is_file():
+            try:
+                import json as _json
+                state = _json.loads(state_file.read_text(encoding="utf-8"))
+                current = int(state.get("progress", {}).get("current_chapter") or 0)
+                vol = state.get("volume_progress", {})
+                vol_chapters = vol.get("chapter_range") or []
+                if isinstance(vol_chapters, (list, tuple)) and len(vol_chapters) >= 2:
+                    start_ch, end_ch = int(vol_chapters[0]), int(vol_chapters[1])
+                    chapter_list = list(range(start_ch, end_ch + 1))
+                    coverage = forecast_coverage(root, chapter_list)
+                elif current > 0:
+                    # 无卷信息时按最近 10 章统计
+                    lo = max(1, current - 9)
+                    coverage = forecast_coverage(root, list(range(lo, current + 1)))
+            except (ValueError, KeyError, TypeError, OSError):
+                pass
+
+        return {"forecasts": rows, "coverage": coverage}
+
     @app.get("/api/review-metrics")
     def list_review_metrics(limit: int = 20):
         with closing(_get_db()) as conn:
