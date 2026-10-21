@@ -78,10 +78,51 @@ class ChapterCommitService:
         # Plain strings or CBN-typed dicts → blocking
         # 通过 parse_review_output 归一化（含 severity→blocking 推导），不直接信任 LLM 原始值
         _normalized = parse_review_output(chapter, review_result)
-        rejected = _normalized.has_blocking or bool(missed_raw) or bool(missed_cbn) or bool(
-            disambiguation_result.get("pending")
+
+        # 门禁分层（2026-10 起）：
+        #   技术层（fail-closed，仍阻断）：
+        #     - missed_raw / missed_cbn  章纲节点缺失（可机判，零误判空间）
+        #     - disambiguation pending   实体消歧未决（无法确定指代，静默写错比不写更糟）
+        #     - unparseable              审查输出不可解析（_shape_issue 路径，技术故障，
+        #                                「无法判断有没有问题」≠「没有问题」）
+        #   语义层（fail-open，留痕不阻断）：
+        #     - LLM 报的 critical/high 语义问题 → 降级为 review_flags（观察标记）。
+        #       LLM 的 critical 不可靠（误判会杀死好章节；一次误杀 = 作者被迫重写
+        #       或绕过审查，破坏对系统的信任）。真矛盾由 flag 驱动人工裁决
+        #       （flag-triage confirm）→ 触发 webnovel-heal，而不是在提交时静默拒绝。
+        # 修复前：`_normalized.has_blocking` 在 rejected 表达式里——LLM 一次误判
+        # 的 critical 就拒章；且 _shape_issue 把「纯解析失败」也包装成 critical 一并阻断。
+        rejected = (
+            bool(missed_raw)
+            or bool(missed_cbn)
+            or bool(disambiguation_result.get("pending"))
+            or _normalized.unparseable
         )
         status = "rejected" if rejected else "accepted"
+
+        # 语义层观察标记：LLM 报出的 blocking 级问题（不含 _shape_issue 合成的那条——
+        # 那条是技术故障信号，已经通过 unparseable 留在 issues 里，不进 flags）。
+        # flags 是 issues 的严格子集：只取 blocking=True 且 category 非
+        # review_output_malformed 的项。accepted 章节带着 flags 提交，
+        # 下游 context 注入 + dashboard 仲裁消费。
+        review_flags = [
+            {
+                "severity": i.severity,
+                "category": i.category,
+                "description": i.description,
+                "location": i.location,
+                "blocking": i.blocking,
+                "triage": None,      # 待仲裁；confirm/dismiss 由 flag-triage 写回
+            }
+            for i in _normalized.issues
+            if i.blocking
+            # 排除 _shape_issue 合成项的两种情形：
+            # ① category 被 __post_init__ 降级成 other（VALID_CATEGORIES 外）
+            # ② 描述文本命中固定文案——两者任一即视为技术信号，不进 flags
+            and i.category != "review_output_malformed"
+            and i.description != "审查结果不可解析，已阻断提交。"
+        ]
+
         volume = volume_num_for_chapter_from_state(self.project_root, chapter) or 1
         return {
             "meta": {
@@ -111,6 +152,7 @@ class ChapterCommitService:
                 "extra_nodes": fulfillment_result.get("extra_nodes", []),
             },
             "review_result": review_result,
+            "review_flags": review_flags,
             "fulfillment_result": fulfillment_result,
             "disambiguation_result": disambiguation_result,
             "extraction_result": dict(extraction_result),

@@ -27,14 +27,37 @@ class TestValidateArtifactPayload:
         assert result["ok"] is True
         assert result["errors"] == []
 
-    def test_review_with_blocking_issues(self):
+    def test_review_with_semantic_blocking_issues_is_warning(self):
+        """门禁分层（2026-10）：LLM 语义判定（解析成功）的 blocking issue
+        降级为 warning（观察），不再 error 阻断。"""
         payload = {
             "blocking_count": 0,
             "issues": [{"blocking": True, "severity": "critical", "description": "test"}],
         }
         result = validate_artifact_payload("review_result", payload)
-        # blocking_count in schema is 0, but policy checks issues list
-        assert any(e["code"] == ERROR_BLOCKING_REVIEW for e in result["errors"])
+        # 语义 blocking → warning，不在 errors 里
+        assert not any(e["code"] == ERROR_BLOCKING_REVIEW for e in result["errors"]), (
+            "LLM 语义 critical 不再是 error 阻断——它可误判，应降级为观察标记"
+        )
+        assert any(
+            w.get("code") == ERROR_BLOCKING_REVIEW and w.get("severity") == "warning"
+            for w in result.get("warnings", [])
+        ), "LLM 语义 blocking issue 应降级为 warning 留痕"
+
+    def test_review_with_unparseable_is_error(self):
+        """技术故障（审查输出不可解析）仍 error 阻断。"""
+        payload = {
+            "blocking_count": 1,
+            "issues": [{"blocking": True, "severity": "critical",
+                        "category": "review_output_malformed",
+                        "description": "审查结果不可解析，已阻断提交。"}],
+            "review_parseable": 0,
+        }
+        result = validate_artifact_payload("review_result", payload)
+        assert any(
+            e["code"] == ERROR_BLOCKING_REVIEW and e.get("severity") == "error"
+            for e in result["errors"]
+        ), "解析失败必须 error 阻断（无法判断有没有问题 ≠ 没有问题）"
 
     def test_valid_fulfillment_result(self):
         payload = {

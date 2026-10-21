@@ -27,6 +27,13 @@ VALID_SEVERITIES = {"critical", "high", "medium", "low"}
 #: `ReviewIssue.__post_init__` 会把它降级成 `other`，`categories` 里查不到。
 UNPARSEABLE_SUMMARY = "审查结果不可解析，已阻断提交。"
 
+#: `_shape_issue()` 的合成 issue 的 category 与描述前缀——下游用它们识别
+#: 「技术故障信号」而非 LLM 语义判定。category 会被 `__post_init__` 降级成
+#: other（VALID_CATEGORIES 外），故靠前缀兜底。
+MALFORMED_CATEGORY = "review_output_malformed"
+MALFORMED_DESCRIPTION_PREFIX = "审查结果形状异常"
+UNPARSEABLE_DESCRIPTION_PREFIX = "审查结果不可解析"
+
 #: CED 加权口径用的 severity 权重。
 #:
 #: 为什么不用"severity 越严重值越小"的直观设计：这里是**计数权重**，
@@ -356,11 +363,19 @@ def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
                         "已按阻断处理，请人工复核。"),
             blocking=True,
         ))
+    # unparseable 只能由 `review_parseable` 字段（0 = 不可解析）显式声明——
+    # 这是 review_pipeline._shape_issue 路径写进 metrics 的标记。
+    # 不能用 `issues 里有没有 review_output_malformed` 来推：
+    # ① 模型自己也可能输出该 category 的 issue（误用）；
+    # ② _shape_issue 合成的 critical 是 fail-closed 技术信号，
+    #    与「LLM 判了 critical」是两回事，必须靠显式字段区分。
+    unparseable = int(raw.get("review_parseable", 1)) == 0
     return ReviewResult(
         chapter=chapter,
         issues=issues,
         summary=str(raw.get("summary", "")),
         declared_blocking_count=_coerce_blocking_count(raw.get("blocking_count")),
+        unparseable=unparseable,
     )
 
 

@@ -184,20 +184,56 @@ def _policy_issues(artifact_name: str, payload: Dict[str, Any]) -> List[Dict[str
     issues: List[Dict[str, Any]] = []
 
     if artifact_name == "review_result":
-        # 我们遍历 issues 列表自算 blocking_count，不信任 LLM 原始值
+        # 门禁分层（2026-10）后，review_result 的 blocking issue 分两类：
+        #   ① 技术故障信号——`_shape_issue` 合成项（category=review_output_malformed
+        #      或描述命中固定前缀）。审查输出不可解析 = 「无法判断有没有问题」，
+        #      静默放行会让被否章节以满分通过进 SSOT → 仍 error 阻断。
+        #   ② LLM 语义判定——模型自己报的 critical/high。LLM 的 critical 不可靠
+        #      （误判会杀死好章节）→ 降级为 warning（观察标记），由 flag-triage
+        #      人工裁决，不再阻断提交。
+        # 修复前：所有 blocking issue 一律 error——一次 LLM 误判或一次 JSON 解析
+        # 失败都会拒章。
+        from .review_schema import (
+            MALFORMED_CATEGORY,
+            MALFORMED_DESCRIPTION_PREFIX,
+            UNPARSEABLE_DESCRIPTION_PREFIX,
+        )
         blocking = 0
+        technical = 0
+        semantic = 0
         for item in payload.get("issues") or []:
-            if isinstance(item, dict) and item.get("blocking"):
-                blocking += 1
-        if blocking > 0:
+            if not (isinstance(item, dict) and item.get("blocking")):
+                continue
+            blocking += 1
+            category = str(item.get("category") or "")
+            description = str(item.get("description") or "")
+            # __post_init__ 会把 review_output_malformed 降级成 other，
+            # 故用 category 命中 + 描述前缀双重识别技术故障信号。
+            if (category == MALFORMED_CATEGORY
+                    or description.startswith(MALFORMED_DESCRIPTION_PREFIX)
+                    or description.startswith(UNPARSEABLE_DESCRIPTION_PREFIX)):
+                technical += 1
+            else:
+                semantic += 1
+        if technical > 0:
             issues.append(_issue(
                 ERROR_BLOCKING_REVIEW,
                 "error",
-                f"审查结果包含 {blocking} 个 blocking issue",
+                f"审查结果不可解析（{technical} 个技术故障信号），无法判定本章是否存在问题",
                 field="issues",
-                impact="存在阻断级审查问题时不应进入提交。",
-                repair="先定点修复 blocking issue，或让用户明确裁决后再继续。",
-                blocking_count=blocking,
+                impact="无法判断有没有问题 ≠ 没有问题，必须人工复核。",
+                repair="重新运行审查或人工补写审查 JSON。",
+                blocking_count=technical,
+            ))
+        if semantic > 0:
+            issues.append(_issue(
+                ERROR_BLOCKING_REVIEW,
+                "warning",
+                f"审查报出 {semantic} 个阻断级语义问题（LLM 判定，可信度有限）",
+                field="issues",
+                impact="已降级为观察标记，不阻断提交；由 flag-triage 人工裁决。",
+                repair="用 `webnovel.py flag-triage list` 查看并逐条 confirm/dismiss。",
+                blocking_count=semantic,
             ))
 
     elif artifact_name == "fulfillment_result":

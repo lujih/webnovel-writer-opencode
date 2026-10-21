@@ -198,8 +198,13 @@ def test_apply_projections_writes_events_and_amend_proposals(project_root):
 # Malformed 输入拒绝测试
 # ---------------------------------------------------------------------------
 
-def test_commit_service_rejects_review_with_blocking_issues(project_root):
-    """review_result 包含 blocking issue 时应 rejected。"""
+def test_commit_service_flags_llm_critical_as_review_flag(project_root):
+    """门禁分层（2026-10）：LLM 报的 critical（解析成功）不再拒章，
+    降级为 accepted + review_flags（观察标记，由 flag-triage 人工裁决）。
+
+    修复前：此用例断言 status == rejected——LLM 一次误判的 critical 就杀死
+    一章；且 _shape_issue 把纯解析失败也包成 critical 一并阻断。
+    """
     service = ChapterCommitService(project_root)
     payload = service.build_commit(
         chapter=3,
@@ -208,7 +213,61 @@ def test_commit_service_rejects_review_with_blocking_issues(project_root):
         disambiguation_result={"pending": []},
         extraction_result={"state_deltas": [], "entity_deltas": [], "accepted_events": []},
     )
+    assert payload["meta"]["status"] == "accepted", (
+        "LLM 的 critical 是语义判定，可误判——不应自动拒章（inkOS 路线：语义审查不 gate）。"
+    )
+    flags = payload.get("review_flags") or []
+    assert len(flags) == 1 and flags[0]["description"] == "test", (
+        "critical 必须降级进 review_flags 留痕，否则问题没有出口"
+    )
+    assert flags[0]["severity"] == "critical"
+    assert flags[0]["triage"] is None, "新 flag 默认待仲裁"
+
+
+def test_commit_service_rejects_unparseable_review(project_root):
+    """技术故障（审查输出不可解析）仍 fail-closed 拒章。
+
+    unparseable 由 `review_parseable=0` 显式声明（review_pipeline._shape_issue
+    路径写入）——「无法判断有没有问题」≠「没有问题」。
+    """
+    service = ChapterCommitService(project_root)
+    payload = service.build_commit(
+        chapter=3,
+        review_result={
+            "blocking_count": 1,
+            "issues": [{"blocking": True, "severity": "critical",
+                        "category": "review_output_malformed",
+                        "description": "审查结果不可解析，已阻断提交。"}],
+            "review_parseable": 0,
+        },
+        fulfillment_result={"planned_nodes": [], "covered_nodes": [], "missed_nodes": [], "extra_nodes": []},
+        disambiguation_result={"pending": []},
+        extraction_result={"state_deltas": [], "entity_deltas": [], "accepted_events": []},
+    )
     assert payload["meta"]["status"] == "rejected"
+    assert payload.get("review_flags") == [], "技术故障信号不得进语义 flags"
+
+
+def test_commit_service_flags_exclude_malformed_category(project_root):
+    """`_shape_issue` 合成的 issue 可能带 original category（被 __post_init__ 降级），
+    故用 description 前缀兜底识别技术信号——它不得进 flags。"""
+    service = ChapterCommitService(project_root)
+    payload = service.build_commit(
+        chapter=3,
+        review_result={
+            "blocking_count": 1,
+            "issues": [{"blocking": True, "severity": "critical",
+                        "category": "other",  # 降级后的实际值
+                        "description": "审查结果不可解析，已阻断提交。"}],
+            "review_parseable": 0,
+        },
+        fulfillment_result={"planned_nodes": [], "covered_nodes": [], "missed_nodes": [], "extra_nodes": []},
+        disambiguation_result={"pending": []},
+        extraction_result={"state_deltas": [], "entity_deltas": [], "accepted_events": []},
+    )
+    assert payload.get("review_flags") == [], (
+        "category 被降级成 other 的技术信号仍不得进 flags——靠 description 前缀识别"
+    )
 
 
 def test_commit_service_rejects_disambiguation_with_pending(project_root):

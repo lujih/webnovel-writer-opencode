@@ -208,9 +208,16 @@ class TestRejectedCommitDoesNotAccrue:
         before = _balance(project)
 
         service = ChapterCommitService(project)
+        # 门禁分层后：拒章的技术原因是「审查输出不可解析」（unparseable），
+        # 而非 LLM 语义 critical（后者已降级为 review_flags，不拒章）。
         payload = service.build_commit(
             chapter=2,
-            review_result={"issues": [{"severity": "critical", "description": "设定矛盾"}]},
+            review_result={
+                "issues": [{"severity": "critical", "blocking": True,
+                            "category": "review_output_malformed",
+                            "description": "审查结果不可解析，已阻断提交。"}],
+                "review_parseable": 0,
+            },
             fulfillment_result={"planned_nodes": [], "covered_nodes": [],
                                 "missed_nodes": [], "extra_nodes": []},
             disambiguation_result={"pending": []},
@@ -221,4 +228,30 @@ class TestRejectedCommitDoesNotAccrue:
 
         assert _balance(project) == pytest.approx(before, rel=1e-12), (
             "被拒章节推进了利息——它并没有真正『写出去』"
+        )
+
+    def test_accepted_commit_with_llm_flags_does_accrue(self, project):
+        """门禁分层后：LLM 报 critical 但解析成功 → accepted（带 flags），
+        accepted 章节正常推进利息。"""
+        _add_debt(project, source_chapter=1, due=5)
+        before = _balance(project)
+
+        service = ChapterCommitService(project)
+        payload = service.build_commit(
+            chapter=2,
+            review_result={"issues": [{"severity": "critical", "blocking": True,
+                                       "description": "设定矛盾"}]},
+            fulfillment_result={"planned_nodes": [], "covered_nodes": [],
+                                "missed_nodes": [], "extra_nodes": []},
+            disambiguation_result={"pending": []},
+            extraction_result={"state_deltas": [], "entity_deltas": [], "accepted_events": []},
+        )
+        assert payload["meta"]["status"] == "accepted", (
+            "LLM critical 不再是拒章原因——它可误判，应降级为 flags 放行"
+        )
+        assert len(payload.get("review_flags", [])) == 1
+        service.apply_projections(payload)
+
+        assert _balance(project) != before, (
+            "accepted 章节（即使带 flags）必须正常推进利息——它确实写出去了"
         )

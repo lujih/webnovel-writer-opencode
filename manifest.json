@@ -752,16 +752,16 @@
       "size": 22025
     },
     ".opencode/scripts/data_modules/artifact_validator.py": {
-      "sha256": "586a036c5692e3e497a540d5143ab3ddbc558e2168bfae2d4721f8b6ddecc046",
-      "size": 17586
+      "sha256": "4d92326d62a278984218ca602f334ec96ab431d7a8769a75a6e3e93478027f1b",
+      "size": 19641
     },
     ".opencode/scripts/data_modules/chapter_commit_schema.py": {
       "sha256": "d6e36ff413c0602218d63e6e307f9e121c62c85168492ef57aa12770f18958cc",
       "size": 11630
     },
     ".opencode/scripts/data_modules/chapter_commit_service.py": {
-      "sha256": "f8ce9e8b6c1239ffaed92d7a52d57d4a5ec3389a9210c8942ac0db11eb68e0a3",
-      "size": 17742
+      "sha256": "8f5817c1bca4dfa12e708479dd2aca9ee263f8d46fc87548038a310fae5e720d",
+      "size": 20269
     },
     ".opencode/scripts/data_modules/chapter_delete_service.py": {
       "sha256": "4da3f513047f6df7af867e6d45211d1e2805b2f2eca6a1800ff03dec84f128e5",
@@ -972,8 +972,8 @@
       "size": 59530
     },
     ".opencode/scripts/data_modules/review_schema.py": {
-      "sha256": "50ac12355a8b031926d63ff4ec1e0a98ef0b3aa76992aec6948a80e87de8ca25",
-      "size": 16516
+      "sha256": "1d4259f31e8f24bd0f786be0762b8fc9e6c234dac9dfca58f6a0fb341653e285",
+      "size": 17494
     },
     ".opencode/scripts/data_modules/runtime_contract_builder.py": {
       "sha256": "9fd4054c6829d8a48ec7991867b3e3f3dd0c78d12119c19a902b850a5c96c863",
@@ -1072,8 +1072,8 @@
       "size": 2150
     },
     ".opencode/scripts/data_modules/tests/test_artifact_validator.py": {
-      "sha256": "1716fdc1b25efa92841b1c112473c2a0ad73cc03ff77a1f19487cda504d16fde",
-      "size": 8958
+      "sha256": "084e0d95631174a5c65c07284083d7eeb3547b3f17ccff69e102643ae8a8b27b",
+      "size": 10212
     },
     ".opencode/scripts/data_modules/tests/test_backup_manager_git.py": {
       "sha256": "6d73f0cbf29a3cf8c06abe0b69e4b8c9f1e77c654ac2c5e5161ec4d8f262d8c1",
@@ -1088,8 +1088,8 @@
       "size": 12310
     },
     ".opencode/scripts/data_modules/tests/test_chapter_commit_service.py": {
-      "sha256": "9b9ba7b7b175d4c9f2157f892c87a6f7e1d5a41511bdcd5dac83598d4d9b7fcb",
-      "size": 11668
+      "sha256": "4652a92360b49482adc5ceac5d8772ea91ddb5b6d08de73c22a8d5335bca8f41",
+      "size": 14657
     },
     ".opencode/scripts/data_modules/tests/test_chapter_delete_current_chapter.py": {
       "sha256": "95b9126dbdbea0359b174b4d9c037ba02c5b43eee28c4d568e8a45c585954daf",
@@ -1240,8 +1240,8 @@
       "size": 51767
     },
     ".opencode/scripts/data_modules/tests/test_debt_auto_accrual.py": {
-      "sha256": "a6adf3342b2bac6dda38ca301042a6bc10234715399d3fd2535a00189e677175",
-      "size": 9129
+      "sha256": "4efebbf0eef0a0ce2492da5423f8fe456b65ae466f61ec95c344db212aa4dcdd",
+      "size": 10829
     },
     ".opencode/scripts/data_modules/tests/test_debt_repair.py": {
       "sha256": "2bfcce856341662f7d8fe2281479b8a0a2c126c57e5cb33e53273a51d033adc7",
