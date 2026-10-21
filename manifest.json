@@ -1,27 +1,17 @@
 {
-  "version": "v2.9.2-20261020.1844",
+  "version": "v2.9.2-20261021.0606",
   "tag": "v2.9.2",
-  "updated": "2026-10-20T18:44:32Z",
+  "updated": "2026-10-21T06:06:12Z",
   "changelog": [
     {
-      "hash": "8291894",
+      "hash": "8f0ad41",
       "type": "feat",
-      "message": "feat: dashboard \u5ba1\u67e5\u5206\u6790\u9875\u5c55\u793a CED \u8d8b\u52bf\u2014\u2014\u4e09\u4e2a\u53e3\u5f84\u53ef\u5207\u6362\uff0c\u6392\u9664\u7ae0\u53ef\u89c1"
+      "message": "feat: \u53d9\u4e8b\u9884\u62a5\uff08Narrative Forecast\uff09\u2014\u2014\u5199\u7ae0\u524d\u751f\u6210\u5019\u9009\u672a\u6765\u5206\u652f\uff0c\u9009\u652f\u540e\u53ea\u8ffd\u52a0\u8fdb\u7ae0\u7eb2"
     },
     {
-      "hash": "656d3ed",
-      "type": "feat",
-      "message": "feat: \u96c6\u6210 CED \u4e00\u81f4\u6027\u9519\u8bef\u5bc6\u5ea6\u6307\u6807\u2014\u2014\u5ba1\u67e5\u4ece\u8fc7\u7a0b\u6307\u6807\u5347\u7ea7\u4e3a\u8d28\u91cf\u6307\u6807"
-    },
-    {
-      "hash": "251bca0",
-      "type": "fix",
-      "message": "fix: find_chapter_file \u6f0f\u6389 1-2 \u4f4d\u7f16\u53f7\uff0c\u4e14 3 \u4f4d\u4f18\u5148\u4e8e 4 \u4f4d\u2014\u2014\u5b9a\u4f4d\u4e0d\u5230\u5c31\u6ca1\u6709\u5b57\u6570\u5206\u6bcd"
-    },
-    {
-      "hash": "e978cd4",
+      "hash": "af11896",
       "type": "chore",
-      "message": "chore: update manifest to v2.9.2-20261020.1521 [skip ci]"
+      "message": "chore: update manifest to v2.9.2-20261020.1844 [skip ci]"
     }
   ],
   "files": {
@@ -933,6 +923,10 @@
       "sha256": "1434de71612db3f06004a4fe1b4665248448d4db912d6a9c2f68f56b0d7df4ba",
       "size": 13119
     },
+    ".opencode/scripts/data_modules/narrative_forecast.py": {
+      "sha256": "6f2aa7044151e182a71f69e986135e8e003404b708bd521995147679fc6d8be2",
+      "size": 18438
+    },
     ".opencode/scripts/data_modules/observability.py": {
       "sha256": "c2fdadddbeb18f9d22a3519b8001907e5bbed42336ce605794db2721c7f8c9e5",
       "size": 2360
@@ -1396,6 +1390,10 @@
     ".opencode/scripts/data_modules/tests/test_migrate_state_to_sqlite.py": {
       "sha256": "1f08e27746f92ee0b3183a154c16cc34b26f49853c68dc05bd7b478630acecfa",
       "size": 7190
+    },
+    ".opencode/scripts/data_modules/tests/test_narrative_forecast.py": {
+      "sha256": "a03fcdb1d5ba158a6c0d0f8c3eabec5d0c821805d83ff8879eb220ffb2552160",
+      "size": 11781
     },
     ".opencode/scripts/data_modules/tests/test_npm_bundle_frontend_dist.py": {
       "sha256": "018ff9b053388374b1d2817633adbad90dfec5a904e9d7fd196529be4ce5fe15",
