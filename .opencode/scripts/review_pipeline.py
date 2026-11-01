@@ -110,6 +110,16 @@ def _assemble_artifacts(
     metrics["chapter_words"] = _count_chapter_words_for(self_project_root, chapter)
     metrics.update(result.compute_ced_for(metrics["chapter_words"]))
 
+    # 解析失败时**源头**就清空 CED，而不是只在下游 `_build_review_metrics_record`
+    # 里抹掉。`metrics` 是公开产物（review-pipeline 打印到 stdout、报告渲染、
+    # 调用方直接读），若这里带着一个"1 个 issue / 字数"的伪值，任何不经过
+    # record-builder 的消费者都会看到虚假的一致性问题密度。
+    # 修复前：`review_parseable=0` 的章节 metrics 里 ced_raw=29.4118，
+    # 只有落库那一步被置空——两层行为不一致。
+    if result.unparseable:
+        for key in ("ced_raw", "ced_weighted", "ced_blocking"):
+            metrics[key] = None
+
     dim_scores = metrics.get("dimension_scores", {})
     system_health = {d: dim_scores.get(d, 0) for d in SYSTEM_DIMENSIONS}
     return {

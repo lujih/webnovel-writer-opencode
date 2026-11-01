@@ -228,6 +228,45 @@ class IndexDebtMixin:
             )
             return [dict(row) for row in cursor.fetchall()]
 
+    def get_active_foreshadowing_debts(self) -> List[Dict[str, Any]]:
+        """取未闭合的伏笔债（active / overdue），带 note，按到期章升序。
+
+        为什么需要这个方法：`chase_debt` 表**没有 note / subject 列**——
+        note 记在 `debt_events.note` 上（建债时写 event_type='created' 那一行）。
+        下游（如叙事预报）若要"把伏笔名念给作者看"，必须 JOIN `debt_events`；
+        自己写 `SELECT note FROM chase_debt` 会抛 `no such column: note`，
+        被 except 吞掉后表现为"永远没有伏笔债"——静默降级成错误行为。
+        SQL 留在数据层，是因为 schema 由这一层拥有。
+        """
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT d.id            AS id,
+                       COALESCE(e.note, '') AS note,
+                       d.due_chapter   AS due_chapter,
+                       d.status        AS status,
+                       d.current_amount AS current_amount
+                FROM chase_debt d
+                LEFT JOIN debt_events e
+                       ON e.debt_id = d.id AND e.event_type = 'created'
+                WHERE d.debt_type = 'foreshadowing'
+                  AND d.status IN ('active', 'overdue')
+                ORDER BY d.due_chapter ASC, d.id ASC
+                """
+            )
+            rows = [dict(row) for row in cursor.fetchall()]
+
+        # 同一 debt 若有多条 'created' 事件（历史脏数据），按 id 去重保留第一条
+        seen: set = set()
+        unique: List[Dict[str, Any]] = []
+        for row in rows:
+            if row["id"] in seen:
+                continue
+            seen.add(row["id"])
+            unique.append(row)
+        return unique
+
     def get_total_debt_balance(self) -> float:
         """获取总债务余额（包括 active 和 overdue）"""
         with self._get_conn() as conn:

@@ -50,18 +50,28 @@ def _make_project(tmp_path: Path, *, with_debt: bool = True,
     (tmp_path / ".webnovel" / "state.json").write_text(
         '{"progress": {"current_chapter": 3}}', encoding="utf-8")
 
-    db = tmp_path / ".webnovel" / "index.db"
-    conn = sqlite3.connect(str(db))
-    conn.execute("""
-        CREATE TABLE chase_debt (
-            id INTEGER PRIMARY KEY, debt_type TEXT, note TEXT,
-            subject TEXT, due_chapter INT, status TEXT, current_amount REAL)
-    """)
+    # 用**真实 schema 与真实 API** 建债，不要手搓假表。
+    #
+    # 曾经这里手工 `CREATE TABLE chase_debt (.., note TEXT, subject TEXT, ..)`
+    # 并直接 INSERT——而生产 schema 里 `chase_debt` **没有** note/subject
+    # （note 在 `debt_events.note`）。于是 `_load_debts()` 的
+    # `SELECT note, subject FROM chase_debt` 在真实项目里必然抛
+    # `no such column`、被 except 吞成"无伏笔债"，`payoff_retrieval`
+    # 候选从未在生产出现过，而本文件一直绿。fixture 必须与生产同源。
+    from data_modules.config import DataModulesConfig
+    from data_modules.index_manager import IndexManager
+
+    config = DataModulesConfig.from_project_root(tmp_path)
+    config.ensure_dirs()
+    manager = IndexManager(config)
     if with_debt:
-        conn.execute(
-            "INSERT INTO chase_debt (debt_type,note,subject,due_chapter,status,current_amount)"
-            " VALUES ('foreshadowing','血纹石的秘密','血纹石',12,'active',10.0)")
-    conn.commit(); conn.close()
+        manager.create_simple_debt(
+            debt_type="foreshadowing",
+            source_chapter=1,
+            due_chapter=12,
+            note="血纹石的秘密",
+            subject="血纹石",
+        )
 
     if with_summary:
         sm = tmp_path / ".webnovel" / "summaries"

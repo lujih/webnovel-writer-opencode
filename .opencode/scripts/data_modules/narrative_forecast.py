@@ -86,28 +86,28 @@ def forecast_dir(project_root: Path, chapter: int) -> Path:
 
 
 def _load_debts(project_root: Path) -> List[Dict[str, Any]]:
-    """读取未闭合伏笔债（active/overdue），按到期章近→远排序。"""
+    """读取未闭合伏笔债（active/overdue），按到期章近→远排序。
+
+    **不要**在这里直接写 SQL。`chase_debt` 表没有 note/subject 列——note 记在
+    `debt_events.note`（event_type='created'）。曾在此写
+    `SELECT note, subject FROM chase_debt`，SQLite 抛 `no such column`，
+    被本函数的 `except` 吞掉后表现为"永远没有伏笔债"：`payoff_retrieval`
+    候选在真实项目里**从未出现过**（单测没发现，因为测试 fixture 手工建了
+    一张带 note/subject 的假表）。查询收归数据层
+    `IndexManager.get_active_foreshadowing_debts()`，schema 与 SQL 同处一地。
+    """
     db = Path(project_root) / ".webnovel" / "index.db"
     if not db.is_file():
         return []
-    import sqlite3
-
-    conn = sqlite3.connect(str(db))
-    conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute(
-            """
-            SELECT id, note, subject, due_chapter, status, current_amount
-            FROM chase_debt
-            WHERE debt_type = 'foreshadowing' AND status IN ('active', 'overdue')
-            ORDER BY due_chapter ASC
-            """,
-        ).fetchall()
-        return [dict(r) for r in rows]
+        from .config import DataModulesConfig
+        from .index_manager import IndexManager
+
+        manager = IndexManager(DataModulesConfig.from_project_root(Path(project_root)))
+        return manager.get_active_foreshadowing_debts()
     except Exception:
+        # 缺库/缺表时降级为"无伏笔债"（forecast 仍可产出 2 个候选）
         return []
-    finally:
-        conn.close()
 
 
 def _load_recent_summaries(project_root: Path, window: int = 3,

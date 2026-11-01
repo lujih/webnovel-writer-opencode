@@ -1594,16 +1594,16 @@
       "size": 22025
     },
     ".opencode/scripts/data_modules/artifact_validator.py": {
-      "sha256": "4d92326d62a278984218ca602f334ec96ab431d7a8769a75a6e3e93478027f1b",
-      "size": 19641
+      "sha256": "d62b9dd33a5a5664b695c482ca440b2d686a9f44dba2cdc4c1e850c73504389f",
+      "size": 19559
     },
     ".opencode/scripts/data_modules/chapter_commit_schema.py": {
       "sha256": "d6e36ff413c0602218d63e6e307f9e121c62c85168492ef57aa12770f18958cc",
       "size": 11630
     },
     ".opencode/scripts/data_modules/chapter_commit_service.py": {
-      "sha256": "8f5817c1bca4dfa12e708479dd2aca9ee263f8d46fc87548038a310fae5e720d",
-      "size": 20269
+      "sha256": "b65f0b1f5be069ea8b6dfc8b2cab5ad6c8fd274746beb199d02e798d09f60601",
+      "size": 20387
     },
     ".opencode/scripts/data_modules/chapter_delete_service.py": {
       "sha256": "4da3f513047f6df7af867e6d45211d1e2805b2f2eca6a1800ff03dec84f128e5",
@@ -1690,8 +1690,8 @@
       "size": 9739
     },
     ".opencode/scripts/data_modules/index_debt_mixin.py": {
-      "sha256": "66a4da7770eec0ca739d3bdad01235bd32527b88110e85647805a81695368be1",
-      "size": 24103
+      "sha256": "c9574705fe353e9ae8de2a2c42bd993063d308ea5099aa2a9815885417dba651",
+      "size": 25941
     },
     ".opencode/scripts/data_modules/index_entity_mixin.py": {
       "sha256": "410de75d0f3a11b1c061548cbf06bdff9c604db439491ae52a625fbd8303d392",
@@ -1770,8 +1770,8 @@
       "size": 13119
     },
     ".opencode/scripts/data_modules/narrative_forecast.py": {
-      "sha256": "6f2aa7044151e182a71f69e986135e8e003404b708bd521995147679fc6d8be2",
-      "size": 18438
+      "sha256": "7bef46d28bb5a8675823ed1aab14a184cfc16d953c66febbe8b772939d81cd5a",
+      "size": 18883
     },
     ".opencode/scripts/data_modules/observability.py": {
       "sha256": "c2fdadddbeb18f9d22a3519b8001907e5bbed42336ce605794db2721c7f8c9e5",
@@ -1818,8 +1818,8 @@
       "size": 59530
     },
     ".opencode/scripts/data_modules/review_schema.py": {
-      "sha256": "1d4259f31e8f24bd0f786be0762b8fc9e6c234dac9dfca58f6a0fb341653e285",
-      "size": 17494
+      "sha256": "2f765d837fe5a93b1d38ecfc25c715158fbe4cb7c9fdac67cff31ca23581c8b3",
+      "size": 19770
     },
     ".opencode/scripts/data_modules/runtime_contract_builder.py": {
       "sha256": "9fd4054c6829d8a48ec7991867b3e3f3dd0c78d12119c19a902b850a5c96c863",
@@ -2242,8 +2242,8 @@
       "size": 7190
     },
     ".opencode/scripts/data_modules/tests/test_narrative_forecast.py": {
-      "sha256": "a03fcdb1d5ba158a6c0d0f8c3eabec5d0c821805d83ff8879eb220ffb2552160",
-      "size": 11781
+      "sha256": "3614ff7b1662048ce3f036d36e3f5e22bd10d47cd2987a182f5a3c3ad4cbf51d",
+      "size": 12265
     },
     ".opencode/scripts/data_modules/tests/test_npm_bundle_frontend_dist.py": {
       "sha256": "018ff9b053388374b1d2817633adbad90dfec5a904e9d7fd196529be4ce5fe15",
@@ -2706,8 +2706,8 @@
       "size": 1138
     },
     ".opencode/scripts/review_pipeline.py": {
-      "sha256": "32af7bd99dfa206e21100f8c870a6bbb44ce0fad0be0b6c29275b94c8341c7f6",
-      "size": 15945
+      "sha256": "8f364b52f7d8f8b44a560b597e2b94e41e44b0a125c373dfbaf57a3f6b693319",
+      "size": 16593
     },
     ".opencode/scripts/run_tests.ps1": {
       "sha256": "49f636eff55ec991a07a88504edb8f6d21281660be145aa9b7e6a794f6ee23a0",

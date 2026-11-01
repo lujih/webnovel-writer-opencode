@@ -193,11 +193,7 @@ def _policy_issues(artifact_name: str, payload: Dict[str, Any]) -> List[Dict[str
         #      人工裁决，不再阻断提交。
         # 修复前：所有 blocking issue 一律 error——一次 LLM 误判或一次 JSON 解析
         # 失败都会拒章。
-        from .review_schema import (
-            MALFORMED_CATEGORY,
-            MALFORMED_DESCRIPTION_PREFIX,
-            UNPARSEABLE_DESCRIPTION_PREFIX,
-        )
+        from .review_schema import ReviewIssue, is_malformed_issue
         blocking = 0
         technical = 0
         semantic = 0
@@ -205,13 +201,15 @@ def _policy_issues(artifact_name: str, payload: Dict[str, Any]) -> List[Dict[str
             if not (isinstance(item, dict) and item.get("blocking")):
                 continue
             blocking += 1
-            category = str(item.get("category") or "")
-            description = str(item.get("description") or "")
-            # __post_init__ 会把 review_output_malformed 降级成 other，
-            # 故用 category 命中 + 描述前缀双重识别技术故障信号。
-            if (category == MALFORMED_CATEGORY
-                    or description.startswith(MALFORMED_DESCRIPTION_PREFIX)
-                    or description.startswith(UNPARSEABLE_DESCRIPTION_PREFIX)):
+            # 技术故障信号（`_shape_issue` 合成项）的判定走共享函数——
+            # 与 chapter_commit_service 的 flags 过滤用同一份逻辑，避免分叉。
+            probe = ReviewIssue(
+                severity=str(item.get("severity") or "medium"),
+                category=str(item.get("category") or "other"),
+                description=str(item.get("description") or ""),
+                blocking=True,
+            )
+            if is_malformed_issue(probe):
                 technical += 1
             else:
                 semantic += 1

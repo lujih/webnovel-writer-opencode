@@ -20,7 +20,7 @@ from .override_ledger_service import (
     ensure_override_ledger_columns,
     persist_amend_proposals,
 )
-from .review_schema import parse_review_output
+from .review_schema import parse_review_output, is_malformed_issue
 from .ssot_enforcer import publish_event, read_events
 from .write_gates import run_write_gate
 
@@ -116,11 +116,12 @@ class ChapterCommitService:
             }
             for i in _normalized.issues
             if i.blocking
-            # 排除 _shape_issue 合成项的两种情形：
-            # ① category 被 __post_init__ 降级成 other（VALID_CATEGORIES 外）
-            # ② 描述文本命中固定文案——两者任一即视为技术信号，不进 flags
-            and i.category != "review_output_malformed"
-            and i.description != "审查结果不可解析，已阻断提交。"
+            # 技术故障信号（`_shape_issue` 合成项）不进语义 flags——
+            # 判定走共享函数，避免与 artifact_validator 的逻辑再次分叉。
+            # 修复前：这里用「description == 固定文案」精确匹配，而
+            # `_shape_issue` 的 description 含动态 detail，必然失配，
+            # 于是「审查输出不可解析」被当成 LLM 的语义 critical 进了 flags。
+            and not is_malformed_issue(i)
         ]
 
         volume = volume_num_for_chapter_from_state(self.project_root, chapter) or 1

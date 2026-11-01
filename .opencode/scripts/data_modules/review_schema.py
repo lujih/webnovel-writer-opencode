@@ -207,6 +207,14 @@ class ReviewResult:
             "blocking_count_declared": self.declared_blocking_count,
             "has_blocking": self.has_blocking,
             "summary": self.summary,
+            # 必须随 review_result 一起流转。`build_review_artifacts()` 的
+            # `review_result` 字段就是本方法的输出，而 chapter-commit 把它交给
+            # `parse_review_output()` 决定 accepted/rejected。此前这里没有
+            # `review_parseable`，于是「审查输出不可解析」的标记在
+            # review_pipeline → chapter-commit 这一跳**整个丢失**：
+            # `_shape_issue()` 的 fail-closed 结论到了提交侧变成正常通过
+            # （只有 metrics/落库那一层还带着 0，两边结论相反）。
+            "review_parseable": 0 if self.unparseable else 1,
         }
 
     def compute_ced_for(self, chapter_words: int) -> Dict[str, Any]:
@@ -238,6 +246,31 @@ class ReviewResult:
             "review_parseable": 0 if self.unparseable else 1,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
         }
+
+
+def is_malformed_issue(issue: "ReviewIssue") -> bool:
+    """判断某条 issue 是 `_shape_issue()` 合成的**技术故障信号**。
+
+    这类 issue 不是 LLM 的语义判定——它代表「审查输出本身读不出来」，
+    必须走 fail-closed 阻断，且**不得**被当成 `review_flags`（观察标记）。
+
+    **为什么需要共享函数**：`artifact_validator._policy_issues` 与
+    `chapter_commit_service.build_commit` 都要做这个判断。两处各写一遍时
+    已经分叉过一次——前者用描述前缀、后者用精确字符串相等，而
+    `_shape_issue` 的 description 是动态的（含 detail 参数），精确匹配必然
+    失配，于是技术信号漏进语义 flags（E2E 抓到）。
+
+    识别依据（三重，任一命中即技术信号）：
+    - category == MALFORMED_CATEGORY（注意 `__post_init__` 会把它降级成
+      `other`，故不能只靠它）
+    - description 以 MALFORMED_DESCRIPTION_PREFIX（"审查结果形状异常"）开头
+    - description 以 UNPARSEABLE_DESCRIPTION_PREFIX（"审查结果不可解析"）开头
+    """
+    if str(issue.category) == MALFORMED_CATEGORY:
+        return True
+    description = str(issue.description or "")
+    return description.startswith(MALFORMED_DESCRIPTION_PREFIX) or \
+        description.startswith(UNPARSEABLE_DESCRIPTION_PREFIX)
 
 
 def compute_ced(
@@ -369,7 +402,12 @@ def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
     # ① 模型自己也可能输出该 category 的 issue（误用）；
     # ② _shape_issue 合成的 critical 是 fail-closed 技术信号，
     #    与「LLM 判了 critical」是两回事，必须靠显式字段区分。
-    unparseable = int(raw.get("review_parseable", 1)) == 0
+    # 主键是 `review_parseable`（0/1，与新产物一致）；
+    # 兼容布尔 `unparseable`（老产物、手工构造的 payload）。
+    if "review_parseable" in raw:
+        unparseable = int(raw.get("review_parseable") or 0) == 0
+    else:
+        unparseable = bool(raw.get("unparseable"))
     return ReviewResult(
         chapter=chapter,
         issues=issues,
