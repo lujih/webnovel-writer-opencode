@@ -44,6 +44,7 @@ from __future__ import annotations
 import argparse
 import re
 import sys
+from pathlib import Path
 from typing import Iterable, List, Optional, Sequence, Tuple
 
 #: 语义化版本各部分的上限保护（防止 tag 数字畸形导致进位爆炸）
@@ -200,7 +201,6 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if args.commits_file == "-":
         text = sys.stdin.read()
     else:
-        from pathlib import Path
         text = Path(args.commits_file).read_text(encoding="utf-8")
 
     messages = split_commits(text)
@@ -220,7 +220,25 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     return 0
 
 
+def _ensure_scripts_path() -> None:
+    """把自己所在的 `scripts/` 加进 sys.path。
+
+    直接以 `python .opencode/scripts/data_modules/semver_bump.py` 执行时，
+    `sys.path[0]` 是 `data_modules/`，`runtime_compat`（在 `scripts/`）导不到。
+    **CI 就是这种调用方式**：semver.yml 里没有设 PYTHONPATH，首次运行因此
+    10 秒就挂在 `ModuleNotFoundError: No module named 'runtime_compat'`。
+    本地之所以没发现，是因为本地验证时我手加了 `PYTHONPATH=.opencode/scripts`
+    ——「本地跑得通」与「CI 跑得通」的差异又坑了一次。
+
+    与 `review_pipeline.py` 的 `_ensure_scripts_path()` 同一做法。
+    """
+    scripts_dir = Path(__file__).resolve().parents[1]
+    if str(scripts_dir) not in sys.path:
+        sys.path.insert(0, str(scripts_dir))
+
+
 if __name__ == "__main__":
+    _ensure_scripts_path()
     from runtime_compat import enable_windows_utf8_stdio
 
     enable_windows_utf8_stdio()

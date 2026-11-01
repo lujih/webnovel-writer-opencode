@@ -954,8 +954,8 @@
       "size": 5018
     },
     ".opencode/scripts/data_modules/semver_bump.py": {
-      "sha256": "ca1c7b70fef3fbd9e81dca91b0c769eec7d6bbc75f22cb4ee3dd90500e8ab8a8",
-      "size": 7976
+      "sha256": "262b9418d7841cbb947711b6b34ce3e55c60b1b474b1825b5f8de1960ebda3db",
+      "size": 8836
     },
     ".opencode/scripts/data_modules/sql_state_manager.py": {
       "sha256": "4387e79c60ecea9d542a1dce71390fb40b1457bd896e738f6bff69773822b54a",
@@ -1542,8 +1542,8 @@
       "size": 3775
     },
     ".opencode/scripts/data_modules/tests/test_semver_bump.py": {
-      "sha256": "66ffedd623884792d08c272fcb8555a01420af1422d7558dc3d1f0218f5e924e",
-      "size": 7047
+      "sha256": "a7913ea959d400e16f053262f8c328faa3fa00f35da3831f33a3f879abf7a777",
+      "size": 9238
     },
     ".opencode/scripts/data_modules/tests/test_skill_runner.py": {
       "sha256": "41f52dadeecd6687642ef2d700fba1b119402443f9c03e883478f73dde5ed479",

@@ -202,3 +202,59 @@ class TestCli:
         captured = capsys.readouterr()
         assert captured.out.strip() == "v3.1.0", "诊断信息不得混进 stdout"
         assert "最高等级" in captured.err
+
+
+class TestRunsAsScriptWithoutPythonPath:
+    """以 CI 的方式直接执行脚本（**不设 PYTHONPATH**）必须能跑。
+
+    ## 为什么这条测试必须存在
+
+    semver.yml 的调用是：
+
+        python .opencode/scripts/data_modules/semver_bump.py --current ... --commits-file ...
+
+    没有设 `PYTHONPATH`。而脚本底部 `from runtime_compat import ...` 需要
+    `scripts/` 在 `sys.path` 上。首次推送时 Semver Tag workflow **10 秒就失败**：
+
+        ModuleNotFoundError: No module named 'runtime_compat'
+
+    本地没发现，是因为本地验证时手加了 `PYTHONPATH=.opencode/scripts`——
+    「本地跑得通」不等于「CI 跑得通」。
+
+    单元测试（import 模式）覆盖不到这种差异：import 时测试自己的
+    `sys.path` 已被本文件顶部的 bootstrap 改过。只有起子进程、给一个干净的
+    环境变量，才能复现 CI。
+    """
+
+    def _run(self, stdin_text: str, *extra: str):
+        import os
+        import subprocess
+
+        script = SCRIPTS / "data_modules" / "semver_bump.py"
+        env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
+        return subprocess.run(
+            [sys.executable, str(script), *extra],
+            input=stdin_text,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            env=env,
+        )
+
+    def test_prints_version_without_pythonpath(self):
+        proc = self._run("feat: x\0", "--current", "v3.0.0", "--commits-file", "-")
+        assert proc.returncode == 0, (
+            f"直接执行失败（CI 就是这种调用方式）：\n{proc.stderr}"
+        )
+        assert proc.stdout.strip() == "v3.1.0"
+
+    def test_prints_empty_without_pythonpath(self):
+        proc = self._run("docs: x\0", "--current", "v3.0.0", "--commits-file", "-")
+        assert proc.returncode == 0, proc.stderr
+        assert proc.stdout.strip() == ""
+
+    def test_help_works_without_pythonpath(self):
+        """`--help` 也要能跑——它走的是同一条 import 路径。"""
+        proc = self._run("", "--help")
+        assert proc.returncode == 0, proc.stderr
+        assert "--current" in proc.stdout
