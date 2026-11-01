@@ -243,6 +243,19 @@ Co-Authored-By: AI Assistant <noreply@anthropic.com>
 MAJOR 是人手动定的。以后这类改动请写成 `feat!:` 或正文加 `BREAKING CHANGE:`。
 
 **幂等**：目标 tag 已存在则跳过（重复运行不会重复打 tag）。
+
+⚠️ **自动打 tag 的已知限制（实测踩过）**：GitHub 的防递归规则规定
+**用 `GITHUB_TOKEN` 推送 tag 不会触发其它 workflow**。v3.1.0 首次自动打 tag 时
+就是如此：tag 建出来了、但 `manifest.yml` 的 `release` job 与 `npm-publish.yml`
+的 tag 路径**零个 run**，npm 仍是旧版本、GitHub Release 也没建。
+
+两种解法（workflow 已按此实现）：
+1. **推荐**：仓库 Secrets 加 `SEMVER_PUSH_TOKEN`（带 `contents:write` 的 PAT），
+   workflow 优先生用它推 tag → 下游正常触发；
+2. 没有该 secret 时退回 `GITHUB_TOKEN` —— tag 仍会建，但 step summary 会打
+   `::warning::` 说明本次不会发版；需要时人工重推一次
+   （`git push --delete origin <tag> && git push origin <tag>`）。
+
 **只推 tag、从不推 master**：master 由 `manifest.yml` 维护，两个 workflow 同时写
 同一分支会产生非快进冲突；`manifest.yml` 已加 `concurrency` 串行化自身的
 `update-manifest` 与 `release`（自动打 tag 后两者会在同一次发布里前后脚运行）。

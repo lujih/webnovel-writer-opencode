@@ -105,6 +105,13 @@ jobs:
         env:
           NEXT: ${{ steps.calc.outputs.next }}
           BASE: ${{ steps.calc.outputs.base }}
+          # ⚠️ GitHub 的防递归规则：**用 GITHUB_TOKEN 推送 tag 不会触发其它
+          # workflow**（manifest.yml 的 release job、npm-publish.yml 的 tag 路径
+          # 都不会跑）。实测 v3.1.0：tag 建出来了，但 npm 仍是 3.0.0-1、
+          # manifest 仍是 v3.0.0，零个 tag 触发的 run。
+          # 故优先用 PAT（`SEMVER_PUSH_TOKEN`，需 contents:write）；没有则退回
+          # GITHUB_TOKEN —— tag 仍会建，但下游不发版，下一步会打醒目警告。
+          PUSH_TOKEN: ${{ secrets.SEMVER_PUSH_TOKEN || github.token }}
         run: |
           set -euo pipefail
 
@@ -128,9 +135,24 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "$NEXT" -F /tmp/tag-message.txt
-          git push origin "refs/tags/$NEXT"
+
+          # 显式带 token 的 URL：缺省 remote 用的是 checkout 注入的 GITHUB_TOKEN，
+          # 那条路径触发的 push 不会引发下游 workflow（见上面 env 的注释）。
+          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+                   "refs/tags/$NEXT"
 
           echo "✅ 已推送 tag $NEXT"
+
+      - name: 若用 GITHUB_TOKEN 推送则警告下游不会发版
+        if: |
+          steps.calc.outputs.next != '' &&
+          steps.check.outputs.exists == 'false' &&
+          (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
+        run: |
+          if [ -z "${{ secrets.SEMVER_PUSH_TOKEN }}" ]; then
+            echo "::warning::tag 已建，但用的是 GITHUB_TOKEN —— GitHub 的防递归规则会让 manifest.yml / npm-publish.yml 的 tag 触发器**不运行**，即本次不会发 GitHub Release、也不会 npm publish。"
+            echo "::warning::要自动发版：在仓库 Secrets 里加 SEMVER_PUSH_TOKEN（一个带 contents:write 的 PAT），或人工把该 tag 重新推送一次（git push --delete origin <tag> && git push origin <tag>）。"
+          fi
 
       - name: 摘要
         run: |
