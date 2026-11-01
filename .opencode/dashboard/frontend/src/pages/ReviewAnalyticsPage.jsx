@@ -2,7 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useDashboardContext } from '../App.jsx'
 import Badge from '../components/Badge.jsx'
 import ChartWrapper from '../components/ChartWrapper.jsx'
-import { fetchReviewAnalytics, fetchReviewFlags, triageReviewFlag } from '../api.js'
+import {
+    fetchEffectivenessStats,
+    fetchReviewAnalytics,
+    fetchReviewFlags,
+    triageReviewFlag,
+} from '../api.js'
 
 const DIMENSION_LABELS = {
     continuity: '叙事连贯',
@@ -186,6 +191,7 @@ export default function ReviewAnalyticsPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
     const [flags, setFlags] = useState(null)
+    const [effect, setEffect] = useState(null)
 
     useEffect(() => {
         setLoading(true)
@@ -200,6 +206,12 @@ export default function ReviewAnalyticsPage() {
         fetchReviewFlags(20)
             .then(setFlags)
             .catch(() => setFlags(null))
+    }, [refreshToken])
+
+    useEffect(() => {
+        fetchEffectivenessStats()
+            .then(setEffect)
+            .catch(() => setEffect(null))
     }, [refreshToken])
 
     const pendingChapters = useMemo(() => {
@@ -278,6 +290,69 @@ export default function ReviewAnalyticsPage() {
                                 )}
                             </p>
                             <ChartWrapper option={cedOption} height={320} />
+
+                    {/* 效果指标：审查标记误判率 + 叙事预报 vs CED */}
+                    {effect && (
+                        <>
+                            <h3 style={{ marginTop: 24 }}>效果指标</h3>
+                            <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13, marginTop: -6 }}>
+                                右侧两项回答「新功能到底有没有用」——此前只能靠猜。
+                            </p>
+
+                            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                                {/* 审查标记误判率 */}
+                                <div style={{ flex: '1 1 240px', padding: 12, borderRadius: 8,
+                                    border: '1px solid var(--border, #d0d7de)' }}>
+                                    <div style={{ fontWeight: 700, marginBottom: 6 }}>审查标记误判率</div>
+                                    {effect.flag_triage.dismiss_rate === null ? (
+                                        <div style={{ fontSize: 13, color: 'var(--text-muted, #8b949e)' }}>
+                                            还没有仲裁记录。用 flag-triage 裁决之后这里会显示
+                                            「LLM 报的问题里有多少其实是误判」。
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div style={{ fontSize: 22, fontWeight: 700 }}>
+                                                {(effect.flag_triage.dismiss_rate * 100).toFixed(0)}%
+                                            </div>
+                                            <div style={{ fontSize: 12, color: 'var(--text-muted, #8b949e)' }}>
+                                                已仲裁 {effect.flag_triage.triaged} 条中
+                                                {' '}{effect.flag_triage.dismissed} 条被判为误判
+                                                （确认 {effect.flag_triage.confirmed} 条、待仲裁 {effect.flag_triage.pending} 条）
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+
+                                {/* 叙事预报 vs CED */}
+                                <div style={{ flex: '1 1 300px', padding: 12, borderRadius: 8,
+                                    border: '1px solid var(--border, #d0d7de)' }}>
+                                    <div style={{ fontWeight: 700, marginBottom: 6 }}>叙事预报 vs 一致性错误密度</div>
+                                    {effect.forecast_effectiveness.status === 'insufficient_data' ? (
+                                        <div style={{ fontSize: 13, color: 'var(--text-muted, #8b949e)' }}>
+                                            {effect.forecast_effectiveness.reason}
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div style={{ fontSize: 13, lineHeight: 1.8 }}>
+                                                已选支：{effect.forecast_effectiveness.forecast.chapters} 章，
+                                                CED {effect.forecast_effectiveness.forecast.ced_raw}
+                                                <br />
+                                                未选支：{effect.forecast_effectiveness.baseline.chapters} 章，
+                                                CED {effect.forecast_effectiveness.baseline.ced_raw}
+                                            </div>
+                                            <div style={{ fontSize: 12, marginTop: 6,
+                                                color: effect.forecast_effectiveness.delta.ced_raw < 0
+                                                    ? 'var(--accent-green, #2ec27e)' : 'var(--text-muted, #8b949e)' }}>
+                                                {effect.forecast_effectiveness.delta.ced_raw < 0
+                                                    ? `选支章的 CED 低 ${Math.abs(effect.forecast_effectiveness.delta.ced_raw)}`
+                                                    : '暂无改善（或样本仍偏小）'}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </>
+                    )}
 
                     {/* 待仲裁审查标记（门禁分层后 LLM 语义问题的留痕出口） */}
                     {pendingChapters.length > 0 && (

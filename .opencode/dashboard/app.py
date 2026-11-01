@@ -880,6 +880,23 @@ def create_app(
         return {"ok": True, "chapter": chapter, "index": index,
                 "triage": decision, "previous_triage": previous}
 
+    @app.get("/api/effectiveness/stats")
+    def effectiveness_stats():
+        """新功能的效果指标：审查标记误判率 + 叙事预报 vs CED。
+
+        纯读（commit JSON / review_metrics / forecasts 目录），不写任何东西。
+        """
+        from data_modules.effectiveness_stats import (
+            flag_triage_stats,
+            forecast_effectiveness,
+        )
+
+        root = _get_project_root()
+        return {
+            "flag_triage": flag_triage_stats(root),
+            "forecast_effectiveness": forecast_effectiveness(root),
+        }
+
     @app.get("/api/review-metrics")
     def list_review_metrics(limit: int = 20):
         with closing(_get_db()) as conn:

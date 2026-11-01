@@ -216,6 +216,10 @@ export function fetchReviewAnalytics(limit = 50) {
     return fetchJSON('/api/review/analytics', { limit })
 }
 
+export function fetchEffectivenessStats() {
+    return fetchJSON('/api/effectiveness/stats')
+}
+
 export function fetchReviewFlags(limit = 10) {
     return fetchJSON('/api/review/flags', { limit })
 }
