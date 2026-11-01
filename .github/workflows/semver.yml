@@ -141,6 +141,13 @@ jobs:
         run: |
           set -euo pipefail
 
+          # 凭据来源（tag 说明里会写，便于事后判断下游为什么没触发）
+          if [ "${{ steps.pat.outputs.available }}" = "true" ]; then
+            CRED_KIND="SEMVER_PUSH_TOKEN (PAT)"
+          else
+            CRED_KIND="GITHUB_TOKEN (fallback)"
+          fi
+
           # annotated tag（不是 lightweight）：能挂说明、`git describe` 行为更稳。
           # 上游那些 lightweight tag 正是版本线混乱的根源之一。
           {
@@ -149,6 +156,7 @@ jobs:
             echo "由 .github/workflows/semver.yml 依据 Conventional Commits 自动生成。"
             echo ""
             echo "基线: ${BASE:-(无)}"
+            echo "推送凭据: ${CRED_KIND}"
             echo ""
             echo "本次纳入的提交："
             if [ -n "$BASE" ]; then
@@ -160,12 +168,23 @@ jobs:
 
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$NEXT" -F /tmp/tag-message.txt
 
-          # 显式带 token 的 URL：缺省 remote 用的是 checkout 注入的 GITHUB_TOKEN，
-          # 那条路径触发的 push 不会引发下游 workflow（见上面 env 的注释）。
-          git push "https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
-                   "refs/tags/$NEXT"
+          # 凭据来源：决定 push URL 的写法，也写进 tag 说明（便于事后从 git 自证）。
+          #
+          # ⚠️ URL 里**不能**无脑用 `x-access-token:` 前缀——那是 GitHub **App
+          # 安装令牌**的惯例写法。用 `x-access-token:<PAT>` 推 tag 实测能成功，
+          # 但 GitHub 可能把该 push 按 App 身份归类，从而套用「App/GITHUB_TOKEN
+          # 推送不触发 workflow」的抑制规则：v3.1.1 那次 tag 建出来了、
+          # 下游零个 run。PAT 的标准写法是把 token 直接放在 userinfo 里
+          # （`https://<token>@github.com/...`），这种推送才会被当成真人操作。
+          if [ "${{ steps.pat.outputs.available }}" = "true" ]; then
+            PUSH_URL="https://${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          else
+            PUSH_URL="https://x-access-token:${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          fi
+
+          git tag -a "$NEXT" -F /tmp/tag-message.txt
+          git push "$PUSH_URL" "refs/tags/$NEXT"
 
           echo "✅ 已推送 tag $NEXT"
 
