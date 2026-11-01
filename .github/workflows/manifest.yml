@@ -10,6 +10,14 @@ on:
     tags:
       - 'v*'
 
+# 串行化本 workflow 的所有运行：`update-manifest`（push 到分支）与
+# `release`（push tag）都会 `git push origin master`，两者并发时会有一个
+# 因非快进被拒。手动打 tag 时这个竞态偶发；semver.yml 自动打 tag 之后每次
+# feat/fix 推送都会触发，必须消掉。
+concurrency:
+  group: manifest-master
+  cancel-in-progress: false
+
 jobs:
   update-manifest:
     if: github.ref_type == 'branch'

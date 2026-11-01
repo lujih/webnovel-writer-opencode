@@ -2101,6 +2101,10 @@
       "sha256": "5fcd0f990b26f1b8ccba57f575e11c7849fc171041989fd713b242ddcd529ca9",
       "size": 7892
     },
+    ".opencode/scripts/data_modules/tests/test_e2e_golden_path.py": {
+      "sha256": "b1ca36b4ddd88d94929a78f429ffebae6c8fab9e58b74299279d79e83d0b141b",
+      "size": 17420
+    },
     ".opencode/scripts/data_modules/tests/test_entities_v3_shape.py": {
       "sha256": "70579b1a0054b8ffb47c835f24fe06668f95ab8870557090109b9ad45791708d",
       "size": 13740

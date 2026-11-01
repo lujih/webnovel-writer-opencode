@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Webnovel Writer for OpenCode — a long-form Chinese web novel AI writing system built on the OpenCode framework. Combats AI "forgetting" and "hallucination" in serialized fiction through layered RAG, story contracts, and structured quality review. v2.8 introduced inkOS-inspired Observer→Reflector fact extraction, SSOT event sourcing, and markdown truth-file projections; v2.9.x added atomic_write_json with WinError 5 backoff, open_loop foreshadowing projections, and rebuild non-event-field preservation (current release v2.9.2). Forked from lingfengQAQ/webnovel-writer and heavily refactored for OpenCode architecture.
+Webnovel Writer for OpenCode — a long-form Chinese web novel AI writing system built on the OpenCode framework. Combats AI "forgetting" and "hallucination" in serialized fiction through layered RAG, story contracts, and structured quality review. v2.8 introduced inkOS-inspired Observer→Reflector fact extraction, SSOT event sourcing, and markdown truth-file projections; v2.9.x added atomic_write_json with WinError 5 backoff, open_loop foreshadowing projections, and rebuild non-event-field preservation. **v3.0.0** added the CED consistency-error-density quality metric, Narrative Forecast (isolated candidate branches before writing), and review-gate layering (LLM semantic verdicts become `review_flags` instead of blocking commits). Forked from lingfengQAQ/webnovel-writer and heavily refactored for OpenCode architecture.
 
 ## Commands
 
@@ -111,9 +111,9 @@ Code is organized as a pipeline — each layer feeds the next:
 
 **Memory System** — Three tiers: working (short-term), **episodic** (mid-term), semantic (long-term). 预算比例见 `memory/budget.py`（`working_ratio` / `episodic_ratio` / `semantic_ratio`，按 write/review/query 三种任务分别配比）。Modules in `data_modules/memory/`: orchestrator, compactor, store, writer, schema, bootstrap, budget.
 
-**Chase Debt / 追读债** — `index_debt_mixin.py`（mixin 进 `index_manager.py`）维护 `chase_debt` 数值表（金额/利息/到期章节，`create_debt`），以及 `create_override_contract` 的版本化合同。与伏笔（`open_loop_created/closed`）**存储上是两套机制**（`chase_debt` 表 vs `plot_threads.foreshadowing`），但**事件上是耦合的**：`chapter_commit_service._sync_foreshadowing()`（`chapter_commit_service.py:119`）在 `open_loop_created` 时 `create_simple_debt(debt_type="foreshadowing")` 建债、在 `open_loop_closed`/`promise_paid_off` 时 `resolve_debt_by_subject()` 销债，两侧 note 都走 `foreshadowing_utils.coerce_loop_content` 归一（否则建债与销债的键会分叉、伏笔债永不闭合）。上下文侧的硬约束是 `context_manager._load_debt_override_hints` 的 `if shown >= 3: break` 上限——注意它读的是 `override_contracts` 而非 `chase_debt`。**文档此前描述的「DebtTracker 类 / 活跃债 > 2 触发 15% token 预算」在代码中并不存在**——`grep -rn "class DebtTracker"` 零命中。真实入口是 `index_debt_mixin.py` 的 `create_debt`/`create_simple_debt`/`pay_debt`/`accrue_interest`（**利息按章节数复利，与调用频率无关**——`accrue_interest(ch)` 用 `debt_events` 里已计息的最大 chapter 算出需补几章，一次性 `current * ((1+rate)**n - 1)`。别改回「每次调用收一期」：`accrue-interest` 是手工 CLI、未接入 chapter-commit，那样写会让余额取决于作者多久跑一次）；上下文侧只通过 `context_manager.build_analysis_signal()` 的 `signal["debt_summary"] = self.index_manager.get_debt_summary()`（`context_manager.py:412`）注入一段摘要，**没有 2 条阈值、也没有 15% token 预算**。
+**Chase Debt / 追读债** — `index_debt_mixin.py`（mixin 进 `index_manager.py`）维护 `chase_debt` 数值表（金额/利息/到期章节，`create_debt`），以及 `create_override_contract` 的版本化合同。与伏笔（`open_loop_created/closed`）**存储上是两套机制**（`chase_debt` 表 vs `plot_threads.foreshadowing`），但**事件上是耦合的**：`chapter_commit_service._sync_foreshadowing()`（`chapter_commit_service.py:119`）在 `open_loop_created` 时 `create_simple_debt(debt_type="foreshadowing")` 建债、在 `open_loop_closed`/`promise_paid_off` 时 `resolve_debt_by_subject()` 销债，两侧 note 都走 `foreshadowing_utils.coerce_loop_content` 归一（否则建债与销债的键会分叉、伏笔债永不闭合）。上下文侧的硬约束是 `context_manager._load_debt_override_hints` 的 `if shown >= 3: break` 上限——注意它读的是 `override_contracts` 而非 `chase_debt`。**文档此前描述的「DebtTracker 类 / 活跃债 > 2 触发 15% token 预算」在代码中并不存在**——`grep -rn "class DebtTracker"` 零命中。真实入口是 `index_debt_mixin.py` 的 `create_debt`/`create_simple_debt`/`pay_debt`/`accrue_interest`（**利息按章节数复利，与调用频率无关**——`accrue_interest(ch)` 用 `debt_events` 里已计息的最大 chapter 算出需补几章，一次性 `current * ((1+rate)**n - 1)`。别改回「每次调用收一期」：那样写会让余额取决于作者多久跑一次。**v3.0 起已接入提交链路**——accepted 章节在投影循环与 `_sync_foreshadowing` 之后自动调用 `accrue_interest(chapter)`，幂等由 `debt_events` 的 `MAX(chapter)` 保证，失败只记 warning 不阻断提交）；上下文侧只通过 `context_manager.build_analysis_signal()` 的 `signal["debt_summary"] = self.index_manager.get_debt_summary()`（`context_manager.py:412`）注入一段摘要，**没有 2 条阈值、也没有 15% token 预算**。
 
-**Review Pipeline** — Two layers: Code Checkers (deterministic, run before LLM, block critical issues) → LLM reviewer checking **6 dimensions**（`reviewer.md`: setting / timeline / continuity / character / logic / rules）。**ai_flavor、pacing、毒点不由 reviewer 检查**，由 polish 阶段处理（`reviewer.md:79,83,135` 三处明确排除）——此前本文件写的「13 维」不存在。结构化检查清单强制逐项输出 pass/问题结论. Reviewer output processed via `.opencode/scripts/review_pipeline.py`, schema in `data_modules/review_schema.py`. **审查载荷形状异常（`issues` 非数组、顶层非对象）一律 fail-closed**——合成 critical 阻断项转人工，因为「无法判断有没有问题」不等于「没有问题」，静默丢弃会让被否章节以满分通过进 SSOT。JSON 解析含中文引号安全处理（`_sanitize_json_text`）. **CED（一致性错误密度）** — 审查指标的**质量口径**，区别于 `overall_score`/清单完成度那类过程指标。三口径定义在 `review_schema.compute_ced()`（**唯一定义处**）：`ced_raw` = issues/单章字数×10000；`ced_weighted` = Σseverity 权重(critical 4.0/high 3.0/medium 2.0/low 1.0)/字数×10000；`ced_blocking` = blocking issues/字数×10000。**中文口径**：`_count_chapter_words()` 用 `len()` 计字符即「字数」，与 ConStory-Bench（arXiv 2603.05890）的英文 word count 单位不同，不可横向比数值、只能比同口径趋势。**`None` 与 `0.0` 是两件事**——分母为 0（章节文件缺失/空文件）时三口径为 NULL，不得除以 0 也不得伪造 0；「算不出」与「真的没发现问题」必须区分，否则趋势图会误导。**审查输出不可解析时不产出 CED**（`ReviewResult.unparseable` → `review_parseable=0`）：`_shape_issue()` 会合成一条 critical issue，照常算会把纯解析失败当成一致性问题，在趋势图上留一个无法解释的尖峰。落库 `review_metrics`（5 个新列 + 幂等 ALTER 迁移，`IndexManager._migrate_review_metrics_columns`），dashboard 经 `/api/review/analytics` 的 `ced_trends`/`ced_summary` 展示。
+**Review Pipeline** — Two layers: Code Checkers (deterministic, run before LLM, block critical issues) → LLM reviewer checking **6 dimensions**（`reviewer.md`: setting / timeline / continuity / character / logic / rules）。**ai_flavor、pacing、毒点不由 reviewer 检查**，由 polish 阶段处理（`reviewer.md:79,83,135` 三处明确排除）——此前本文件写的「13 维」不存在。结构化检查清单强制逐项输出 pass/问题结论. Reviewer output processed via `.opencode/scripts/review_pipeline.py`, schema in `data_modules/review_schema.py`. **审查载荷形状异常（`issues` 非数组、顶层非对象）一律 fail-closed**——合成 critical 阻断项转人工，因为「无法判断有没有问题」不等于「没有问题」，静默丢弃会让被否章节以满分通过进 SSOT。JSON 解析含中文引号安全处理（`_sanitize_json_text`）. **CED（一致性错误密度）** — 审查指标的**质量口径**，区别于 `overall_score`/清单完成度那类过程指标。三口径定义在 `review_schema.compute_ced()`（**唯一定义处**）：`ced_raw` = issues/单章字数×10000；`ced_weighted` = Σseverity 权重(critical 4.0/high 3.0/medium 2.0/low 1.0)/字数×10000；`ced_blocking` = blocking issues/字数×10000。**中文口径**：`_count_chapter_words()` 用 `len()` 计字符即「字数」，与 ConStory-Bench（arXiv 2603.05890）的英文 word count 单位不同，不可横向比数值、只能比同口径趋势。**`None` 与 `0.0` 是两件事**——分母为 0（章节文件缺失/空文件）时三口径为 NULL，不得除以 0 也不得伪造 0；「算不出」与「真的没发现问题」必须区分，否则趋势图会误导。**审查输出不可解析时不产出 CED**（`ReviewResult.unparseable` → `review_parseable=0`）：`_shape_issue()` 会合成一条 critical issue，照常算会把纯解析失败当成一致性问题，在趋势图上留一个无法解释的尖峰。落库 `review_metrics`（5 个新列 + 幂等 ALTER 迁移，`IndexManager._migrate_review_metrics_columns`），dashboard 经 `/api/review/analytics` 的 `ced_trends`/`ced_summary` 展示。**`unparseable` 必须随 `review_result` 流转**：`ReviewResult.to_dict()` 会带上 `review_parseable`（0/1），因为 `build_review_artifacts()` 的 `review_result` 字段就是它的输出、而 chapter-commit 把它交给 `parse_review_output()` 决定 accepted/rejected——此前 to_dict 漏了这个键，导致 fail-closed 结论在提交侧整段丢失（E2E 抓到）。技术/语义判定统一走 `review_schema.is_malformed_issue()`，`chapter_commit_service` 与 `artifact_validator` 共用一份逻辑。
 **门禁分层（review_flags，v3.0）** — 提交门禁从「LLM 语义阻断」收窄为「技术阻断 + 语义标记」。`chapter_commit_service.build_commit` 的 `rejected` 表达式只保留三类**技术故障**（fail-closed 仍拒章）：`missed_raw`（章纲节点缺失为裸串）/ `missed_cbn`（核心情节点缺失）/ `disambiguation pending`（实体消歧未决）/ `unparseable`（审查输出不可解析，`ReviewResult.unparseable`，「无法判断有没有问题」≠「没有问题」）。LLM 报的 blocking 级**语义问题**不再拒章，降级为 commit 的 `review_flags`（观察标记，`triage: null` 即待仲裁）。配套：① `artifact_validator._policy_issues` 把单一 `blocking_review` error 拆成 technical error（`category=review_output_malformed` 或描述命中固定前缀，仍阻断）+ semantic warning（其余，不阻断）；② `context_manager._load_pending_review_flags` 写第 N 章前注入第 N-1 章未仲裁 flag（上限 3）到 `reader_signal["pending_review_flags"]` 警戒段；③ `flag_triage.py` CLI（`webnovel.py flag-triage list|confirm|dismiss --chapter N [--index I]`）+ dashboard `/api/review/flags` GET + `/api/review/flags/triage` PUT 作为人工裁决入口——confirm/dismiss 只写回 `review_flags[i].triage`，**不改 commit status**（门禁分层的底线：语义问题不拒章，仲裁只留痕）。confirm 不自动触发 heal（避免一次点击就改作品），真矛盾由作者显式跑 `webnovel-heal`。
 
 写-修循环上限**只存在于 prompt 文本**（`webnovel-write/SKILL.md` 写 2 轮，与 `webnovel-write-batch/SKILL.md` 一致；本文件此前写 3 轮，与 skill 矛盾），代码中无计数器或轮次参数。
@@ -215,37 +215,55 @@ Co-Authored-By: AI Assistant <noreply@anthropic.com>
 | `simplify:` | 代码审查清理 | 不触发版本变更 |
 | `test:` | 测试 | 不触发版本变更 |
 
-### 发版（当前实际行为，勿依赖下面这段）
+### 发版（v3.0.1 起自动打 tag）
 
-`manifest.yml` 在 push 到 master 时**只做两件事**：读 `git describe --tags` 拿到最近
-tag，生成 `manifest.json`（`version` 字段形如 `v2.9.2-20260926.1521`，即
-**tag + UTC 时间戳**，不是 semver），并把 manifest 提交回 master。`release` job
-仅在 `github.ref_type == 'tag'` 时运行，也就是**必须人工先推 tag**。
+三个 workflow 分工，**不再需要人工推 tag**：
 
-⚠️ 本文件此前描述的「CI 根据 commit type 计算下一个 semver 版本 / 创建 git tag /
-`feat!:` → v3.0.0 / `docs:` 不 bump」**并未实现**：`manifest.yml` 里没有任何
-semver 运算，也没有 `git tag` 调用；它确实解析了 commit type，但只写进
-`manifest.json` 的 changelog 数组，**从不影响版本号**。上表的「版本影响」列描述的是
-**约定**，不是自动化行为——`feat!:` 目前会发成 `v2.9.2-<时间戳>`，`docs:` 反而也会
-产生新的 `version` 字符串。补齐这部分（type → semver → 自动打 tag）是待办。
+| workflow | 触发 | 做什么 |
+|---|---|---|
+| `semver.yml` | push master（改了非 manifest.json 的文件） | 按 Conventional Commits 推算下一个版本 → **打 annotated tag 并推送** |
+| `manifest.yml` → `update-manifest` | push master（`.opencode/**`） | 用 `git describe` 的 tag + UTC 时间戳生成 `manifest.json`（`version` 形如 `v3.1.0-20261101.0930`），提交回 master |
+| `manifest.yml` → `release` | push tag | 建 GitHub Release |
+| `npm-publish.yml` | push master（`.opencode/**` / `.npm-package/**`）或 push tag | tag 路径发正式版（`npm version $TAG` + `publish`）；非 tag 路径发 `${BASE:-0.0.0}-N` prerelease |
 
-**版本号仍以 git tag 为准**，不是 manifest.json 字段。发布 = 人工打 tag。
+**bump 规则**（实现在 `data_modules/semver_bump.py`，纯函数 + 49 例单测；
+逻辑不埋在 YAML 里，因为 YAML 无法单测、写错只有推送后才知道）：
+
+- 标题 `type!:` / `type(scope)!:`，或正文含 `BREAKING CHANGE:` → **MAJOR**
+- 标题 `feat:` / `feat(scope):` → **MINOR**
+- 标题 `fix:` / `refactor:` / `perf:`（可带 scope）→ **PATCH**
+- 只有 `docs:` `ci:` `chore:` `test:` `simplify:` `style:` `build:` `revert:` → **不 bump、不打 tag**
+- 取所有 commit 里的最高档；空列表或全被忽略 → 不发版
+
+**被忽略的 commit**：含 `[skip ci]`（CI 自己产出的 manifest/release 提交）、
+含 `[no release]`（显式逃生口）、`Merge ...` 合并提交、以及无法识别的 type。
+
+⚠️ **真正的破坏性变更必须写进 commit**：自动化只读 message。v3.0.0 的「门禁分层」
+是破坏性行为变更，但当时的 commit 写的是 `feat:`——按规则只会算成 MINOR，
+MAJOR 是人手动定的。以后这类改动请写成 `feat!:` 或正文加 `BREAKING CHANGE:`。
+
+**幂等**：目标 tag 已存在则跳过（重复运行不会重复打 tag）。
+**只推 tag、从不推 master**：master 由 `manifest.yml` 维护，两个 workflow 同时写
+同一分支会产生非快进冲突；`manifest.yml` 已加 `concurrency` 串行化自身的
+`update-manifest` 与 `release`（自动打 tag 后两者会在同一次发布里前后脚运行）。
+
+**版本号仍以 git tag 为准**，不是 `manifest.json` 字段。
 
 ### 示例
 
 ```bash
-git commit -m "feat: add HTML export format"     # → v2.9.0
-git commit -m "fix: resolve JSON corruption"     # → v2.8.1
-git commit -m "docs: update install guide"        # → 无版本变更
-git commit -m "feat!: drop Python 3.9 support"    # → v3.0.0
+git commit -m "feat: add HTML export format"     # → MINOR，如 v3.1.0
+git commit -m "fix: resolve JSON corruption"     # → PATCH，如 v3.0.1
+git commit -m "docs: update install guide"        # → 不发版
+git commit -m "feat!: drop Python 3.9 support"    # → MAJOR，如 v4.0.0
 ```
 
 ### 注意
 
-- **不要**在提交里手动改 `manifest.json` 版本号：`manifest.yml` 的 `update-manifest` job 在 push 到分支时会覆写它
-- 但上表的「版本影响」**不是自动化行为**——`manifest.yml` 不做 semver 运算、也不打 tag，`version` 仍是 `v2.9.2-<UTC时间戳>`，真正的发版要**人工推 tag**
-- 因此「多个提交一起 push → CI 取最高优先级的 bump」**并不存在**，别依赖它
-- `docs:`/`ci:`/`chore:`/`simplify:`/`test:` 仍建议照上表选择，但它只影响 `manifest.json` 的 changelog，不影响版本号
+- **不要**在提交里手动改 `manifest.json` 版本号：`update-manifest` job 会覆写它
+- 「多个提交一起 push → 取最高优先级的 bump」**成立**（`highest_bump` 取最大值）
+- 上表的「版本影响」现在是**真实自动化行为**，不再是约定
+- 想跳过自动发版但保留提交：commit message 里带 `[no release]`
 
 ## Guidelines
 

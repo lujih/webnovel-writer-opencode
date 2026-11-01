@@ -1,0 +1,145 @@
+name: Semver Tag
+
+# 把「commit type → 下一个版本 → 打 tag」自动化。
+#
+# 此前 `CLAUDE.md` 的「版本影响」表只是**约定**：manifest.yml 只把
+# `git describe` 的结果拼上时间戳写进 manifest.json，从不做 semver 运算、
+# 也不打 tag。于是 `feat!:` 会发成 `v2.9.2-<时间戳>`，`docs:` 反而也产生新的
+# 版本字符串——补 tag 全靠人工。
+#
+# 规则实现在 `.opencode/scripts/data_modules/semver_bump.py`（纯函数 + 单测），
+# 本文件只负责取 commit、调它、打 tag。逻辑不埋在 YAML 里：YAML 无法单测，
+# 写错只有推送之后才会发现，而 tag 一旦推出就很难收回。
+#
+# ⚠️ **本 workflow 只推 tag、从不推 master**。master 由 manifest.yml 的两个
+# job 维护，这里再推会产生非快进冲突（两个 workflow 同时写同一分支）。
+on:
+  push:
+    branches: [master]
+    paths-ignore:
+      - 'manifest.json'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: '只打印推算结果，不打 tag'
+        type: boolean
+        default: false
+
+# 手动触发与推送同时发生时串行化，避免并发打同一个 tag
+concurrency:
+  group: semver-tag-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    # CI 自己产出的 manifest/release 提交不当成人为变更（双保险：脚本里也认
+    # `[skip ci]` 标记）。head_commit 为空（如 workflow_dispatch 无提交）时放行。
+    if: |
+      github.ref_type == 'branch' &&
+      (github.event.head_commit == null ||
+       (!contains(github.event.head_commit.message, '[skip ci]') &&
+        !contains(github.event.head_commit.message, '[no release]')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # 需要完整历史与全部 tag：`git describe` 与区间日志都依赖它们
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 推算下一个版本
+        id: calc
+        run: |
+          set -euo pipefail
+          BASE=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          echo "基线 tag: ${BASE:-(无)}"
+
+          if [ -n "$BASE" ]; then
+            RANGE="${BASE}..HEAD"
+          else
+            RANGE="HEAD"
+          fi
+
+          # %B = 完整消息（正文里的 BREAKING CHANGE 也要看到）
+          # %x00 = NUL 分隔，避免正文空行被误当成 commit 边界
+          git log --format=%B%x00 "$RANGE" > /tmp/commits.txt
+
+          NEXT=$(python .opencode/scripts/data_modules/semver_bump.py \
+                   --current "$BASE" --commits-file /tmp/commits.txt --dry-run)
+
+          echo "next=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+
+          if [ -z "$NEXT" ]; then
+            echo "本次没有需要发版的 commit（只有 docs/ci/chore/test 等），跳过打 tag。"
+          else
+            echo "将打 tag: $NEXT"
+          fi
+
+      - name: 幂等检查（tag 已存在则跳过）
+        id: check
+        if: steps.calc.outputs.next != ''
+        run: |
+          set -euo pipefail
+          NEXT="${{ steps.calc.outputs.next }}"
+          if git rev-parse -q --verify "refs/tags/$NEXT" >/dev/null; then
+            echo "::warning::tag $NEXT 已存在，跳过（幂等：重复运行不会重复打 tag）"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 打 annotated tag 并推送
+        if: |
+          steps.calc.outputs.next != '' &&
+          steps.check.outputs.exists == 'false' &&
+          (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
+        env:
+          NEXT: ${{ steps.calc.outputs.next }}
+          BASE: ${{ steps.calc.outputs.base }}
+        run: |
+          set -euo pipefail
+
+          # annotated tag（不是 lightweight）：能挂说明、`git describe` 行为更稳。
+          # 上游那些 lightweight tag 正是版本线混乱的根源之一。
+          {
+            echo "$NEXT"
+            echo ""
+            echo "由 .github/workflows/semver.yml 依据 Conventional Commits 自动生成。"
+            echo ""
+            echo "基线: ${BASE:-(无)}"
+            echo ""
+            echo "本次纳入的提交："
+            if [ -n "$BASE" ]; then
+              git log --format='- %h %s' "${BASE}..HEAD" | head -50
+            else
+              git log --format='- %h %s' HEAD | head -50
+            fi
+          } > /tmp/tag-message.txt
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEXT" -F /tmp/tag-message.txt
+          git push origin "refs/tags/$NEXT"
+
+          echo "✅ 已推送 tag $NEXT"
+
+      - name: 摘要
+        run: |
+          {
+            echo "### Semver Tag"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| 基线 tag | \`${{ steps.calc.outputs.base || '(无)' }}\` |"
+            echo "| 推算结果 | \`${{ steps.calc.outputs.next || '(不发版)' }}\` |"
+            echo "| tag 已存在 | \`${{ steps.check.outputs.exists || 'n/a' }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
