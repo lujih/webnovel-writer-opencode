@@ -938,16 +938,16 @@
       "size": 9290
     },
     ".opencode/agents/data-agent.md": {
-      "sha256": "861d77bbe69475355c07177702116be6138fc6b5b66a68a78f954e5e82b1ae93",
-      "size": 9078
+      "sha256": "f7dc301ea1001c43ce3df0a541fa6c50a2f0cf1dd7bc83703b46a81ae13ee95f",
+      "size": 10482
     },
     ".opencode/agents/deconstruction-agent.md": {
       "sha256": "b6e1bd96210beec32cd2affdc92409604d952044db8a040e9169b0c6f2cb624b",
       "size": 9083
     },
     ".opencode/agents/observer-agent.md": {
-      "sha256": "d9a78ec120799116f17a390eeb8a2f6485e1a7741143e7d4de30e20a85f025d1",
-      "size": 3977
+      "sha256": "00cc32b05407ff646b209e20b3de4c7cc534cc0b05d716994b605cf19f6839e1",
+      "size": 5091
     },
     ".opencode/agents/references/context-agent-example.md": {
       "sha256": "5b8da19bca68db90cf89c0d3c43d1e365bcf144c85d316ab8e0dfc7d4d109622",
@@ -993,6 +993,70 @@
       "sha256": "b5a7daf46c399e91c969f19946fbcdf2c8ae531fa0e612f0ea1bf61ca6d7095e",
       "size": 9629
     },
+    ".opencode/dashboard/frontend/dist/assets/Badge-MSahtjoy.js": {
+      "sha256": "95cca7c1c7011a1adefa13b9ab8c343fea27a5b88c9174872ce7ea67780aab79",
+      "size": 373
+    },
+    ".opencode/dashboard/frontend/dist/assets/CharactersPage-CO9uf8N7.js": {
+      "sha256": "9177884b9af7a4f60e63b25039f87ceaaee2335cc1bf2fb6fdb2d92c2b321a78",
+      "size": 13099
+    },
+    ".opencode/dashboard/frontend/dist/assets/ChartWrapper-BDeKEgYa.js": {
+      "sha256": "5d3340617659f11cd70ee942d12271966a3bb1b3a29e44b99a1464e79643388b",
+      "size": 9153
+    },
+    ".opencode/dashboard/frontend/dist/assets/ContextHealthPage-BZilOFoM.js": {
+      "sha256": "d0da9727669318214492dfac1f538a8f4ad315350b1da4796a2519d1b3797a53",
+      "size": 8637
+    },
+    ".opencode/dashboard/frontend/dist/assets/DataTable-h9MjA4YV.js": {
+      "sha256": "2c7f2733c9a4cb97eec98b1e9caa748ced674c62d848c53e3386bec4ee8be0d7",
+      "size": 1469
+    },
+    ".opencode/dashboard/frontend/dist/assets/DebtPage-DZdltd1M.js": {
+      "sha256": "d896444a6ee6424ccb1e5b64b0373176cac450f476b6fe46d4c61a1996e4335d",
+      "size": 6317
+    },
+    ".opencode/dashboard/frontend/dist/assets/DiagnosticsPage-Cje3MXsK.js": {
+      "sha256": "aec78efdf0327e34649d1bb6c25da35eaaf67ad390d4bcf59c5b4a1050448c1e",
+      "size": 6261
+    },
+    ".opencode/dashboard/frontend/dist/assets/EditorPanel-LUMW0JsZ.js": {
+      "sha256": "bef60f8663dde55d27d1875c7d58b8d504654bf80845f4b2e2c01f6a46273bc9",
+      "size": 618392
+    },
+    ".opencode/dashboard/frontend/dist/assets/FilesPage-MaY6fc_U.js": {
+      "sha256": "734568e3188487f11ac658b46876d4be39df6bc7ce2b9ca7d309d0570d6ea86b",
+      "size": 4553
+    },
+    ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-Do1pclO7.js": {
+      "sha256": "f1129acf7419f481f9b52bde34fd1d1160482ad8f8f00a905b918136e97d9749",
+      "size": 5574
+    },
+    ".opencode/dashboard/frontend/dist/assets/OverviewPage-DLoAXoBY.js": {
+      "sha256": "5fdc76db84304197d81e4141dcba01b28d5d61a7386fe6ff43536a5218567e30",
+      "size": 13208
+    },
+    ".opencode/dashboard/frontend/dist/assets/PacingPage-Ddgl1q7V.js": {
+      "sha256": "214c9f1a6ec52b08e1555d7751a708d22d8b09d7a4b29fd56b29794e3677a568",
+      "size": 5325
+    },
+    ".opencode/dashboard/frontend/dist/assets/Pager-Sqmy5T0P.js": {
+      "sha256": "2692e304ba92f50da849f651a8f80271362dfae8230ab27427ac3bf8c8f3a004",
+      "size": 700
+    },
+    ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-3fRQ7CY1.js": {
+      "sha256": "00bdc12916c9bbba180eb588b185504c0c7c37300fdb7e67dc2954f6724c4d37",
+      "size": 10554
+    },
+    ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-CTpweNk3.js": {
+      "sha256": "d8f45f5de57d2759fa22c81913c08d7a08cceac9ee9c0772f0e9dce91210b73e",
+      "size": 22057
+    },
+    ".opencode/dashboard/frontend/dist/assets/SystemPage-D89uDOgv.js": {
+      "sha256": "3b21b22c7b298dc44272c1406c415aa19c61d03915f502695a8e10c3b18a6baf",
+      "size": 10985
+    },
     ".opencode/dashboard/frontend/dist/assets/echarts-vendor-CCZFUTXT.js": {
       "sha256": "afbdbda1d918861640343bb397f2eb457b2a2db6b415cdc3cb3208a155bb8f2a",
       "size": 632750
@@ -1008,6 +1072,10 @@
     ".opencode/dashboard/frontend/dist/assets/index-B3sPIbAP.css": {
       "sha256": "dd6135d3e1a9aefab3e2e4ad8aaab357d4a25fd1840e313f039859fd75df2a65",
       "size": 16893
+    },
+    ".opencode/dashboard/frontend/dist/assets/index-CbSsDot6.js": {
+      "sha256": "91e5f731c2f47e30cdde0da0395fad5acad587df79d0303a3a47aa3bca64b7ee",
+      "size": 197388
     },
     ".opencode/dashboard/frontend/dist/assets/react-vendor-CjpoAPrF.js": {
       "sha256": "a73ee4c48bf1694465cb392489e61ba3dc5b229f360cb22298dc0fb9181b843e",
@@ -1581,6 +1649,10 @@
       "sha256": "546b5cc8851b72143ebf7d1114161b8091d086fb7e20ceaac811a89388877ae6",
       "size": 12198
     },
+    ".opencode/scripts/data_modules/effectiveness_stats.py": {
+      "sha256": "cc3ea33db4abf2928a03dd7c1f7c3fd818f9756840f227002587793ed341f0b8",
+      "size": 8650
+    },
     ".opencode/scripts/data_modules/entity_cleanup.py": {
       "sha256": "6cb56c22235e64951e68ff3a1acecb73fe9c224124aa324b7ce408a53a8cf53d",
       "size": 5627
@@ -2040,6 +2112,10 @@
     ".opencode/scripts/data_modules/tests/test_e2e_golden_path.py": {
       "sha256": "b1ca36b4ddd88d94929a78f429ffebae6c8fab9e58b74299279d79e83d0b141b",
       "size": 17420
+    },
+    ".opencode/scripts/data_modules/tests/test_effectiveness_stats.py": {
+      "sha256": "106d0a357c1987d6161026504a38038b5ed36effb0ca6ed2a9d50ea4f6df8b71",
+      "size": 11631
     },
     ".opencode/scripts/data_modules/tests/test_entities_v3_shape.py": {
       "sha256": "70579b1a0054b8ffb47c835f24fe06668f95ab8870557090109b9ad45791708d",

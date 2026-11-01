@@ -172,6 +172,9 @@ v2.9.2 之后做了 L0-L4 自下而上 + A/B/C/D 正交两轴的第二轮深度�
 
 ## 已知限制
 
-- `observer-agent` 仍为 free-text 提取（无 schema 约束，coverage-first）
-- `data-agent` 的 prompt 不读 `ambiguous_mentions`（代码路径 `ambiguous_to_pending()` + fail-closed pending 已兜底）
 - 三个 skill 的 `allowed-tools` 在 OpenCode V2 不被解释（V2 只认 `name` / `description` / `slash` / `metadata`；对两代宿主都是惰性键，保留是为兼容 Claude Code / Agent Skills 生态）
+
+## 发布后补充（v3.0.1）
+
+- **`observer-agent` 的分段名契约**：9 个 `## 段落名` 是 `observer_settler.py` 的**精确查找键**。此前把「角色状态变化」写成「角色状态」不会报错——那一节变成孤儿 section，事件**静默全部丢弃**，且 `unparsed_lines` 只统计已识别 section 所以日志也看不出来。现在 prompt 明确要求逐字照抄、空节整节省略，并有测试解析源码比对两边的键集合。
+- **`data-agent` 消费 `ambiguous_mentions`**：settler 检出同名歧义后只写文件 + 打 warning；此前 prompt 未要求把它转成 `disambiguation_result.pending`，于是提交侧 `pending` 为空、`artifact_validator` 放行，**错误实体绑定被固化为事实**。现在 `pending` 非空是 precommit 的 error 级阻断（fail-closed），prompt 给出了与 `ambiguous_to_pending()` 完全一致的字段形状。

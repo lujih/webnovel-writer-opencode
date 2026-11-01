@@ -222,7 +222,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   └── scripts/                  # Python 核心脚本
 │       ├── webnovel.py           # CLI 统一入口（40 个子命令）
 │       ├── data_modules/         # 核心数据模块（77 个）
-│       └── tests/                # 测试（167 个测试文件，2429 用例）
+│       └── tests/                # 测试（168 个测试文件，2443 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构

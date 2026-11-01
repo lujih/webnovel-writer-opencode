@@ -92,6 +92,33 @@ python -X utf8 "${SCRIPTS_DIR}/webnovel.py" --project-root "{project_root}" chap
 
 **B 提取与消歧**：同一轮完成，不额外调 LLM。置信度>0.8 自动采用，0.5-0.8 采用+warning，<0.5 标记待人工。
 
+**B-1 必须消费 `ambiguous_mentions`（硬性要求）**
+
+`extraction_result.json` 里如果有 `ambiguous_mentions`，**必须逐条转成
+`disambiguation_result.json` 的 `pending` 条目**，一条都不能丢：
+
+```json
+{"pending": [
+  {"mention": "萧炎",
+   "candidates": ["char_xiao_yan_a", "char_xiao_yan_b"],
+   "entity_type": "角色",
+   "confidence": 0.0,
+   "reason": "「萧炎」在实体库里对应 2 个同类型实体（…），无法确定指哪一个。",
+   "source": "observer_settler.ambiguous_mentions"}
+]}
+```
+
+为什么这是硬性要求：settler 检出同名歧义后**只写文件 + 打 warning**，
+如果没人把它放进 `pending`，提交侧看到的 `pending` 就是空的 →
+`artifact_validator` 放行 → **错误的实体绑定被固化为事实**。而 `pending`
+非空时，`precommit` 门禁是 **error 级阻断**（fail-closed），会把判定交回人工。
+
+- `ambiguous_mentions` 不存在或为空 → 写 `pending: []`（明确表态，不要省略该键）
+- **不要**因为"我觉得这个歧义不严重"就丢掉某条——判定权在门禁与人工，不在你
+- 不要改写 `mention` / `candidates` 的内容：它们来自实体库查表，不是你的推测
+- 若你自己还发现别的歧义（置信度 <0.5），同样写进 `pending`，`source` 写
+  `data_agent.confidence`
+
 **C 生成 artifacts**：
 
 产出两份 JSON 到 `.webnovel/tmp/`：
@@ -145,7 +172,7 @@ hook_strength: "strong"
 
 ## 6. 校验清单
 
-实体识别完整、extraction_result 已生成、commit artifacts 齐全、projection 已触发、摘要已生成、场景索引已写入、观测日志有效。
+实体识别完整、**`ambiguous_mentions` 已全部落入 `pending`**、extraction_result 已生成、commit artifacts 齐全、projection 已触发、摘要已生成、场景索引已写入、观测日志有效。
 
 ## 7. 输出
 
