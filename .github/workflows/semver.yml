@@ -148,9 +148,16 @@ jobs:
         run: |
           set -euo pipefail
 
-          # 凭据来源（tag 说明里会写，便于事后判断下游为什么没触发）
-          if [ "${{ steps.pat.outputs.available }}" = "true" ]; then
+          # 凭据来源：**按实际会被使用的身份**判断，不要只看 secret 是否存在。
+          #
+          # 上一轮这里只看 `steps.pat.outputs.available`，于是即使 checkout 持久化
+          # 的 GITHUB_TOKEN header 覆盖了 PAT，tag 说明里仍写着「PAT」——
+          # 把自己误导了两轮。现在同时看 extraheader 是否已被清掉。
+          HAS_HEADER=$(git config --local --get "http.https://github.com/.extraheader" || true)
+          if [ "${{ steps.pat.outputs.available }}" = "true" ] && [ -z "$HAS_HEADER" ]; then
             CRED_KIND="SEMVER_PUSH_TOKEN (PAT)"
+          elif [ -n "$HAS_HEADER" ]; then
+            CRED_KIND="GITHUB_TOKEN (extraheader 覆盖，PAT 未生效)"
           else
             CRED_KIND="GITHUB_TOKEN (fallback)"
           fi
