@@ -28,6 +28,7 @@
 
 - [operations/architecture-review-2026-05-25.md](./operations/architecture-review-2026-05-25.md)：2026-05 分层架构审查报告与修复计划
 - [operations/auto-fix-workflow.md](./operations/auto-fix-workflow.md)：自动修复工作流
+- [operations/release-token.md](./operations/release-token.md)：自动发版开关 `SEMVER_PUSH_TOKEN`（为什么需要、怎么建、怎么验证、常见故障）
 - [operations/2026-09-16-upstream-sync-merge.md](./operations/2026-09-16-upstream-sync-merge.md)：2026-09 上游同步合并记录（#130/#131/#125 三笔 fix + P0/P1/P2 五项审查修复）
 
 ### 记忆系统

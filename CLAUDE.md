@@ -259,7 +259,8 @@ base 时它 `exit 1`。实测 v3.1.1 就产生过这种悬空 tag（tag 有、np
 必须手工删掉才对回来。宁可这次不动，也不制造不一致。
 
 启用自动化只需一步：仓库 Settings → Secrets and variables → Actions →
-添加 `SEMVER_PUSH_TOKEN`（PAT，`contents:write`）。在此之前不影响其它任何流程
+添加 `SEMVER_PUSH_TOKEN`（PAT，`contents:write`）。建 token 的逐步操作、
+验证方法与常见故障见 [`docs/operations/release-token.md`](docs/operations/release-token.md)。在此之前不影响其它任何流程
 （`manifest.yml` 仍按旧 tag 生成 manifest、`npm-publish` 仍发 `${BASE}-N` prerelease）。
 
 **只推 tag、从不推 master**：master 由 `manifest.yml` 维护，两个 workflow 同时写
