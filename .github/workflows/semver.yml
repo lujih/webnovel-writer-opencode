@@ -50,6 +50,13 @@ jobs:
           # 需要完整历史与全部 tag：`git describe` 与区间日志都依赖它们
           fetch-depth: 0
           fetch-tags: true
+          # ⚠️ 必须 false。默认 true 时 checkout 会把 GITHUB_TOKEN 写进
+          # `http.https://github.com/.extraheader`，此后**所有**对 github.com
+          # 的 HTTPS 推送都会带上这个头，**把 URL 里给的 PAT 完全覆盖掉**。
+          # 表现极隐蔽：tag 推成功、但推送身份仍是 GITHUB_TOKEN，于是
+          # 「App/GITHUB_TOKEN 推送不触发 workflow」的抑制规则照旧生效——
+          # 下游零个 run，而日志里看不出任何异常。
+          persist-credentials: false
 
       - uses: actions/setup-python@v5
         with:
@@ -177,6 +184,10 @@ jobs:
           # 推送不触发 workflow」的抑制规则：v3.1.1 那次 tag 建出来了、
           # 下游零个 run。PAT 的标准写法是把 token 直接放在 userinfo 里
           # （`https://<token>@github.com/...`），这种推送才会被当成真人操作。
+          # 兜底：即使 checkout 的 persist-credentials 又被改回 true，
+          # 也先把那个 extraheader 清掉，否则 URL 里的 PAT 会被无条件覆盖。
+          git config --local --unset-all "http.https://github.com/.extraheader" 2>/dev/null || true
+
           if [ "${{ steps.pat.outputs.available }}" = "true" ]; then
             PUSH_URL="https://${PUSH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           else
