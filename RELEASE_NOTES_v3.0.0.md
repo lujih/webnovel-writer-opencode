@@ -107,6 +107,10 @@ v2.9.2 之后做了 L0-L4 自下而上 + A/B/C/D 正交两轴的第二轮深度�
 - 项目根解析以 CWD 为先——人站在哪本书就操作哪本书（避免写错书）
 - 空项目根被解析成当前目录 → 环境变量留空不再「写错书」
 
+### 追读债计息接入默认路径
+
+- `accrue_interest()` 此前**只由一条手工 CLI 触发**——作者不主动跑命令，追读债就永远不产生利息、`get_overdue_debts()` 永远是空的，这套机制在默认使用路径上等于不存在。现已在 accepted 章节的提交链路里自动触发（投影循环与 `_sync_foreshadowing` 之后，此时本章建债/销债均已落库），幂等性由 `debt_events` 的 `MAX(chapter)` 保证，计息失败只记 warning、不阻断提交。
+
 ### 数值 / 统计正确性
 
 - 空清单得满分、无 required 项白送 30% → 评分公式不再把「没有依据」当成「全部达成」
@@ -168,7 +172,6 @@ v2.9.2 之后做了 L0-L4 自下而上 + A/B/C/D 正交两轴的第二轮深度�
 
 ## 已知限制
 
-- `accrue-interest` 仍为手工 CLI，未自动接入 `chapter-commit`（行为变更影响所有既有项目的债务值，需单独评估）
 - `observer-agent` 仍为 free-text 提取（无 schema 约束，coverage-first）
 - `data-agent` 的 prompt 不读 `ambiguous_mentions`（代码路径 `ambiguous_to_pending()` + fail-closed pending 已兜底）
 - 三个 skill 的 `allowed-tools` 在 OpenCode V2 不被解释（V2 只认 `name` / `description` / `slash` / `metadata`；对两代宿主都是惰性键，保留是为兼容 Claude Code / Agent Skills 生态）
