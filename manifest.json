@@ -1,8 +1,34 @@
 {
-  "version": "v3.1.0",
+  "version": "v3.1.0-20261101.1436",
   "tag": "v3.1.0",
-  "updated": "2026-11-01T10:51:24Z",
-  "changelog": [],
+  "updated": "2026-11-01T14:36:45Z",
+  "changelog": [
+    {
+      "hash": "30af531",
+      "type": "docs",
+      "message": "docs: \u81ea\u52a8\u53d1\u7248\u5f00\u5173 SEMVER_PUSH_TOKEN \u7684\u8fd0\u7ef4\u8bf4\u660e"
+    },
+    {
+      "hash": "7b0b21b",
+      "type": "fix",
+      "message": "fix: flag-triage \u5199\u56de commit JSON \u7528\u88f8 write_text\u2014\u2014\u4e2d\u65ad\u4f1a\u7559\u4e0b\u622a\u65ad\u6587\u4ef6"
+    },
+    {
+      "hash": "354d2e1",
+      "type": "fix",
+      "message": "fix: secrets \u4e0d\u80fd\u7528\u5728 step \u7ea7 if\u2014\u2014Semver Tag \u89e3\u6790\u9636\u6bb5\u5373\u5931\u8d25\uff08ebcd26f\uff09"
+    },
+    {
+      "hash": "ebcd26f",
+      "type": "fix",
+      "message": "fix: \u6ca1\u914d PAT \u5c31\u4e0d\u5efa tag\u2014\u2014\u907f\u514d\u60ac\u7a7a tag \u8ba9\u4e0b\u4e00\u6b21\u53d1\u5e03\u76f4\u63a5\u5931\u8d25"
+    },
+    {
+      "hash": "f309f3a",
+      "type": "chore",
+      "message": "chore: release v3.1.0 [skip ci]"
+    }
+  ],
   "files": {
     ".opencode/.gitignore": {
       "sha256": "e1ea563c7f69c5502b623b7563a99fffe542694331b6bae3806c9c8e603afa7f",
