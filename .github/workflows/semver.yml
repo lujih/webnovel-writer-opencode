@@ -84,6 +84,23 @@ jobs:
             echo "将打 tag: $NEXT"
           fi
 
+      - name: 检测是否配置了 SEMVER_PUSH_TOKEN
+        id: pat
+        # ⚠️ `secrets` 上下文**不能用在 step 级 `if:`** —— 直接写
+        # `if: secrets.X != ''` 会让整个 workflow 在解析阶段失败（实测
+        # ebcd26f 那次 Semver Tag 就因此红了）。必须先在一个 step 里把它
+        # 读进 env、再输出成 step output，后续用 `steps.pat.outputs.*` 判断。
+        env:
+          TOKEN: ${{ secrets.SEMVER_PUSH_TOKEN }}
+        run: |
+          if [ -n "${TOKEN:-}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+            echo "SEMVER_PUSH_TOKEN 已配置 → 可自动建 tag 并发版。"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "SEMVER_PUSH_TOKEN 未配置 → 本次不建 tag（见后续步骤说明）。"
+          fi
+
       - name: 幂等检查（tag 已存在则跳过）
         id: check
         if: steps.calc.outputs.next != ''
@@ -109,7 +126,7 @@ jobs:
         if: |
           steps.calc.outputs.next != '' &&
           steps.check.outputs.exists == 'false' &&
-          secrets.SEMVER_PUSH_TOKEN != '' &&
+          steps.pat.outputs.available == 'true' &&
           (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
         env:
           NEXT: ${{ steps.calc.outputs.next }}
@@ -156,7 +173,7 @@ jobs:
         if: |
           steps.calc.outputs.next != '' &&
           steps.check.outputs.exists == 'false' &&
-          secrets.SEMVER_PUSH_TOKEN == '' &&
+          steps.pat.outputs.available != 'true' &&
           (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
         env:
           NEXT: ${{ steps.calc.outputs.next }}
@@ -185,4 +202,5 @@ jobs:
             echo "| 基线 tag | \`${{ steps.calc.outputs.base || '(无)' }}\` |"
             echo "| 推算结果 | \`${{ steps.calc.outputs.next || '(不发版)' }}\` |"
             echo "| tag 已存在 | \`${{ steps.check.outputs.exists || 'n/a' }}\` |"
+            echo "| PAT 已配置 | \`${{ steps.pat.outputs.available || 'n/a' }}\` |"
           } >> "$GITHUB_STEP_SUMMARY"
