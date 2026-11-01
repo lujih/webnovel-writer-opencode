@@ -1,57 +1,17 @@
 {
-  "version": "v3.1.1",
-  "tag": "v3.1.1",
-  "updated": "2026-11-01T14:51:18Z",
+  "version": "v3.1.2",
+  "tag": "v3.1.2",
+  "updated": "2026-11-01T14:55:51Z",
   "changelog": [
     {
-      "hash": "10b97ed",
+      "hash": "fbb943f",
       "type": "fix",
-      "message": "fix: checkout \u6301\u4e45\u5316\u7684 GITHUB_TOKEN \u8986\u76d6\u4e86 PAT\u2014\u2014\u6240\u4ee5\u81ea\u52a8 tag \u6c38\u8fdc\u4e0d\u89e6\u53d1\u4e0b\u6e38"
+      "message": "fix: tag \u8bf4\u660e\u91cc\u7684\u300c\u51ed\u636e\u6765\u6e90\u300d\u6309\u5b9e\u9645\u8eab\u4efd\u5224\u65ad\uff0c\u4e0d\u518d\u53ea\u770b secret \u662f\u5426\u5b58\u5728"
     },
     {
-      "hash": "4e6f47a",
-      "type": "fix",
-      "message": "fix: \u81ea\u52a8\u6253 tag \u7528\u4e86 App \u5f0f\u7684 x-access-token \u524d\u7f00\u2014\u2014PAT \u63a8\u9001\u88ab\u5f53\u6210 App \u8eab\u4efd\uff0c\u4e0b\u6e38\u4e0d\u89e6\u53d1"
-    },
-    {
-      "hash": "5ca4b7f",
+      "hash": "09c773b",
       "type": "chore",
-      "message": "chore: update manifest to v3.1.0-20261101.1436 [skip ci]"
-    },
-    {
-      "hash": "30af531",
-      "type": "docs",
-      "message": "docs: \u81ea\u52a8\u53d1\u7248\u5f00\u5173 SEMVER_PUSH_TOKEN \u7684\u8fd0\u7ef4\u8bf4\u660e"
-    },
-    {
-      "hash": "7b0b21b",
-      "type": "fix",
-      "message": "fix: flag-triage \u5199\u56de commit JSON \u7528\u88f8 write_text\u2014\u2014\u4e2d\u65ad\u4f1a\u7559\u4e0b\u622a\u65ad\u6587\u4ef6"
-    },
-    {
-      "hash": "354d2e1",
-      "type": "fix",
-      "message": "fix: secrets \u4e0d\u80fd\u7528\u5728 step \u7ea7 if\u2014\u2014Semver Tag \u89e3\u6790\u9636\u6bb5\u5373\u5931\u8d25\uff08ebcd26f\uff09"
-    },
-    {
-      "hash": "ebcd26f",
-      "type": "fix",
-      "message": "fix: \u6ca1\u914d PAT \u5c31\u4e0d\u5efa tag\u2014\u2014\u907f\u514d\u60ac\u7a7a tag \u8ba9\u4e0b\u4e00\u6b21\u53d1\u5e03\u76f4\u63a5\u5931\u8d25"
-    },
-    {
-      "hash": "f309f3a",
-      "type": "chore",
-      "message": "chore: release v3.1.0 [skip ci]"
-    },
-    {
-      "hash": "c738a24",
-      "type": "fix",
-      "message": "fix: \u81ea\u52a8\u6253\u7684 tag \u4e0d\u89e6\u53d1\u4e0b\u6e38 workflow\u2014\u2014GITHUB_TOKEN \u7684\u9632\u9012\u5f52\u9650\u5236"
-    },
-    {
-      "hash": "631c39c",
-      "type": "chore",
-      "message": "chore: update manifest to v3.0.0-20261101.1044 [skip ci]"
+      "message": "chore: release v3.1.1 [skip ci]"
     }
   ],
   "files": {
