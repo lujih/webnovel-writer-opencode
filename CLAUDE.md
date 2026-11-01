@@ -249,12 +249,18 @@ MAJOR 是人手动定的。以后这类改动请写成 `feat!:` 或正文加 `BR
 就是如此：tag 建出来了、但 `manifest.yml` 的 `release` job 与 `npm-publish.yml`
 的 tag 路径**零个 run**，npm 仍是旧版本、GitHub Release 也没建。
 
-两种解法（workflow 已按此实现）：
-1. **推荐**：仓库 Secrets 加 `SEMVER_PUSH_TOKEN`（带 `contents:write` 的 PAT），
-   workflow 优先生用它推 tag → 下游正常触发；
-2. 没有该 secret 时退回 `GITHUB_TOKEN` —— tag 仍会建，但 step summary 会打
-   `::warning::` 说明本次不会发版；需要时人工重推一次
-   （`git push --delete origin <tag> && git push origin <tag>`）。
+因此 workflow 的当前行为是：**只有配置了 `SEMVER_PUSH_TOKEN`（带 `contents:write`
+的 PAT）才会建 tag**；没配就**整步跳过**并在 step summary 里写明「推算出的是哪个
+版本、为什么没建」。
+
+为什么不「先建 tag、发不了版再说」：悬空 tag 会让**下一次推送的发布直接失败**
+——`npm-publish.yml` 的非 tag 路径要求「npm 最新版与 git tag 同 base」，不同
+base 时它 `exit 1`。实测 v3.1.1 就产生过这种悬空 tag（tag 有、npm 停在 3.1.0），
+必须手工删掉才对回来。宁可这次不动，也不制造不一致。
+
+启用自动化只需一步：仓库 Settings → Secrets and variables → Actions →
+添加 `SEMVER_PUSH_TOKEN`（PAT，`contents:write`）。在此之前不影响其它任何流程
+（`manifest.yml` 仍按旧 tag 生成 manifest、`npm-publish` 仍发 `${BASE}-N` prerelease）。
 
 **只推 tag、从不推 master**：master 由 `manifest.yml` 维护，两个 workflow 同时写
 同一分支会产生非快进冲突；`manifest.yml` 已加 `concurrency` 串行化自身的

@@ -98,9 +98,18 @@ jobs:
           fi
 
       - name: 打 annotated tag 并推送
+        # 只在**配了 PAT** 时才建 tag。
+        #
+        # 为什么不是「先建 tag、发不了版再说」：GitHub 的防递归规则让
+        # GITHUB_TOKEN 推的 tag 不触发下游（manifest release / npm-publish），
+        # 于是会留下一个「tag 有、npm 没发」的悬空版本。而 `npm-publish.yml`
+        # 的非 tag 路径明确要求「npm 最新版与 git tag 同 base」，不同 base 时
+        # 直接 `exit 1` —— 悬空 tag 会让**下一次推送的发布 workflow 直接失败**。
+        # 宁可这次不建 tag（什么都不变），也不制造这个不一致。
         if: |
           steps.calc.outputs.next != '' &&
           steps.check.outputs.exists == 'false' &&
+          secrets.SEMVER_PUSH_TOKEN != '' &&
           (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
         env:
           NEXT: ${{ steps.calc.outputs.next }}
@@ -143,16 +152,28 @@ jobs:
 
           echo "✅ 已推送 tag $NEXT"
 
-      - name: 若用 GITHUB_TOKEN 推送则警告下游不会发版
+      - name: 未配置 PAT 时跳过建 tag 并说明
         if: |
           steps.calc.outputs.next != '' &&
           steps.check.outputs.exists == 'false' &&
+          secrets.SEMVER_PUSH_TOKEN == '' &&
           (github.event_name != 'workflow_dispatch' || inputs.dry_run == false)
+        env:
+          NEXT: ${{ steps.calc.outputs.next }}
         run: |
-          if [ -z "${{ secrets.SEMVER_PUSH_TOKEN }}" ]; then
-            echo "::warning::tag 已建，但用的是 GITHUB_TOKEN —— GitHub 的防递归规则会让 manifest.yml / npm-publish.yml 的 tag 触发器**不运行**，即本次不会发 GitHub Release、也不会 npm publish。"
-            echo "::warning::要自动发版：在仓库 Secrets 里加 SEMVER_PUSH_TOKEN（一个带 contents:write 的 PAT），或人工把该 tag 重新推送一次（git push --delete origin <tag> && git push origin <tag>）。"
-          fi
+          set -euo pipefail
+          echo "::warning::推算出下一个版本是 ${NEXT}，但仓库没有 SEMVER_PUSH_TOKEN，故**本次不建 tag**。"
+          echo "::warning::原因：GITHUB_TOKEN 推送的 tag 不会触发 manifest.yml / npm-publish.yml（GitHub 防递归），会留下「tag 有、npm 没发」的悬空版本，而 npm-publish 的非 tag 路径要求 npm 最新版与 git tag 同 base，悬空 tag 会让下一次发布直接失败。"
+          echo "::warning::启用自动化：仓库 Settings → Secrets and variables → Actions 添加 SEMVER_PUSH_TOKEN（PAT，需 contents:write）。"
+          {
+            echo "### Semver Tag — 已跳过"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| 基线 tag | \`${{ steps.calc.outputs.base || '(无)' }}\` |"
+            echo "| 推算版本 | \`${NEXT}\` |"
+            echo "| 是否建 tag | ❌ 未配置 `SEMVER_PUSH_TOKEN` |"
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: 摘要
         run: |
