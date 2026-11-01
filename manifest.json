@@ -753,8 +753,8 @@
       "size": 2153
     },
     ".opencode/scripts/data_modules/flag_triage.py": {
-      "sha256": "e40be010242279e38d0f03419334f5dbe1679cfe8b6e423f0449995da16726bd",
-      "size": 6064
+      "sha256": "b693c89699725e33197c8623b41880bcce60d20a72b755c1f92bd53a0527e91c",
+      "size": 7148
     },
     ".opencode/scripts/data_modules/foreshadowing_utils.py": {
       "sha256": "20c8c19aec13be71250805084cba043c21261a4b01decea1d6153f01602c39b3",
@@ -1237,8 +1237,8 @@
       "size": 5188
     },
     ".opencode/scripts/data_modules/tests/test_flag_triage.py": {
-      "sha256": "d0a57dd2088a712fe943cc8d9d2ffbe3126596ad1ea24ca58f613918ef51a045",
-      "size": 11599
+      "sha256": "7c0b0cc1456cea90669a54c94a6173929b65b25f395dbab95391be9d5c7f435e",
+      "size": 14124
     },
     ".opencode/scripts/data_modules/tests/test_foreshadowing_contract.py": {
       "sha256": "ad38c68a1b05fd0e67a84ead16abcb15f2f2ec24627e5cafc7fc1833f73e428d",

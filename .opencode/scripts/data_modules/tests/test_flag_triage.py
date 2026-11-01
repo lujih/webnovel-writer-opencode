@@ -144,6 +144,56 @@ class TestFlagTriageCli:
         assert rc == 1, "无 commit 时 list 报错（不能静默）"
 
 
+class TestAtomicWrite:
+    """仲裁写回必须是原子写（含备份），与 dashboard PUT 路径一致。
+
+    修复前：`_save_flags` 用裸 `write_text`。那个文件不只在存 flags，还存
+    `meta.status`（accepted/rejected）——中途被打断会留下截断的 JSON，
+    下一次 `build_commit` / `apply_projections` 读它直接 JSONDecodeError。
+    而同一文件的 dashboard 路径一直走 `atomic_write_json`（tempfile +
+    os.replace + `.bak` 备份），两条路径的持久化保证不一致。
+    """
+
+    def _triage(self, project: Path, *argv: str) -> None:
+        sys.argv = ["flag_triage.py", "--project-root", str(project), *argv]
+        with pytest.raises(SystemExit):
+            flag_triage.main()
+
+    def test_creates_backup_file(self, tmp_path):
+        project = _make_project(tmp_path, flags=_flags([("critical", "A")]))
+        self._triage(project, "confirm", "--chapter", "4", "--index", "0")
+
+        commit = project / ".story-system" / "commits" / "chapter_004.commit.json"
+        backup = commit.with_suffix(commit.suffix + ".bak")
+        assert backup.is_file(), (
+            "没有生成 .bak —— 说明走的还是裸 write_text，不是 atomic_write_json"
+        )
+        # 备份里应是**改动前**的内容（triage 仍为 None）
+        import json as _json
+        before = _json.loads(backup.read_text(encoding="utf-8"))
+        assert before["review_flags"][0]["triage"] is None
+
+    def test_no_temp_files_left_behind(self, tmp_path):
+        """原子写用临时文件再 replace，正常结束后不应残留 tmp。"""
+        project = _make_project(tmp_path, flags=_flags([("critical", "A")]))
+        self._triage(project, "dismiss", "--chapter", "4", "--index", "0")
+
+        commits = project / ".story-system" / "commits"
+        leftovers = [p.name for p in commits.iterdir()
+                     if p.suffix not in (".json", ".bak")]
+        assert not leftovers, f"残留临时文件：{leftovers}"
+
+    def test_result_still_correct_after_atomic_switch(self, tmp_path):
+        project = _make_project(tmp_path, flags=_flags([("critical", "A")]))
+        self._triage(project, "confirm", "--chapter", "4", "--index", "0")
+        import json as _json
+        saved = _json.loads(
+            (project / ".story-system" / "commits" / "chapter_004.commit.json")
+            .read_text(encoding="utf-8"))
+        assert saved["review_flags"][0]["triage"] == "confirmed"
+        assert saved["meta"]["status"] == "accepted"
+
+
 class TestContextInjection:
     """context_manager._load_pending_review_flags 注入行为。"""
 

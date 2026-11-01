@@ -52,12 +52,30 @@ def _load_flags(project_root: Path, chapter: int) -> Dict[str, Any]:
 
 
 def _save_flags(project_root: Path, chapter: int, payload: Dict[str, Any]) -> None:
+    """把仲裁结果写回 commit JSON——**必须原子写**。
+
+    为什么不能用裸 `write_text`：这个文件不只存 flags，还存
+    `meta.status`（accepted/rejected）。中途被打断（Ctrl-C、磁盘满、Windows
+    杀软占文件）会留下**截断的 JSON**，下一次 `build_commit`/`apply_projections`
+    读它直接 JSONDecodeError，整章卡死——而仲裁本身只是「给观察标记留个终态」，
+    不该有这种破坏力。
+
+    同一文件的 dashboard PUT 路径（`/api/review/flags/triage`）一直走
+    `_atomic_write_json`（tempfile + os.replace + 备份），CLI 侧此前是裸写，
+    两条路径的持久化保证不一致。这里对齐。
+
+    `use_lock=False`：commit JSON 没有并发写者（仲裁是人工低频操作，
+    且 dashboard 侧也已落盘完成），加锁只会与 filelock 的可重入限制纠缠。
+    """
     from data_modules.story_contracts import StoryContractPaths
 
     paths = StoryContractPaths.from_project_root(project_root)
     commit_file = paths.commit_json(chapter)
-    commit_file.write_text(json.dumps(payload, ensure_ascii=False, indent=2),
-                           encoding="utf-8")
+    try:
+        from security_utils import atomic_write_json
+    except ImportError:                     # 以包方式导入时的兜底
+        from ..security_utils import atomic_write_json  # type: ignore[import-not-found]
+    atomic_write_json(commit_file, payload, backup=True, use_lock=False)
 
 
 def cmd_list(args) -> None:
