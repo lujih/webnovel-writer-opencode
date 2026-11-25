@@ -121,16 +121,59 @@ def _normalize_heading(heading: str) -> str:
     return _re.sub(r'^[\d①②③④⑤⑥⑦⑧⑨⑩]+[.、]\s*', '', heading).strip()
 
 
+#: observer 输出里被下游提取器消费的段落标题（去掉 # 与编号后的纯文本）。
+#:
+#: 这个清单有**两个**消费方，必须同源：
+#:   1. `_parse_markdown_sections()`——判断 `### xxx` 这类更深标题是「真正的
+#:      段落边界」还是「段落内的子条目」；
+#:   2. `settle()` 的提取器映射——按标题取 section 内容。
+#: 拆成两份就会出现「解析器认得、提取器不认」的静默丢数据。
+KNOWN_SECTION_HEADINGS: tuple[str, ...] = (
+    "角色状态变化",
+    "关系变化",
+    "力量突破",
+    "新出场实体",
+    "宝物/物品获得",
+    "世界规则揭示",
+    "世界规则打破",
+    "对读者的承诺/伏笔",
+    "伏笔创建与闭合",
+)
+_KNOWN_SECTION_SET = frozenset(KNOWN_SECTION_HEADINGS)
+
+_HEADING_LINE_RE = re.compile(r'^(#{1,6})\s*(.+)$')
+
+
 def _parse_markdown_sections(text: str) -> dict[str, list[str]]:
-    """Parse observer output into sections keyed by heading name."""
+    """Parse observer output into sections keyed by heading name.
+
+    标题处理规则（修复前只认 ``## ``，其余一律当正文）：
+
+    - ``## X`` —— 永远开新段（observer prompt 约定的格式）；
+    - ``### X`` 及更深，且 X 命中 `KNOWN_SECTION_HEADINGS` —— 也开新段。
+      模型偶尔会把 ``## 角色状态变化`` 写成 ``### 角色状态变化``，不认它就
+      等于整段内容静默消失；
+    - ``### X`` 且 X 不在白名单 —— 视为段落内的子条目：**标题行本身丢弃**
+      （此前它被 append 进上一段，于是 ``### 张三`` 这类文字会混进事件描述，
+      污染写进 SSOT 的事实）；
+    - 空行忽略。
+    """
     sections: dict[str, list[str]] = {}
     current_heading: str | None = None
     for line in text.splitlines():
         stripped = line.strip()
-        if stripped.startswith("## "):
-            current_heading = _normalize_heading(stripped[3:])
-            sections.setdefault(current_heading, [])
-        elif current_heading and stripped:
+        if not stripped:
+            continue
+        match = _HEADING_LINE_RE.match(stripped)
+        if match:
+            level = len(match.group(1))
+            title = _normalize_heading(match.group(2))
+            if level == 2 or (level > 2 and title in _KNOWN_SECTION_SET):
+                current_heading = title
+                sections.setdefault(current_heading, [])
+            # 其余深度的标题既不新建段落，也不作为正文入队
+            continue
+        if current_heading:
             sections[current_heading].append(stripped)
     return sections
 
@@ -536,23 +579,35 @@ def _consumed_line_count(heading: str, produced: list[dict]) -> int:
     return len(produced)
 
 
+_HEADING_EXTRACTORS: tuple[tuple[str, Any], ...] = (
+    ("角色状态变化", _extract_character_state_changes),
+    ("关系变化", _extract_relationships),
+    ("力量突破", _extract_power_breakthroughs),
+    ("新出场实体", _extract_entity_creations),
+    ("宝物/物品获得", _extract_artifact_acquisitions),
+    ("世界规则揭示", _extract_world_rule_revealed),
+    ("世界规则打破", _extract_world_rule_broken),
+    ("对读者的承诺/伏笔", _extract_promises),
+    ("伏笔创建与闭合", _extract_open_loops),
+)
+
+# 两处白名单必须同源：解析器用 KNOWN_SECTION_HEADINGS 判断 `### X` 是否开新段，
+# 提取器按标题取内容。少一条 ⇔ 该标题下的内容被当成子条目丢弃。
+_MISSING_EXTRACTORS = _KNOWN_SECTION_SET - {h for h, _ in _HEADING_EXTRACTORS}
+if _MISSING_EXTRACTORS:  # pragma: no cover - 模块加载期就该炸
+    raise RuntimeError(
+        "observer_settler: KNOWN_SECTION_HEADINGS 与 _HEADING_EXTRACTORS 不同源，"
+        f"缺少提取器：{sorted(_MISSING_EXTRACTORS)}"
+    )
+
+
 def settle(raw_facts_path: Path, project_root: Path, chapter: int) -> dict:
     """Parse observer output → validated StoryEvent list."""
     text = raw_facts_path.read_text(encoding="utf-8")
     sections = _parse_markdown_sections(text)
     known = _load_known_entities(project_root)
 
-    heading_extractors = [
-        ("角色状态变化", _extract_character_state_changes),
-        ("关系变化", _extract_relationships),
-        ("力量突破", _extract_power_breakthroughs),
-        ("新出场实体", _extract_entity_creations),
-        ("宝物/物品获得", _extract_artifact_acquisitions),
-        ("世界规则揭示", _extract_world_rule_revealed),
-        ("世界规则打破", _extract_world_rule_broken),
-        ("对读者的承诺/伏笔", _extract_promises),
-        ("伏笔创建与闭合", _extract_open_loops),
-    ]
+    heading_extractors = list(_HEADING_EXTRACTORS)
 
     _NEEDS_KNOWN = {"角色状态变化", "关系变化", "力量突破", "新出场实体", "宝物/物品获得"}
 

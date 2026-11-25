@@ -40,18 +40,22 @@ def _read_agent(name: str) -> str:
 
 
 def _settler_headings() -> list[str]:
-    """从 settler 源码里取出 `heading_extractors` 的全部键。
+    """从 settler 源码里取出分段标题的全集。
 
     直接解析源码而不是抄一份清单——抄写会在两边各自漂移，而那正是要防的事。
+
+    解析目标是 `_HEADING_EXTRACTORS`（模块级元组）。它同时是
+    `KNOWN_SECTION_HEADINGS` 的来源，后者被 `_parse_markdown_sections()`
+    用来判断 `### X` 是否开新段——所以这里读到的集合等于「解析器认得的集合」。
     """
     import re
 
     source = (SCRIPTS / "data_modules" / "observer_settler.py").read_text(encoding="utf-8")
     # 形如  ("角色状态变化", _extract_character_state_changes),
     pattern = re.compile(r'\("([^"]+)",\s*(?:_extract_\w+|_extract\w*)\)')
-    block_start = source.index("heading_extractors = [")
-    block_end = source.index("]", source.index("_extract_open_loops", block_start))
-    block = source[block_start:block_end + 1]
+    block_start = source.index("_HEADING_EXTRACTORS")
+    block_end = source.index("\n)", block_start)
+    block = source[block_start:block_end]
     headings = pattern.findall(block)
     assert headings, "未能从源码解析出 heading 列表——正则或源码结构变了"
     return headings
