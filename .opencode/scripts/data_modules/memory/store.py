@@ -5,6 +5,7 @@ scratchpad 持久化与查询。
 """
 from __future__ import annotations
 
+import json
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -24,11 +25,25 @@ from .schema import (
 )
 
 try:
-    from security_utils import atomic_write_json, read_json_safe
+    from security_utils import atomic_write_json
 except ImportError:  # pragma: no cover
-    from scripts.security_utils import atomic_write_json, read_json_safe
+    from scripts.security_utils import atomic_write_json
 
 from filelock import FileLock
+
+
+class MemoryStoreCorrupted(RuntimeError):
+    """scratchpad 存在但读不出来（坏 JSON / 不是对象 / 权限）。
+
+    修复前：``read_json_safe(path, default={})`` 把「读坏」当成 `{}`，
+    `load()` 返回空结构，随后 `upsert_item` / `mark_status` 在锁内把这条
+    空结构写回去 —— **一次读坏就清空整库长期记忆**；而且
+    ``atomic_write_json(..., backup=True)`` 在覆盖前把那份损坏文件拷成
+    ``.bak``，回滚通道同时失效。
+
+    现在的约定：读路径可以降级（页面显示为空 + 打印告警），
+    **写路径必须 strict** —— 读不出就中止，不允许用空库覆盖真数据。
+    """
 
 
 class ScratchpadManager:
@@ -37,16 +52,47 @@ class ScratchpadManager:
         self.path = Path(self.config.scratchpad_file)
         self._lock = FileLock(str(self.path) + ".lock", timeout=30)
 
-    def load(self) -> ScratchpadData:
+    def load(self, *, strict: bool = False) -> ScratchpadData:
+        """读取 scratchpad。
+
+        ``strict=True`` 供**写路径**使用：文件存在但解析失败时抛
+        `MemoryStoreCorrupted`，绝不让调用方拿到一个"空库"去覆盖真数据。
+        默认（读路径）降级为空结构，但**打印告警**——静默把损坏当空库
+        是这条数据丢失链的起点。
+
+        ``utf-8-sig`` 而非 ``utf-8``：BOM 会让 `json.loads` 失败，把
+        「有内容」误判成「空库」。
+        """
         if not self.path.exists():
             return ScratchpadData.empty()
-        payload = read_json_safe(self.path, default={})
+        try:
+            payload = json.loads(self.path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError) as exc:
+            if strict:
+                raise MemoryStoreCorrupted(
+                    f"长期记忆文件无法解析，写入已中止：{self.path}（{exc}）。"
+                    "继续写会把整库覆盖成空；请先修复该文件或从 .bak 恢复。"
+                ) from exc
+            print_error(f"长期记忆文件无法解析，已按空库处理：{self.path}（{exc}）")
+            return ScratchpadData.empty()
         if not isinstance(payload, dict):
+            if strict:
+                raise MemoryStoreCorrupted(
+                    f"长期记忆文件顶层不是对象，写入已中止：{self.path}"
+                    f"（实际类型 {type(payload).__name__}）"
+                )
+            print_error(f"长期记忆文件顶层不是对象，已按空库处理：{self.path}")
             return ScratchpadData.empty()
         return ScratchpadData.from_dict(payload)
 
+    def _assert_writable(self) -> None:
+        """覆盖前确认既有文件可解析——直接调 `save()` 的路径同样不许毁库。"""
+        if self.path.exists():
+            self.load(strict=True)
+
     def save(self, data: ScratchpadData, _use_lock: bool = True) -> None:
         self.config.ensure_dirs()
+        self._assert_writable()
         if bool(getattr(self.config, "memory_compactor_enabled", True)):
             threshold = max(1, int(getattr(self.config, "memory_compactor_threshold", 500)))
             if data.count_items() > threshold:
@@ -65,7 +111,7 @@ class ScratchpadManager:
     def upsert_item(self, item: MemoryItem) -> Dict[str, int]:
         normalized = item.normalized()
         with self._lock:
-            data = self.load()
+            data = self.load(strict=True)
             bucket = CATEGORY_TO_BUCKET[normalized.category]
             rows: List[MemoryItem] = list(getattr(data, bucket))
             target_key = self._key_for(normalized)
@@ -104,7 +150,7 @@ class ScratchpadManager:
         if not item_id:
             return False
         with self._lock:
-            data = self.load()
+            data = self.load(strict=True)
             updated = False
             for bucket in BUCKET_TO_CATEGORY:
                 rows: List[MemoryItem] = getattr(data, bucket)
