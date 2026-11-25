@@ -225,12 +225,13 @@ export function fetchReviewFlags(limit = 10) {
 }
 
 // 仲裁一条 review flag（confirm / dismiss）——写回 commit JSON 的 triage 字段
+//
+// ⚠️ 必须走 `apiPut`：服务端只有 `@app.put("/api/review/flags/triage")`
+// （app.py:837）。此前这里把 `{method,headers,body}` 当成 `fetchJSON` 的
+// **query 参数**传进去，实际发出的是 `GET ...?method=PUT&headers=[object Object]`
+// ——405、请求体从不发送、按钮点了没反应，`triage` 永远是 null。
 export function triageReviewFlag(chapter, index, action) {
-    return fetchJSON('/api/review/flags/triage', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chapter, index, action }),
-    })
+    return apiPut('/api/review/flags/triage', { chapter, index, action })
 }
 
 export function fetchForeshadowingReminders(threshold = 5) {

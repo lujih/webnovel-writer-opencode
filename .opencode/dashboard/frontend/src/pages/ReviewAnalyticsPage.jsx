@@ -220,9 +220,16 @@ export default function ReviewAnalyticsPage() {
     }, [flags])
 
     async function handleTriage(chapter, index, action) {
-        await triageReviewFlag(chapter, index, action)
-        const fresh = await fetchReviewFlags(20)
-        setFlags(fresh)
+        // 仲裁失败必须让用户看见：此前无 catch，请求出错时按钮点了毫无反应，
+        // 表现为「UI 坏了」而不是「服务端拒绝」。
+        setError(null)
+        try {
+            await triageReviewFlag(chapter, index, action)
+            const fresh = await fetchReviewFlags(20)
+            setFlags(fresh)
+        } catch (e) {
+            setError(`仲裁失败: ${e?.message || e}`)
+        }
     }
 
     const radarOption = useMemo(() => buildRadarOption(data?.dimension_averages), [data])

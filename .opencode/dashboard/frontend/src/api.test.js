@@ -5,6 +5,7 @@ import {
   apiPut,
   fetchJSON,
   HttpError,
+  triageReviewFlag,
 } from './api.js'
 
 // api.js 是所有页面与后端之间的唯一通道。它的错误语义一旦不一致，
@@ -121,6 +122,40 @@ describe('fetchJSON 参数拼接', () => {
     // 0 与 false 是**有效**过滤值（如 threshold=0），不能被当成空值丢掉
     expect(url.searchParams.get('e')).toBe('0')
     expect(url.searchParams.get('f')).toBe('false')
+  })
+})
+
+describe('写函数必须用正确的 HTTP 方法', () => {
+  // 回归防护：`triageReviewFlag` 曾把 {method,headers,body} 当成 `fetchJSON`
+  // 的 query 参数传进去 —— 实际发出的是 `GET .../triage?method=PUT`，服务端
+  // 只有 @app.put，于是 405、请求体从不发送、按钮点了毫无反应。
+  // 这类「拼错 helper」的 bug 只在**发出请求的那一瞬间**可见，必须钉住 URL
+  // 与方法本身，而不是断言返回值为 ok。
+  function stubOk() {
+    const spy = vi.fn(async () => ({
+      ok: true, status: 200, statusText: 'OK', json: async () => ({ ok: true }),
+    }))
+    vi.stubGlobal('fetch', spy)
+    return spy
+  }
+
+  it('triageReviewFlag 走 PUT，body 是 JSON 且字段完整', async () => {
+    const spy = stubOk()
+    await triageReviewFlag(7, 2, 'confirm')
+
+    const [url, init] = spy.mock.calls[0]
+    expect(url).toBe('/api/review/flags/triage')
+    expect(init.method).toBe('PUT')
+    expect(JSON.parse(init.body)).toEqual({ chapter: 7, index: 2, action: 'confirm' })
+  })
+
+  it('triageReviewFlag 不把 method / body 拼进 query 串', async () => {
+    const spy = stubOk()
+    await triageReviewFlag(3, 0, 'dismiss')
+
+    const [url] = spy.mock.calls[0]
+    expect(String(url)).not.toContain('?')
+    expect(String(url)).not.toContain('method=')
   })
 })
 
