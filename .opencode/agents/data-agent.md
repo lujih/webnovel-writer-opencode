@@ -46,6 +46,11 @@ permissions:
   - action: edit
     resource: "*.story-system/master_setting.json"
     effect: deny
+  # commits/ 是提交产物的归档（含 review_flags 的 triage 结论）。
+  # 漏了它 = agent 能直接改「已提交」的历史，与 write-guard.js 的清单也会漂移。
+  - action: edit
+    resource: "*.story-system/commits/"
+    effect: deny
 
 ---
 

@@ -139,6 +139,7 @@ class TestSSOTProtectedPaths:
         ".webnovel/vectors.db",
         ".webnovel/memory_scratchpad.json",
         ".story-system/events/",
+        ".story-system/commits/",
         ".story-system/master_setting.json",
     )
 
@@ -172,14 +173,31 @@ class TestSSOTProtectedPaths:
             f"{agent.name}: SSOT deny 排在 edit allow 之前，会被盖过"
         )
 
-    def test_matches_write_guard_plugin_list(self):
-        """两份清单必须一致——漂移了就等于有一侧失效。"""
+    def _plugin_suffixes(self) -> set[str]:
+        """从 `write-guard.js` **解析**受保护清单，不抄一份。
+
+        抄写会漂移；而这里要防的正是「plugin 加了、permissions 没加」——
+        单向断言（PROTECTED ⊆ plugin）在那种情况下仍然通过。
+        """
         plugin = (REPO_ROOT / ".opencode" / "plugins" / "write-guard.js").read_text(
             encoding="utf-8")
-        for suffix in self.PROTECTED:
-            assert f"'{suffix}'" in plugin, (
-                f"write-guard.js 不再保护 {suffix}，与 permissions 层清单漂移"
-            )
+        block_start = plugin.index("const PROTECTED_SUFFIXES = [")
+        block_end = plugin.index("]", block_start)
+        return set(re.findall(r"'([^']+)'", plugin[block_start:block_end]))
+
+    def test_matches_write_guard_plugin_list(self):
+        """两份清单必须**双向相等**——任一方向漂移都等于有一侧失效。
+
+        修复前这里只做 `PROTECTED 里的每一条都在 plugin 里`（子集断言）：
+        plugin 多出 `.story-system/commits/` 而 4 个 agent 都没加时，测试仍然绿。
+        """
+        plugin_list = self._plugin_suffixes()
+        assert plugin_list, "未能从 write-guard.js 解析出 PROTECTED_SUFFIXES"
+        assert plugin_list == set(self.PROTECTED), (
+            "permissions 层与 write-guard.js 的受保护清单不一致：\n"
+            f"  只在 plugin: {sorted(plugin_list - set(self.PROTECTED))}\n"
+            f"  只在测试期望: {sorted(set(self.PROTECTED) - plugin_list)}"
+        )
 
 
 class TestPerAgentToolFit:

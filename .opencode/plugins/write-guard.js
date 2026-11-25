@@ -178,7 +178,13 @@ function hasWriteIntent(lower) {
   // PowerShell cmdlet
   if (/\b(set-content|add-content|out-file|clear-content|new-item|remove-item|rename-item|move-item|copy-item)\b/.test(lower)) return true
   // 解释器内写盘：writeFileSync / writeFile / appendFile / createWriteStream / fs.write
-  if (/(writefilesync|writefile|appendfile|createwritestream|fs\.write|open\([^)]*['"][wa])/.test(lower)) return true
+  // pathlib 的 write_text / write_bytes 同样能覆盖受保护文件（Python 侧最常用）
+  if (/(writefilesync|writefile|appendfile|createwritestream|fs\.write|write_text|write_bytes|open\([^)]*['"][wa])/.test(lower)) return true
+  // .NET 静态写入（PowerShell 里 `[IO.File]::WriteAllText(...)` 等价于一次覆盖）
+  if (/\[(system\.)?io\.file\]::(writealltext|writealllines|writeallbytes|appendalltext)/.test(lower)) return true
+  // 版本控制回滚：`git checkout -- .webnovel/state.json` / `git restore` / `git reset --hard`
+  // 都能把受保护文件覆盖成历史版本，且不经过任何 write 动词。
+  if (/\bgit\s+(checkout|restore|reset|apply|stash)\b/.test(lower)) return true
   // 就地编辑 / 截断 / dd
   if (/\b(sed\s+-i|perl\s+-pi|truncate)\b/.test(lower)) return true
   // `dd ... of=` 的末尾是 `=`，后面跟非单词字符时 `\b` 不成立，不能加尾锚点
