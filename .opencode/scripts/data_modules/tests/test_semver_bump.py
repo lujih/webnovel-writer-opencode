@@ -236,8 +236,7 @@ class TestRunsAsScriptWithoutPythonPath:
             [sys.executable, str(script), *extra],
             input=stdin_text,
             capture_output=True,
-            text=True,
-            encoding="utf-8",
+            text=True, encoding="utf-8", errors="replace",
             env=env,
         )
 

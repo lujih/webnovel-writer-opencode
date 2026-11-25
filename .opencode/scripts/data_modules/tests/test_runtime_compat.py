@@ -71,38 +71,52 @@ class TestWindowsPathConversion:
     """Windows 平台上的 Git Bash / WSL 路径转换。"""
 
     def test_git_bash_drive(self, win32):
-        assert str(normalize_windows_path("/d/desktop/x")) == "D:/desktop/x"
+        assert normalize_windows_path("/d/desktop/x").as_posix() == "D:/desktop/x"
 
     def test_git_bash_uppercase_input(self, win32):
-        assert str(normalize_windows_path("/D/desktop/x")) == "D:/desktop/x"
+        assert normalize_windows_path("/D/desktop/x").as_posix() == "D:/desktop/x"
 
     def test_wsl_mnt_drive(self, win32):
-        assert str(normalize_windows_path("/mnt/d/desktop/x")) == "D:/desktop/x"
+        assert normalize_windows_path("/mnt/d/desktop/x").as_posix() == "D:/desktop/x"
 
     def test_already_windows(self, win32):
-        assert str(normalize_windows_path("C:/already/here")) == "C:/already/here"
+        assert normalize_windows_path("C:/already/here").as_posix() == "C:/already/here"
 
     def test_relative_path_untouched(self, win32):
-        assert str(normalize_windows_path("relative/path")) == "relative/path"
+        assert normalize_windows_path("relative/path").as_posix() == "relative/path"
 
     def test_multi_char_first_segment_untouched(self, win32):
         """`/usr/local/bin` 不是盘符路径，不该被转成 `U:/sr/local/bin`。"""
-        result = str(normalize_windows_path("/usr/local/bin"))
+        result = normalize_windows_path("/usr/local/bin").as_posix()
         assert result == "/usr/local/bin", f"被误转成 {result}"
 
     def test_backslash_path_untouched(self, win32):
-        assert "C:" in str(normalize_windows_path("C:\\Users\\me"))
+        assert "C:" in normalize_windows_path("C:\\Users\\me").as_posix()
 
 
 class TestNonWindowsPassthrough:
-    """非 Windows 平台原样返回。"""
+    """非 Windows 平台原样返回。
 
+    ⚠️ 这两个用例只在 posix 上成立：`normalize_windows_path()` 读的是**真实**
+    `sys.platform`，而 `Path` 的类型也由运行平台决定。在 Windows 上跑时，
+    `Path("/d/desktop/x").as_posix()` 仍会经过 `WindowsPath` 的盘符化处理，
+    断言必然失败——那是平台差异，不是回归。
+    """
+
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="仅在 posix 运行时有意义（Windows 上 Path 一定是 WindowsPath）",
+    )
     def test_posix_path_untouched(self):
         # 当前 CI 就是 posix；`/d/x` 不该被转成 `D:/x`
-        assert str(normalize_windows_path("/d/desktop/x")) == "/d/desktop/x"
+        assert normalize_windows_path("/d/desktop/x").as_posix() == "/d/desktop/x"
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="仅在 posix 运行时有意义（Windows 上 Path 一定是 WindowsPath）",
+    )
     def test_wsl_style_untouched(self):
-        assert str(normalize_windows_path("/mnt/d/x")) == "/mnt/d/x"
+        assert normalize_windows_path("/mnt/d/x").as_posix() == "/mnt/d/x"
 
 
 class TestEmptyInputIsNotCurrentDirectory:
@@ -170,7 +184,7 @@ class TestNoneInput:
             pytest.fail(f"Windows 上 None 抛了 TypeError: {exc}")
 
     def test_pathlib_input_works(self):
-        assert str(normalize_windows_path(Path("some/path"))) == "some/path"
+        assert normalize_windows_path(Path("some/path")).as_posix() == "some/path"
 
 
 class TestStdioHelper:

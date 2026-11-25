@@ -107,7 +107,7 @@ class TestFileSetComesFromGitIndex:
         """清单条目必须都在 git 索引里——否则就是遍历工作树的残留。"""
         tracked = subprocess.run(
             ['git', '-C', str(REPO_ROOT), 'ls-files', '-z', '--', '.opencode'],
-            capture_output=True, text=True, check=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", check=True, timeout=120,
         ).stdout.split('\0')
         tracked = {p for p in tracked if p}
 
@@ -180,7 +180,7 @@ class TestVerifyModeReportsDrift:
             [sys.executable, str(SCRIPTS / 'gen_manifest.py'),
              '--verify', '--opencode-dir', str(root / '.opencode'),
              '--manifest', str(mpath)],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
         )
         assert r.returncode == 1, r.stdout + r.stderr
 

@@ -175,7 +175,7 @@ class TestSelfTestActuallyPasses:
 
         r = subprocess.run(
             [_sys.executable, str(SCRIPTS / "security_utils.py")],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
         )
         assert r.returncode == 0, (
             f"security_utils 自检失败：\n{r.stdout[-2000:]}\n{r.stderr[-2000:]}"

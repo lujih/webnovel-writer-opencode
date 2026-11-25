@@ -156,7 +156,7 @@ class TestAgentsMdIsActuallyCommitted:
     def test_tracked_by_git(self):
         proc = subprocess.run(
             ["git", "ls-files", "--error-unmatch", "AGENTS.md"],
-            cwd=REPO_ROOT, capture_output=True, text=True)
+            cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
         assert proc.returncode == 0, (
             "AGENTS.md 未被 git 跟踪；.gitignore 里的忽略规则已移除，"
             "请确认 git add 过"

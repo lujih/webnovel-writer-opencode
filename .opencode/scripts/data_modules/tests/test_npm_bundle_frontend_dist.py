@@ -39,7 +39,7 @@ DIST_INDEX_REL = f"{DIST_REL}/index.html"
 
 
 def _run(args, cwd=None, check=True):
-    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=180)
+    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180)
     if check and r.returncode != 0:
         raise AssertionError(
             f"命令失败 rc={r.returncode}\nstdout:\n{r.stdout}\nstderr:\n{r.stderr}")
@@ -51,7 +51,7 @@ def _git_available() -> bool:
         return False
     r = subprocess.run(
         ["git", "rev-parse", "--is-inside-work-tree"],
-        cwd=REPO_ROOT, capture_output=True, text=True)
+        cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
     return r.returncode == 0
 
 
@@ -80,7 +80,7 @@ class TestGitignoreTracksFrontendDist:
         """
         r = subprocess.run(
             ["git", "check-ignore", "-v", "--no-index", DIST_INDEX_REL],
-            cwd=REPO_ROOT, capture_output=True, text=True)
+            cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
         # 输出格式：<source>:<lineno>:<pattern>\t<pathname>
         rule = r.stdout.split("\t")[0] if r.stdout.strip() else ""
         matched_pattern = rule.split(":", 2)[-1] if rule else ""

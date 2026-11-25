@@ -170,7 +170,7 @@ class TestCliDoesNotCrash:
 
         return subprocess.run(
             [sys.executable, str(RENDERER), "--project-root", str(project)],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
         )
 
     def test_no_traceback(self, project):
@@ -208,7 +208,7 @@ class TestWebnovelStateRenderDoesNotCrash:
         r = subprocess.run(
             [sys.executable, str(SCRIPTS / "webnovel.py"), "state", "render",
              "--project-root", str(project)],
-            capture_output=True, text=True, timeout=180,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180,
             cwd=str(SCRIPTS.parent),
         )
         combined = r.stdout + r.stderr

@@ -36,7 +36,7 @@ BUNDLE = NPM_DIR / "offline" / "opencode-bundle.tar.gz"
 
 
 def _run(args, cwd=None, check=True):
-    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=120)
+    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
     if check and r.returncode != 0:
         raise AssertionError(
             f"命令失败 rc={r.returncode}\nstdout:\n{r.stdout}\nstderr:\n{r.stderr}")

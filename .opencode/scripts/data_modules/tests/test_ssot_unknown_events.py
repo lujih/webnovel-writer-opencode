@@ -260,7 +260,7 @@ class TestCliExitCode:
         return subprocess.run(
             [sys.executable, str(SCRIPTS / "webnovel.py"),
              "ssot", "rebuild", "--project-root", str(project)],
-            capture_output=True, text=True, timeout=180,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180,
             cwd=str(SCRIPTS.parent),
         )
 
@@ -312,7 +312,7 @@ class TestVerifySurfacesUnknownEvents:
         r = subprocess.run(
             [sys.executable, str(SCRIPTS / "webnovel.py"),
              "ssot", "verify", "--project-root", str(project)],
-            capture_output=True, text=True, timeout=180,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=180,
             cwd=str(SCRIPTS.parent),
         )
         assert r.returncode != 0, f"有未知事件但 verify 返回 0：{r.stdout}"

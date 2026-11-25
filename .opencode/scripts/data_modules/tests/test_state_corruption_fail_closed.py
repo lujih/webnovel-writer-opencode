@@ -163,7 +163,7 @@ class TestCliSurfacesCorruptState:
         r = subprocess.run(
             [sys.executable, str(SCRIPTS_DIR / "webnovel.py"), "state",
              "get-progress", "--project-root", str(project.project_root)],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
             cwd=str(project.project_root),
         )
         combined = r.stdout + r.stderr

@@ -125,7 +125,7 @@ class TestNoBareTracebackAtCli:
         r = subprocess.run(
             [_sys.executable, str(SCRIPTS / "webnovel.py"),
              "delete-chapters", bad, "--project-root", str(project), "--dry-run"],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
             cwd=str(SCRIPTS.parent),
         )
         combined = r.stdout + r.stderr

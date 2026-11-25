@@ -98,7 +98,7 @@ class TestStagingNormalizesCrlf:
         import os
         runenv = {**os.environ, **env}
         r = subprocess.run(["git", "add", "sample.md"], cwd=repo,
-                           capture_output=True, text=True, env=runenv, timeout=60)
+                           capture_output=True, text=True, encoding="utf-8", errors="replace", env=runenv, timeout=60)
         assert r.returncode == 0, r.stderr
 
         blob = subprocess.run(["git", "cat-file", "-p", ":sample.md"], cwd=repo,

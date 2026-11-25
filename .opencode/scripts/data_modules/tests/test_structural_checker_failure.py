@@ -156,7 +156,7 @@ class TestCliReportsInsteadOfCrashing:
         r = subprocess.run(
             [sys.executable, str(SCRIPTS / "data_modules" / "structural_checker.py"),
              "--project-root", str(book), "--chapter", "1"],
-            capture_output=True, text=True, timeout=120,
+            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120,
         )
         combined = r.stdout + r.stderr
         assert "Traceback (most recent call last)" not in combined, (

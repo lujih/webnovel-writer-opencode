@@ -187,7 +187,7 @@ class TestEnvCredentialsAreIgnored:
         """返回 True 表示该路径会被忽略。"""
         r = subprocess.run(
             ["git", "check-ignore", "-q", "--", rel],
-            cwd=REPO_ROOT, capture_output=True, text=True, timeout=60,
+            cwd=REPO_ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
         )
         return r.returncode == 0
 
