@@ -171,12 +171,24 @@ class ContextManager:
             },
         }
 
+        total_budget = int(getattr(self.config, "context_section_char_budget", 0) or 0)
+        applied_budgets: Dict[str, int] = {}
+
         for section_name in self.SECTION_ORDER:
             if section_name in pack:
                 content = pack[section_name]
                 weight = weights.get(section_name, 0.0)
                 if weight > 0 or section_name in self.EXTRA_SECTIONS:
+                    # 权重 → 字符预算。此前 weight 只当布尔用，权重表对体积零影响。
+                    if total_budget > 0 and weight > 0:
+                        budget = max(1, int(total_budget * weight))
+                        content = self._clamp_section(content, budget)
+                        applied_budgets[section_name] = budget
                     payload[section_name] = content
+
+        if applied_budgets:
+            # 可观测：预算被应用过才写，避免老产物突然多出一个键
+            payload["meta"]["section_char_budgets"] = applied_budgets
 
         if chapter > 0:
             payload["meta"]["context_weight_stage"] = self._resolve_context_stage(chapter)
@@ -253,6 +265,7 @@ class ContextManager:
             "location_context": state.get("protagonist_state", {}).get("location", {}),
             "appearing_characters": self._load_recent_appearances(
                 limit=self.config.context_max_appearing_characters,
+                max_chapter=chapter,
             ),
         }
         scene["appearing_characters"] = self.filter_invalid_items(
@@ -932,8 +945,18 @@ class ContextManager:
                     break
         return results
 
-    def _load_recent_appearances(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
-        appearances = self.index_manager.get_recent_appearances(limit=limit)
+    def _load_recent_appearances(
+        self, limit: Optional[int] = None, max_chapter: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        """最近出场实体；`max_chapter` 是**上界**。
+
+        修复前这里没有章节上界：`appearances` 表按 `MAX(chapter)` 排序取前 N，
+        于是写第 3 章时会拿到"第 20 章出场最多"的角色——**未来剧情泄漏进当前章
+        上下文**（重写旧章时尤其致命）。上界取"正在写的这一章"。
+        """
+        appearances = self.index_manager.get_recent_appearances(
+            limit=limit, max_chapter=max_chapter,
+        )
         return appearances or []
 
     def _load_setting(self, keyword: str) -> str:
@@ -1043,6 +1066,47 @@ class ContextManager:
     def _trunc(text: str, limit: int) -> str:
         text = str(text or "")
         return text if len(text) <= limit else text[:limit].rstrip()
+
+    _CLAMP_MARKER = "\n…[已按段落预算截断]"
+
+    def _clamp_section(self, content: Any, budget: int) -> Any:
+        """按字符预算裁剪一个 section，**不改变结构**（只截字符串、裁条目）。
+
+        为什么需要：`TEMPLATE_WEIGHTS` 此前只做 `>0` 门控——权重 0.25 的段与
+        0.50 的段拿到完全一样的内容，`max_chars` 零引用，全程没有任何体积限制。
+        把权重换算成字符预算后，权重才真正决定"给多少位置"。
+
+        预算单位是**字符**：本仓库没有分词依赖，`_count_chapter_words()` 同样
+        以 `len()` 计；中文里字符与 token 近似线性，先控制住字符量即可。
+        """
+        if budget <= 0:
+            return content
+        if isinstance(content, str):
+            if len(content) <= budget:
+                return content
+            return self._trunc(content, budget) + self._CLAMP_MARKER
+        if isinstance(content, list):
+            kept: List[Any] = []
+            used = 0
+            for item in content:
+                size = (len(item) if isinstance(item, str)
+                        else len(json.dumps(item, ensure_ascii=False, default=str)))
+                if used + size > budget:
+                    break
+                kept.append(item)
+                used += size
+            return kept
+        if isinstance(content, dict):
+            kept_dict: Dict[str, Any] = {}
+            used = 0
+            for key, value in content.items():
+                size = len(json.dumps(value, ensure_ascii=False, default=str))
+                if used + size > budget:
+                    continue
+                kept_dict[key] = value
+                used += size
+            return kept_dict
+        return content
 
     def _author_style_patterns(self, patterns: Optional[List[Any]]) -> List[Dict[str, Any]]:
         """project_memory.json 的 patterns 按 importance 排序取前 N 条，

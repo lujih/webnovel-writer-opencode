@@ -267,6 +267,12 @@ class DataModulesConfig:
     context_reader_signal_include_debt: bool = False
     context_genre_profile_enabled: bool = True
     context_genre_profile_max_refs: int = 8
+    # 上下文各段的**字符预算总额**（0 = 不裁剪，保持旧行为）。
+    # 按 `TEMPLATE_WEIGHTS` 的权重切分到 core/scene/global 等段。
+    # 为什么按字符而不是 token：本仓库没有分词依赖（`_count_chapter_words`
+    # 同样以 len() 计），中文里二者近似线性。此前权重只做 `>0` 门控，
+    # 对 payload 体积零影响 —— 「token 预算」是装饰。
+    context_section_char_budget: int = 24000
     context_genre_profile_fallback: str = "shuangwen"
     context_writing_guidance_enabled: bool = True
     context_writing_guidance_max_items: int = 6

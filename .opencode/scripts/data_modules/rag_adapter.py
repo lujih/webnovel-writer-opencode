@@ -1133,7 +1133,7 @@ class RAGAdapter:
         if strategy == "bm25":
             return self.bm25_search(query, top_k=top_k, chunk_type=chunk_type, chapter=chapter)
         if strategy == "backtrack":
-            return await self.search_with_backtrack(query, top_k=top_k)
+            return await self.search_with_backtrack(query, top_k=top_k, chapter=chapter)
         if strategy == "graph_hybrid":
             return await self.graph_hybrid_search(
                 query=query,
@@ -1352,7 +1352,15 @@ class RAGAdapter:
             merged.append(child)
         return merged
 
-    async def search_with_backtrack(self, query: str, top_k: int = 5) -> List[SearchResult]:
+    async def search_with_backtrack(
+        self, query: str, top_k: int = 5, chapter: int | None = None
+    ) -> List[SearchResult]:
+        """检索片段；`chapter` 是**上界**（写第 N 章时只应看到 ≤N 章的内容）。
+
+        修复前这条路径是唯一没有章节上界的检索：vector/bm25/hybrid 都支持
+        `chapter=`，只有 backtrack 没透传，于是一次召回就可能把**未来章节**的
+        原文注进当前章的上下文（重写旧章时尤其致命——模型会"记得"还没写的剧情）。
+        """
         start_time = time.perf_counter()
         child_results = await self.hybrid_search(
             query,
@@ -1361,6 +1369,7 @@ class RAGAdapter:
             rerank_top_n=top_k,
             chunk_type="scene",
             log_query=False,
+            chapter=chapter,
         )
         parent_ids = sorted({r.parent_chunk_id for r in child_results if r.parent_chunk_id})
         parents = self._get_chunks_by_ids(parent_ids) if parent_ids else []

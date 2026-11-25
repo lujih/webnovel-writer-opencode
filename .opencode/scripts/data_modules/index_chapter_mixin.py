@@ -196,22 +196,42 @@ class IndexChapterMixin:
                 for row in cursor.fetchall()
             ]
 
-    def get_recent_appearances(self, limit: int = None) -> List[Dict]:
-        """获取最近出场的实体"""
+    def get_recent_appearances(
+        self, limit: int = None, max_chapter: int | None = None
+    ) -> List[Dict]:
+        """获取最近出场的实体。
+
+        `max_chapter` 为章节**上界**：写第 N 章时只能看到 ≤N 章的出场记录。
+        没有上界时 SQL 按全表 `MAX(chapter)` 排序，会把**未来章节**的角色当成
+        "最近出场"注入当前章上下文（重写旧章时尤其危险）。
+        """
         if limit is None:
             limit = self.config.query_recent_appearances_limit
         with self._get_conn() as conn:
             cursor = conn.cursor()
-            cursor.execute(
-                """
-                SELECT entity_id, MAX(chapter) as last_chapter, COUNT(*) as total
-                FROM appearances
-                GROUP BY entity_id
-                ORDER BY last_chapter DESC
-                LIMIT ?
-            """,
-                (limit,),
-            )
+            if max_chapter is None:
+                cursor.execute(
+                    """
+                    SELECT entity_id, MAX(chapter) as last_chapter, COUNT(*) as total
+                    FROM appearances
+                    GROUP BY entity_id
+                    ORDER BY last_chapter DESC
+                    LIMIT ?
+                """,
+                    (limit,),
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT entity_id, MAX(chapter) as last_chapter, COUNT(*) as total
+                    FROM appearances
+                    WHERE chapter <= ?
+                    GROUP BY entity_id
+                    ORDER BY last_chapter DESC
+                    LIMIT ?
+                """,
+                    (int(max_chapter), limit),
+                )
             return [dict(row) for row in cursor.fetchall()]
 
     def get_chapter_appearances(self, chapter: int) -> List[Dict]:
