@@ -39,6 +39,52 @@ class WriteGateRejected(RuntimeError):
         super().__init__(message)
         self.gate = gate or {}
 
+
+def merge_code_detected_pending(
+    disambiguation_result: Dict[str, Any],
+    extraction_result: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """把 settler 检出的同名歧义并入 ``disambiguation_result["pending"]``。
+
+    为什么必须在这里做（而不是靠 prompt）：`disambiguation_result.json` 由
+    data-agent 按 LLM 自评置信度生成，而 `ambiguous_mentions` 是 settler 用
+    实体表算出来的。LLM 不自觉消费该信号时 `pending` 永远是空数组，
+    `build_commit` 的消歧门禁（``bool(disambiguation_result.get("pending"))``）
+    就形同虚设——两个实体同名时 settler 静默取字典序最小者，错误的实体绑定
+    被固化为事实。`observer_settler.ambiguous_to_pending()` 早就写好了这条
+    「不依赖 LLM」的通道，但**没有任何生产调用点**。
+
+    合并语义是**只增不减**：代码检出的歧义不会被 LLM 的空 pending 覆盖。
+    去重键是 ``(mention, source)``，重复提交同一章不会叠加。
+    """
+    base = dict(disambiguation_result or {})
+    try:
+        from .observer_settler import ambiguous_to_pending
+    except ImportError:  # pragma: no cover - 包内相对导入失败时退回绝对导入
+        from data_modules.observer_settler import ambiguous_to_pending
+
+    detected = ambiguous_to_pending((extraction_result or {}).get("ambiguous_mentions"))
+    if not detected:
+        return base
+
+    pending = [p for p in (base.get("pending") or []) if isinstance(p, dict)]
+    seen = {(str(p.get("mention") or "").strip(), str(p.get("source") or "")) for p in pending}
+    added = 0
+    for entry in detected:
+        key = (entry["mention"], entry["source"])
+        if key in seen:
+            continue
+        seen.add(key)
+        pending.append(entry)
+        added += 1
+    if added:
+        logger.info(
+            "commit: 代码检出 %d 条同名歧义已并入 disambiguation.pending（source=%s）",
+            added, detected[0]["source"],
+        )
+    base["pending"] = pending
+    return base
+
 # 伏笔默认偿还章数：创建债务时默认要求 10 章内偿还
 _FORESHADOW_DUE_OFFSET = 10
 
@@ -77,6 +123,13 @@ class ChapterCommitService:
 
         # Plain strings or CBN-typed dicts → blocking
         # 通过 parse_review_output 归一化（含 severity→blocking 推导），不直接信任 LLM 原始值
+        # 代码侧的消歧信号必须先并进来，再参与任何判定：
+        # `disambiguation_result` 是 LLM 自评产物，`ambiguous_mentions` 是
+        # settler 用实体表算出来的客观歧义。合并"只增不减"。
+        disambiguation_result = merge_code_detected_pending(
+            disambiguation_result, extraction_result,
+        )
+
         _normalized = parse_review_output(chapter, review_result)
 
         # 门禁分层（2026-10 起）：
@@ -92,11 +145,19 @@ class ChapterCommitService:
         #       （flag-triage confirm）→ 触发 webnovel-heal，而不是在提交时静默拒绝。
         # 修复前：`_normalized.has_blocking` 在 rejected 表达式里——LLM 一次误判
         # 的 critical 就拒章；且 _shape_issue 把「纯解析失败」也包装成 critical 一并阻断。
+        #
+        # 但 v3.0 把 has_blocking 拿掉后留下一个洞：`_shape_issue` 合成的
+        # critical（issues 部分畸形 / 空对象）**也是** blocking=True，于是同样
+        # 被降级成观察标记——那条本该 fail-closed 的技术信号被静默放行，
+        # 文案却写着「已按阻断处理」。这里按 `is_malformed_issue()` 显式补回：
+        # 技术信号必须拒章，语义信号才留痕放行。
+        has_malformed = any(is_malformed_issue(i) for i in _normalized.issues)
         rejected = (
             bool(missed_raw)
             or bool(missed_cbn)
             or bool(disambiguation_result.get("pending"))
             or _normalized.unparseable
+            or has_malformed
         )
         status = "rejected" if rejected else "accepted"
 

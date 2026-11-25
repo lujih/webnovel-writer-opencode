@@ -381,19 +381,25 @@ def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
     if malformed:
         # 保留已解析出的有效问题（不丢信息），并补一条 critical 阻断项：
         # 无法确认被丢弃的部分里是否藏着更严重的问题。
+        #
+        # description 必须以 MALFORMED_DESCRIPTION_PREFIX 开头：`is_malformed_issue()`
+        # 靠前缀识别技术信号，而 category 会被 `__post_init__` 降级成 `other`
+        # （`review_output_malformed` 不在 VALID_CATEGORIES 里）。此前文案是
+        # 「issues 数组中有 N 个…」，不匹配任何前缀 → 合成项被判成语义问题，
+        # 门禁只发 warning。前半句因此不能改。
         issues.append(ReviewIssue(
             severity="critical",
             category="review_output_malformed",
-            description=(f"issues 数组中有 {malformed} 个元素不是对象，其内容未被解析。"
-                        "已按阻断处理，请人工复核。"),
+            description=(f"{MALFORMED_DESCRIPTION_PREFIX}：issues 数组中有 {malformed} 个"
+                         "元素不是对象，其内容未被解析。已按阻断处理，请人工复核。"),
             blocking=True,
         ))
     if empty:
         issues.append(ReviewIssue(
             severity="critical",
             category="review_output_malformed",
-            description=(f"issues 数组中有 {empty} 个元素是空对象，没有任何可判读的内容。"
-                        "已按阻断处理，请人工复核。"),
+            description=(f"{MALFORMED_DESCRIPTION_PREFIX}：issues 数组中有 {empty} 个"
+                         "元素是空对象，没有任何可判读的内容。已按阻断处理，请人工复核。"),
             blocking=True,
         ))
     # unparseable 只能由 `review_parseable` 字段（0 = 不可解析）显式声明——
