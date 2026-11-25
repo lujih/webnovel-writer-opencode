@@ -139,8 +139,60 @@ async function downloadWithFallback(urls, destPath) {
 
 // ── 步骤 3: 部署 .opencode/ ──────────────────────────────
 
+/**
+ * 载荷完整性预检 —— **必须在删除旧 .opencode/ 之前跑**。
+ *
+ * 修复前的顺序：确认覆盖 → `rmSync(dest)` → 校验 sha256 → 校验失败 `error()`
+ * 直接 `exit(1)`。于是 npm 包被篡改/损坏时用户的状态是：旧工具链已被删、
+ * 新的没解压、命令以失败退出。校验的意义是「拒绝坏载荷」，不是「先毁掉
+ * 已有的再拒绝」。
+ *
+ * 同时修掉第二个洞：`--sha256` 此前只在网络分支生效，走默认离线包时被
+ * 静默忽略（sidecar 缺失也只 warn 后继续解压）。现在离线路径把它当成
+ * **额外**的必过校验（与 sidecar 同时校验，两者都必须匹配）。
+ *
+ * 幂等：无副作用，可重复调用。
+ */
+async function preflightOfflinePayload(options) {
+  const offlinePath = join(__pkgRoot, 'offline', 'opencode-bundle.tar.gz');
+  if (options.mirror || !existsSync(offlinePath)) return null; // 网络分支在下载后校验
+
+  const checks = [];
+  const sidecar = readSha256Sidecar(`${offlinePath}.sha256`);
+  if (sidecar) checks.push({ label: 'sidecar', expected: sidecar });
+  if (options.sha256) {
+    if (!looksLikeSha256(options.sha256)) {
+      error(`--sha256 不是合法的 sha256 hex: ${options.sha256}`);
+    }
+    checks.push({ label: '--sha256', expected: String(options.sha256).trim().toLowerCase() });
+  }
+
+  if (!checks.length) {
+    warn('离线包缺少 .sha256 校验文件（旧版本包），跳过完整性校验');
+    return null;
+  }
+
+  for (const { label, expected } of checks) {
+    const { ok, actual } = await verifyFileSha256(offlinePath, expected);
+    if (!ok) {
+      error(
+        `离线包完整性校验失败（来源: ${label}），已拒绝覆盖 .opencode/。\n` +
+        `  期望 sha256: ${expected}\n` +
+        `  实际 sha256: ${actual}\n` +
+        `这通常意味着 npm 包在下载/缓存过程中被改动过。请清除 npm 缓存后重装：\n` +
+        `  npm cache clean --force && npx @cszx/webnovel-writer-opencode init`
+      );
+    }
+    info(`离线包完整性校验通过（${label}: ${expected.slice(0, 16)}…）`);
+  }
+  return 'verified';
+}
+
 async function deployOpencode(cwd, options) {
   const dest = join(cwd, '.opencode');
+
+  // 先校验载荷，再动磁盘上已有的东西（顺序不能反，见 preflightOfflinePayload）
+  await preflightOfflinePayload(options);
 
   if (existsSync(dest)) {
     const overwrite = await confirm('.opencode/ 已存在，是否覆盖？', false);
@@ -151,27 +203,8 @@ async function deployOpencode(cwd, options) {
   // 1) 离线包（tar 内已含 .opencode/ 目录，解压到 cwd 即得 cwd/.opencode/）
   const offlinePath = join(__pkgRoot, 'offline', 'opencode-bundle.tar.gz');
   if (!options.mirror && existsSync(offlinePath)) {
-    // 完整性校验必须发生在解压之前：离线包随 npm 包发布、内容固定，
-    // 是本安装器唯一能强制校验的载荷。npm tarball 若被替换，sha256
-    // sidecar 也会一起被换掉——那属于 npm 生态自身的信任根，本节不管。
-    // 但网络镜像路径（下面 step 2）没有预置哈希可用，所以两级不同：
-    // 这里强制，那里只打印供审计。
-    const expected = readSha256Sidecar(`${offlinePath}.sha256`);
-    if (expected) {
-      const { ok, actual } = await verifyFileSha256(offlinePath, expected);
-      if (!ok) {
-        error(
-          `离线包完整性校验失败，已拒绝解压。\n` +
-          `  期望 sha256: ${expected}\n` +
-          `  实际 sha256: ${actual}\n` +
-          `这通常意味着 npm 包在下载/缓存过程中被改动过。请清除 npm 缓存后重装：\n` +
-          `  npm cache clean --force && npx @cszx/webnovel-writer-opencode init`
-        );
-      }
-      info(`离线包完整性校验通过 (sha256 ${expected.slice(0, 16)}…)`);
-    } else {
-      warn('离线包缺少 .sha256 校验文件（旧版本包），跳过完整性校验');
-    }
+    // 完整性校验已由 preflightOfflinePayload() 在删除旧目录**之前**完成，
+    // 这里只负责解压。别再往这段加校验——它会回到「先删后验」的老路上。
 
     const s = createSpinner('从离线包解压 .opencode/');
     s.start();

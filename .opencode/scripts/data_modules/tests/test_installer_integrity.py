@@ -48,7 +48,11 @@ def _text(path):
 
 
 def _run(args, cwd=None, check=True):
-    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True, timeout=180)
+    # encoding 必须显式：Windows 下 text=True 按 GBK 解码 node 的中文输出会抛
+    # UnicodeDecodeError，reader 线程炸掉后 stdout/stderr 变成 None——
+    # 失败信息会伪装成 "NoneType is not iterable"，与真实原因无关。
+    r = subprocess.run(args, cwd=cwd, capture_output=True, text=True,
+                       encoding="utf-8", errors="replace", timeout=180)
     if check and r.returncode != 0:
         raise AssertionError(
             f"命令失败 rc={r.returncode}\nstdout:\n{r.stdout}\nstderr:\n{r.stderr}")
@@ -199,7 +203,7 @@ class TestInstallerVerifiesBeforeExtract:
 
     def test_init_refuses_to_extract_on_mismatch(self):
         src = _text(INIT_JS)
-        assert "离线包完整性校验失败，已拒绝解压" in src
+        assert "离线包完整性校验失败" in src
 
     def test_init_warns_instead_of_silently_passing_when_sidecar_absent(self):
         """旧版本包没有 sidecar：必须出声，不能静默当通过。"""

@@ -39,8 +39,14 @@ export async function uninstall() {
         info('AGENTS.md 与 CLAUDE.md 不一致（你改过说明文件），已保留两者');
       }
     } else {
+      // 只有一个文件存在时**无法**判定它是不是「未修改的安装器镜像」。
+      // 修复前这里无条件 rmSync：用户删掉 CLAUDE.md、只留自己写/改过的
+      // AGENTS.md 时，卸载会把用户文件一起删掉——卸载不该碰用户内容。
       for (const f of [agents, claude]) {
-        try { if (existsSync(f)) rmSync(f); } catch {}
+        if (existsSync(f)) {
+          const name = f.split(/[\\/]/).pop();
+          info(`${name} 无法确认为安装器部署的镜像（另一份说明文件不存在），已保留`);
+        }
       }
     }
 
