@@ -60,7 +60,7 @@ Webnovel Writer for OpenCode 是一个面向长篇中文网文的 AI 辅助写�
 
 ### 3.1 安装
 
-**系统要求**：Node.js ≥ 22、Python 3.10+、OpenCode 运行环境。
+**系统要求**：Node.js ≥ 22、Python 3.10+、**OpenCode 2.x**（本项目已放弃 V1 兼容，V1 请用 v3.1.x 及更早版本）。
 
 ```bash
 npx @cszx/webnovel-writer-opencode init
@@ -72,7 +72,7 @@ npx @cszx/webnovel-writer-opencode init
 > - `2.9.2-11`（2026-09-18）：遗漏整批 OpenCode v2 适配，`license` 还误标为 MIT。**勿再使用。**
 > - `2.9.2-12` ～ `2.9.2-15`：已含 v2 适配（`opencode.json`、agent `permissions`、
 >   写保护双入口、`wn-*` 诊断命令、随包 `LICENSE`），**但离线包里没有 `AGENTS.md`**——
->   OpenCode 2.x 用户装完没有任何项目说明（2.x 不回退 `CLAUDE.md`）。
+>   装完模型读不到本项目的写作规则（那时两份说明都没进包）。
 > - `2.9.2-16` 起：离线包内置 `AGENTS.md` + `CLAUDE.md`，安装时部署到工作区根
 >   （与 `.opencode/` 平级，正是 2.x 的发现位置）。装过旧版执行
 >   `npx @cszx/webnovel-writer-opencode update` 即可补齐。
@@ -143,28 +143,21 @@ RERANK_API_KEY=your_api_key
 
 同时兼容 **OpenCode 1.x 与 2.x**：
 
-- **1.x**：≥ 1.18.29（旧版需升级——写保护插件的双入口写法从该版本起才生效）。
-- **2.x**：直接可用。仓库已按 V2 规范适配，配置文件 `.opencode/opencode.json`。
-- **项目说明走 `AGENTS.md`**：OpenCode 2.x 只发现 `AGENTS.md`、不再回退 `CLAUDE.md`。克隆后请运行 `python .opencode/scripts/webnovel.py sync-agents-md` 生成（CI 会校验二者一致）。**注意不要把 `AGENTS.md` 加进 `.gitignore`**——那是仓库的正式产物，漏了会导致模型看不到全部项目规则。
+- **2.x**：支持。**本项目自 v3.2 起仅支持 OpenCode 2**——`.opencode/opencode.json` 使用 V2 原生键（`$schema` + 顶层 `permissions` + `formatter`/`compaction`/`watcher`/`tool_output`），对照官方 schema 校验。
+- **1.x**：**不再支持**（破坏性变更）。实测 OpenCode 1.18.34 遇到 V2 的 `permissions` 键会以 rc=1 **拒绝加载整份配置**（"V2 permissions are not supported by OpenCode V1"）。需要 V1 请使用 v3.1.x 及更早版本——那两个版本的配置刻意只用了 V1 也能加载的 4 个键。
+- **项目说明**：仓库同时提供 `AGENTS.md`（正本）与**逐字节镜像**的 `CLAUDE.md`。OpenCode 2.x 优先用同目录的 `AGENTS.md`，缺了会回退 `CLAUDE.md`（V2 保留该 fallback）；两份都带是为了同时与 Claude Code 共用同一套规则。克隆后请运行 `python .opencode/scripts/webnovel.py sync-agents-md` 生成/校验（CI 会校验二者一致）。**注意不要把 `AGENTS.md` 加进 `.gitignore`**——漏了会导致模型看不到全部项目规则。
 - **不要开启 `formatter`**：内置格式化器（prettier / biome）覆盖 `.md`，而章节正文全是 `.md`，开启会重排你的作品。配置里已显式关闭。
 
-> ⚠️ **V1 用户的一处功能差异**：`opencode.json` 里**刻意不写** V2 的 `permissions` 键。
-> 实测 OpenCode 1.18.34 遇到该键会以 rc=1 **拒绝加载整份配置**
-> （"V2 permissions are not supported by OpenCode V1"），那会让所有 V1 用户起不来。
->
-> 代价是：**在 V2 下，主 agent（你直接对话的那个）不再"看不见" SSOT 路径的
-> edit 工具**，改为在运行时被拒绝。SSOT 写保护本身没有消失——
-> `.opencode/plugins/write-guard.js` 是全局 tool hook，对所有 agent 生效、V1/V2 都跑。
-> 受影响的只是 V2 主 agent 少了一层"工具不可见"的提前拦截。
+> ⚠️ **SSOT 写保护（V2 三层）**：① `.opencode/opencode.json` 顶层的 7 条 `edit` deny（主 agent 也受约束）；② 6 个 agent 各自的 `permissions`（子 agent 用自己的规则集）；③ `.opencode/plugins/write-guard.js` 的运行时拦截。三层互补，任一层单独失效都还有兜底。
 
-> ⚠️ **OpenCode 会自动改写你的文件（已实测，非 bug，不必修）**：
-> 1. **每次运行都会往 `.opencode/opencode.json` 插入 `"$schema"`**——
->    恰是我们刻意避开的那个陈旧 V1 schema。仓库提交的版本不含它；
->    本地被写回无害（V1/V2 都接受该键）。
+> ⚠️ **OpenCode 会顺手改你的文件（已实测，非 bug，不必修）**：
+> 1. `.opencode/opencode.json` 的 `"$schema"` 现在是**我们自己写的**（官方推荐，编辑器校验用）。
+>    若 OpenCode 运行后把它改成别的值，以 `https://opencode.ai/config.json` 为准。
 > 2. **每次运行都会往 `.opencode/package.json` 追加 `@opencode-ai/plugin` 依赖**
 >    （并同步 lock）。回退后下次运行又出现，无法持久去除。本项目刻意不用它，
 >    留着无副作用。
-> 3. **不要在 V2 里运行官方的 "Migrate my OpenCode configuration" 迁移提示词。**
+> 3. 官方 "Migrate my OpenCode configuration" 提示词可以跑，但它会重写整份配置——
+>    跑完请核对 `$schema`、顶层 `permissions` 与 `external_directory: ask` 仍在。
 >    它会把配置转成 V2 原生形态（含 `permissions`），此后 **V1 将无法加载**
 >    （rc=1，见上方 V1 差异说明）。双版本兼容的前提是配置保持 V1 安全形态；
 >    V2 官方文档也明确警告"不要让 V1 指向已转换为原生 V2 形态的配置"。
@@ -222,7 +215,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   └── scripts/                  # Python 核心脚本
 │       ├── webnovel.py           # CLI 统一入口（40 个子命令）
 │       ├── data_modules/         # 核心数据模块（77 个）
-│       └── tests/                # 测试（173 个测试文件，2484 用例）
+│       └── tests/                # 测试（174 个测试文件，2593 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构

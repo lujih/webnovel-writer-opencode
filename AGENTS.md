@@ -128,33 +128,32 @@ Code is organized as a pipeline — each layer feeds the next:
 
 ### OpenCode Integration
 
-16 skills and 6 agents defined in `.opencode/skills/` and `.opencode/agents/`。**OpenCode v2 适配**（依据 https://opencode.ai/v2/docs/migrate-v1 ）：
-V2 三处破坏性变更中两处直接影响本仓库——**① 插件 API 全换，V1 插件实现在 V2 里根本不会被加载**（不报错、静默不加载，守卫无声失效），故 `write-guard.js` 采用官方并存写法：同一个 default export 上同时给 `setup(ctx)`（V2 调用）与 `server()`（V1 调用，OpenCode ≥ 1.18.29 支持 object 入口）。两代 hook 入参形状不同（V1 `input.tool`/`output.args` vs V2 `event.tool`/`event.input`），判定逻辑抽成共享的 `guard(tool, args)`，`test_write_guard_plugin.py` 逐例比对两代判定必须一致。有意不 `import { Plugin } from '@opencode/plugin'`：该包本机未安装，静态 import 解析失败会让插件在 V1 下也加载不了。
-**② V2 只发现 `AGENTS.md`，不再回退 `CLAUDE.md`**——没有 AGENTS.md 则整套项目说明在 V2 下不可见。故 `sync-agents-md` 把 `CLAUDE.md` 逐字节镜像为 `AGENTS.md` 并纳入 `--check` CI 门禁。内容逐字节一致而非拆成两份：拆开则两套规则各自漂移、模型会收到互相矛盾的两套说明；一致则不会双重注入（部分宿主的 `instructionFileCandidates` 同时含两者，内容相同时去重并优先 AGENTS.md）。
+16 skills and 6 agents defined in `.opencode/skills/` and `.opencode/agents/`。**本项目自本次改动起以 OpenCode 2 为唯一目标**（V1 兼容已放弃，理由见下方配置章节）。规范依据：[/docs/migrate-v1/](https://opencode.ai/docs/migrate-v1/) 、[/docs/agents/](https://opencode.ai/docs/agents/) 、[/docs/skills/](https://opencode.ai/docs/skills/) 、[/docs/commands/](https://opencode.ai/docs/commands/) 、[/docs/permissions/](https://opencode.ai/docs/permissions/) 、[/docs/build/plugins/migrate-v1](https://opencode.ai/docs/build/plugins/migrate-v1) 。
+**① 插件 API 全换**：V1 插件实现在 V2 里根本不会被加载（不报错、静默不加载，守卫无声失效）。`write-guard.js` 用官方「one package, both generations」写法：同一个 default export 上并存 `setup(ctx)`（V2）与 `server()`（V1 ≥1.18.29）。V2 侧注册 `ctx.tool.hook('execute.before', event => guard(event.tool, event.input))`——回调收**一个可变 event**；V1 侧仍是 `'tool.execute.before'(input, output)`，两代入参形状不同，判定抽成共享 `guard(tool, args)`，`test_write_guard_plugin.py` 逐例比对两代结论必须一致。有意不 `import { Plugin } from '@opencode/plugin'`：`Plugin.define` 只是定义辅助，手写的 `{ id, setup, server }` 与其返回值同形状，少一个依赖就少一个加载失败点（`test_opencode_v2_native.py` 钉住 id + setup + server 三要素）。
+**② `AGENTS.md` 与 `CLAUDE.md`**：V2 **保留** `CLAUDE.md` fallback（目录里没有 AGENTS.md 就用 CLAUDE.md；`~/.claude/CLAUDE.md` 顶替缺失的全局 AGENTS.md），且**按目录各自择一**——根目录有 AGENTS.md 不再遮蔽子目录的 CLAUDE.md。所以 `sync-agents-md` 的镜像不是"V2 只认 AGENTS.md"的补丁（旧说法已作废），理由变为三条更稳的：① 让 V2 在任何目录都命中 AGENTS.md（显式存在优先于 fallback）；② 与 Claude Code 共用同一份说明；③ 逐字节一致，避免两份规则漂移。`--check` 已纳入 CI。
 已确认无需改动：skills 目录式 + `name`/`description`（V2 明示不需重写）、`mode: subagent`（V2 仍接受 primary/subagent/all）、`.opencode/plugins/` 与 `.opencode/agents/`（已是 V2 推荐位置）。
 **6 个 agent 已迁到 `permissions:`**（`migrate_agents_v2_permissions.py`，幂等可重复运行）。V1 文档明写 legacy `tools` 布尔配置"已废弃并并入 `permission`"，而**两代默认策略都是放行**（`{action:"*",resource:"*",effect:"allow"}`）——所以原来那 6 个 `tools: {read: true, ...}` **从未构成白名单**，只是把当时默认放行的东西又写了一遍。只把 true 翻成 allow 等于零约束，必须先 deny-all 再逐条放行。规则顺序即优先级（最后命中者生效），故 deny-all 必须排在最前。每个 agent 在 `shell` 之后显式放回 `external_directory: ask`——书项目在 `E:\workspace\webnovel2`，`deny *` 会连它一起拒掉，agent 立刻读不到正文与 state.json（迁移时真踩到，已被 `test_agent_v2_permissions.py` 钉死）。`glob`/`grep` 无条件放行：只读发现工具，原 `tools:` 没列但 V1 默认放行，deny-all 会收掉它们——那属于迁移自造的回归。
 **本次收紧的**（相对原先"实际全放行"的行为）：`subagent`/`skill`/`webfetch`/`websearch`/`question` 一律 deny——子 agent 不该自行委派、联网或向用户追问（与 V2 出厂 `general` agent 策略一致）。`edit` 逐个判定：`reviewer`/`chapter-writer-agent`/`data-agent`/`observer-agent` 有（reviewer 正文要求"用 Write 工具将完整 JSON 写入 `${REVIEW_OUTPUT}`"）；`context-agent`/`deconstruction-agent` 无（后者正文明写"只返回结构化结果，不写任何文件"）。
-仍待办：3 个 skill 的 `allowed-tools` 在 V2 不被解释（V2 只认 `name`/`description`/`slash`/`metadata`）。该键对 OpenCode 两代都是惰性的，保留它是为兼容 Claude Code / Agent Skills 生态，若不跨宿主使用可直接删。
+**skill frontmatter 已按 V2 规范收敛**：V2 只解释 `name` / `description` / `metadata.opencode/autoinvoke` / `disable-model-invocation`。此前 3 个 skill 带的 `allowed-tools: Agent AskUserQuestion` 已**删除**——它在 V2 里不被解释，留着等于"看起来限制了工具其实没生效"，正是本项目反复栽的「声明了但没生效」。`compatibility` 是官方明确接受的可移植字段，保留。`test_opencode_v2_native.py` 钉住：16 个 skill 都有 `description`（没有它模型根本看不到该 skill）、无 `allowed-tools`、目录名与 `name` 一致（ID 由路径决定，`name` 只是展示名）。
 
 ### OpenCode v2 深度适配（.opencode/opencode.json + commands/）
 
-`.opencode/opencode.json`（JSONC）只有 4 个键，且**每一个都要求 OpenCode V1 也能加载**：
+`.opencode/opencode.json`（JSONC）是 **OpenCode 2 原生配置**，键集合与 https://opencode.ai/config.json 对齐：
 
-- ⚠️ **不带 `permissions`（关键约束）**：2026-10-04 实测 opencode 1.18.34，`opencode debug config` 遇到 V2 的 `permissions` 键会以 **rc=1 拒绝加载整份配置**——不是忽略单个键、不是降级：
-  `Error: Configuration is invalid at .../.opencode/opencode.json` / `↳ V2 permissions are not supported by OpenCode V1. Use V1 "permission" rules or run opencode2.`
-  本仓库是对外公开的、安装器会把 `.opencode/` 部署到用户工作区，写死 V2 权限会让**全部 V1 用户起不来**。同次实测确认 `formatter`/`compaction`(V2 形状的 `keep`)/`watcher`/`tool_output` 四个键 V1 均接受，故只留这四个。`test_opencode_v2_config.py::TestConfigDoesNotBreakV1` 钉死此约束。
-  同次实测还确认一件**不对称**的事：`.opencode/agents/*.md` frontmatter 里的 V2 `permissions` 在 V1 下是**静默忽略**（agent 照常加载，规则回落 V1 默认 102 条），不触发这种失败。所以子 agent 可以留 V2 规则，配置文件不行。
-- **不带 `$schema`**：2026-10-01 实测 `https://opencode.ai/config.json` 返回的**仍是 V1 形状**——顶层 `additionalProperties: false`，只认 `permission`/`agent`/`command`/`plugin`/`snapshot`/`attachment`/`provider`，文档里的 V2 原生键一个都没有，挂上去只会让编辑器把**正确的** V2 字段全标红。
-  ⚠️ 但 **OpenCode 会自动把它写回来**：2026-10-04 实测，执行任意一次 `opencode debug config` 后本文件第 2 行被自动插入 `"$schema": ...`。仓库提交的版本刻意不含它；本地被写回不必修（V1 也接受 `$schema`）。测试因此断言的是"仓库副本不含"，不是"任何本地副本都不含"。
-- **不带 `instructions`**：V2 文档原文 "OpenCode accepts this field but does not load its entries; use AGENTS.md for instructions" —— 能过校验、什么都不做的静默空操作。项目说明唯一真实通道是 `AGENTS.md`。
-- **`formatter: false`（显式）**：依据 V2 文档，内置 formatter 里 prettier/biome **都覆盖 `.md`**，而本书 65 章正文全是 `.md`（`正文/第1卷/第0001章-….md`）。开启会把已发布正文重排折行、规范空白——那是**改用户作品**，且 formatter 在写盘**之后**才跑，拦不住。（**文档转述，未在本书正文上实测**。）
-- **`compaction`**：用 V2 的 `keep.tokens`（24000），不用 V1 的 `tail_turns`/`prune`。调高 keep 是为让刚写完那章原文尽量逐字留在尾部。
+- **`$schema` 必须写**：`"$schema": "https://opencode.ai/config.json"`。官方 config 页把它放进所有示例，编辑器校验与自动补全靠它。
+  ⚠️ 旧断言已作废：2026-10 曾以「该地址返回的仍是 V1 形状 schema」为由刻意不写——现在 schema 已是 V2 形状，`test_opencode_v2_config.py::TestSchemaDeclaration` 反转钉住「必须声明」。
+- **顶层 `permissions`（SSOT 写保护第一层）**：7 条 `edit` deny 覆盖 `.webnovel/state.json`、`index.db`、`vectors.db`、`memory_scratchpad.json`、`.story-system/events/`、`commits/`、`master_setting.json`，外加 `external_directory: ask`。
+  规则语义：**最后匹配者生效**，全局规则先于 agent 规则且 agent 规则是**追加**不是替换；默认基线是 `{*:*:allow}` + `.env` 读 ask，所以我们的 deny 位于基线之后、必须生效。`TestNativeV2Shape` 逐条校验三元组形状、V2 action 名、7 条路径覆盖、`external_directory` 为 ask。
+- **`external_directory: ask` 是必须显式写的**：V2 **默认允许**访问项目外（V1 是 ask）。本项目书项目常在仓库之外的 `E:\workspace\webnovel2`，不写就等于静默放行任意外部路径。
+- **V1 不再支持（破坏性变更）**：V1 的配置 schema 是 `additionalProperties: false`，遇到顶层 `permissions` 会 rc=1 **拒绝整份配置**（2026-10 实测 1.18.34）。本项目现为 V2-only，需要 V1 请用 v3.1.x 及更早版本。README/INSTALL 已标注 requires OpenCode 2。
+- **`formatter: false`（显式）**：V2 内置 prettier/biome **都覆盖 `.md`**，而本项目产物绝大多数是 `.md`。formatter 在写盘**之后**才跑，等于重排用户作品且拦不住。
+- **`compaction`**：V2 形状 `keep.tokens`(24000) + `buffer`(20000)，取代 V1 的 `tail_turns`/`prune`。调高 keep 是为让刚写完那章原文尽量逐字留在尾部。
 - **`watcher.ignore`**：屏蔽 `node_modules`/`__pycache__`/`.tmp`/`外部参考`，减少无意义的文件事件。
-- **`tool_output`**：`max_lines`/`max_bytes` 取 V2 文档给出的默认值 2000/51200，写出来只为长输出时尽早暴露截断，不改变默认行为。
+- **`tool_output`**：`max_lines`/`max_bytes` 取 V2 文档默认值 2000/51200，写出来只为长输出时尽早暴露截断。
+- **不使用 `instructions`**：V2 **确实会加载**该键（/docs/config#instructions）。此前写的「V2 accepts this field but does not load its entries」是**错的**；本项目的理由改为「规则集中在单一 AGENTS.md，不需要额外文件清单」，而不是「该键无效」。
 
-**SSOT 写保护现状（2026-10-04 调整后）**：原本是三层——① 主 agent 的全局 `permissions` deny、② 子 agent 各自的 `permissions` deny、③ `write-guard.js` 的 `tool.execute.before` 运行时抛错。**因①会让 V1 拒绝加载配置，已移除**，故主 agent 在 V2 下不再"看不见" SSOT 路径的 edit 工具（改为运行时拒绝）。
-**保护本身没有缺口**：③ 挂的是全局 tool hook，与 agent 无关、对主 agent 生效、V1/V2 都能跑；②对 V2 仍在。丢失的只是"V2 主 agent 少一层提前拦截"，不是拦截本身。`test_opencode_v2_config.py::TestSsotGuardSurvivesPermissionsRemoval` 从 `write-guard.js` 的 `PROTECTED_SUFFIXES` **解析**清单（不抄一份——早先抄写时把后缀写成了 glob 且漏了 `commits/`，自己造出个不存在的清单），钉住兜底层不许被一起删掉。
-另外 ② 与 ③ 的清单一致性由 `test_agent_v2_permissions.py::test_matches_write_guard_plugin_list` 钉住。
+**SSOT 写保护现状（V2 原生，三层都在）**：① 顶层 `permissions` 的 7 条 `edit` deny——主 agent 也受约束，模型在权限判定阶段就看不到那些 edit；② 6 个 agent 各自的 `permissions`——子 agent 用**自己的**规则集，不是父集的子集（V2 明确如此）；③ `write-guard.js` 的 `ctx.tool.hook('execute.before')` 运行时抛错。
+三层互补而非重复：①② 依赖 OpenCode 的权限流程，③ 是运行时兜底（绕过权限配置直接调 hook 也拦得住）。清单一致性由 `test_agent_v2_permissions.py::test_matches_write_guard_plugin_list` **双向解析** write-guard 的 `PROTECTED_SUFFIXES` 钉住（此前是子集断言——plugin 多一条仍然绿）；`test_opencode_v2_config.py::TestNativeV2Shape` 另钉住 config 侧 7 条路径全覆盖。
 
 `.opencode/commands/` 5 个只读斜杠命令（`wn-status` / `wn-doctor` / `wn-ssot-verify` / `wn-where` / `wn-chapter-status`），用 `!\`shell\`` 块把 CLI 真实输出**在 prompt 提交前**注入，模型不必先猜再跑。**关键约束**：V2 文档 Warning 明确 shell 块"run when OpenCode evaluates the command, **outside the agent's tool permission flow**"——即 `write-guard.js` 拦不到它。所以 `test_opencode_v2_config.py` 断言 shell 块里**不得出现破坏性子命令**（`delete-chapters`/`rebuild`/`chapter-commit`/`publish`/`export`/…）；写路径必须走 skill + agent permissions + write-guard 链路。破坏性命令仍留 dry-run 默认 + `--apply` 二次确认。
 实测 5 个命令的真书（`E:\workspace\webnovel2\凡尘之舞`）均正常执行；`ssot verify` 在真书上确实检出漂移并以 rc=1 退出（`foreshadowing` 0 vs 26、`entities_v3` 0 vs 4、`world_rules` 0 vs 10、`reader_promises` 0 vs 7），故 `wn-ssot-verify` 明确要求模型**不得自行 rebuild**。
@@ -162,14 +161,14 @@ V2 三处破坏性变更中两处直接影响本仓库——**① 插件 API 全
 **npm 离线包必须携带项目说明**（2026-10-09，对照 V2 迁移文档追出的三重缺口，已修）：`build-bundle.js` 原来只打包 `.opencode/`，仓库根的 `AGENTS.md`/`CLAUDE.md` 从未进包——已发布的 `2.9.2-12` 实测无此二文件，即 **npm 主安装路径在 V2 下没有项目说明**（且是静默失败：模型照常调用 skill 但读不到规则）。修复：① 构建时把两份文件追加为 tar 根条目（解压到工作区根、与 `.opencode/` 平级——正是 V2 的发现位置），缺失即拒绝出包；② 网络安装路径 PREFIX 限定 `.opencode/`、抽不到根文件，`init`/`update` 改用 `extractRootDocs`（`extract.js` 新增 `only` 白名单过滤）从源码 tarball 单抽，**必须在 `unlinkSync(tmp)` 之前**；③ 抽取失败不判安装失败，靠部署后的 AGENTS.md 存在性检查出声警告；④ `uninstall` 只删逐字节镜像（AGENTS==CLAUDE 才删），用户改过的说明保留。`test_npm_bundle_instructions.py`（11 例，需 node）钉住：构建产物含二文件且与仓库根逐字节一致、缺文件时构建失败、`extractRootDocs` 白名单不越权、init/update 调用顺序。
 
 **OpenCode V2 实机验证（2026-10-10，opencode 2.0.26 全量实测）**：安装方式 `npm i -g --allow-scripts=@opencode/cli`（官方包，bin 同时提供 `opencode`/`opencode2`；⚠️ npm 上的 `opencode2` 包是**第三方分叉** `game-libgdx-unity/opencode2`，勿装；⚠️ 不带 `--allow-scripts` 时 postinstall 被 npm 门禁拦掉、选不了原生二进制）。回滚 V1：`npm uninstall -g @opencode/cli && npm install -g opencode-ai@1.18.34`。验证结论：
-- 4 键 `opencode.json` 加载 rc=0、4 键原样解析；V2 **未**像 V1 那样注入 `$schema`。
+- 配置：当时是 4 键、V2 加载 rc=0。**现已扩到 7 键**（新增 `$schema` 与顶层 `permissions`），改变了「V1 也能加载」这个前提——本项目随之转为 V2-only，`test_opencode_v2_config.py` 的旧断言（4 键白名单、断言不含 `$schema`/`permissions`）已全部反转为 V2 原生断言。这次没有重跑真机 `opencode debug config`（本机无 opencode 二进制），配置形状按官方文档校对。
 - 6 个 agent 全被发现，**但 frontmatter 的 `permissions` 全部错位到 `request.body.permissions`**（顶层只剩出厂默认 5 条，SSOT deny 零生效）。根因是 frontmatter 里的 **`name:` 行**——隔离实验矩阵：无 name→规则正确追加到顶层（默认在前、文件规则在后、最后匹配者生效）；有 name→必然错位；而 name 的值本身还被忽略（id/展示名取文件名）。已从 6 个 agent 删除 name（V1 侧 id 本就取文件名，两代行为不变）；`test_agent_v2_permissions.py::TestNoFrontmatterName` 钉死，`test_prompt_integrity.py::test_agent_frontmatter_complete` 的"name 必须有"**反转为"禁止有"**。修复后 `opencode debug agents` 确认：4 个带 edit 的 agent = 18 条（5 默认+13 文件规则）、2 个只读 agent = 11 条（5+6），deny-all 与 6 条 SSOT deny 均在顶层生效字段。
 - **AGENTS.md 发现语义（npm 布局的成立依据）**：工作区根的 AGENTS.md 在三种 CWD 下均加载——工作区根本身、书子目录（书是独立 git 仓库）、书子目录（非 git），模型均可复述 marker。文档说 "outside home 时走到 project root 为止"，实测该 project root = **配置根**（含 `.opencode`/`package.json` 的目录），**书目录自身的 git 根不截断**向上发现。
 - 16 个 skills 模型逐个可见；**write-guard 端到端拦截**：V2 主 agent 默认 allow-all 下，模型 Edit `.webnovel/state.json` 被 hook 拒绝（中文提示原样返回、文件未变）——兜底层独立成立。
 - commands：V2 文档确认 `.opencode/commands/` 发现规则同 V1，frontmatter **只需 `description`、没有 name 字段**（id=文件名）——`wn-*` 形态本就符合；plugin-scanner 要求 name 是它自设约定，不是 OpenCode 规范。
 - 操作坑：V2 `debug` 仅剩 agents/config/paths；共享服务 stop 后**首跑可能返回 `[]` 或只含内置 agent**（预热竞态，重试即可）；`--standalone` 对 debug 子命令无效。**未实测**：TUI 内 `/wn-*` 实调（机制同 V1，真书已验过）。
 
-**未做及原因**：`$schema`（如上，schema 未跟上）；`experimental.policies`（想用它做 SSOT 硬 deny，但实测 schema 里 `Policy.action` 枚举**只有 `provider.use`**，文档示例中的 `"action":"permission"` 过不了校验，不冒这个险）；MCP 暴露 Python 数据层（需 `opencode.json` 的 `mcp.servers` + 给 6 个 agent 加 `<server>_<tool>` 放行规则，工作量中等且收益待观察）；FastAPI 面板**不可**迁进 OpenCode（插件只能挂 TUI slot / OpenTUI JSX，**没有 webview 宿主**，ECharts 无等价物）。
+**未做及原因**：`$schema`（**已完成**——见配置章节；旧的「schema 还未跟上 V2」判断已作废）；顶层 `policies`（这是正式键，可硬 deny `tool.use`，但本项目已用 `permissions` 的 edit deny 达成同等效果，而 policies 的语义是「在权限判定之后硬拒」——属于冗余的第二道锁，暂不加，需要企业级强制时再加）；MCP 暴露 Python 数据层（需 `mcp.servers` + 给 6 个 agent 加 `<server>_<tool>` 放行规则，工作量中等且收益待观察）；FastAPI 面板**不可**迁进 OpenCode（插件没有 webview 宿主，ECharts 无等价物）。
 
 **不追求 DSH 原生化。** 本仓库只适配 OpenCode。DeepSeek Harness 侧由上游
 `外部参考/webnovel-writer` 的 v8 分支负责（已用 TypeScript 重写成 DSH 原生插件

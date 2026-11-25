@@ -2,10 +2,13 @@
 name: webnovel-install
 description: 自动安装 Webnovel Writer。触发条件："安装"、"重新安装"、"更新"、"安装依赖"、"setup"、"初始化环境"。
 compatibility: opencode
-allowed-tools: Bash
 ---
 
 # Webnovel Writer 安装
+
+> **前置要求：OpenCode 2.x**（本项目已放弃 V1 兼容）。`opencode.json` 使用 V2 原生键
+> （`$schema` + 顶层 `permissions`），V1 遇到 `permissions` 会以 rc=1 拒绝加载整份配置。
+> 需要 V1 请用 v3.1.x 及更早版本。
 
 ## 目标
 
