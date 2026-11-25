@@ -403,25 +403,41 @@ def resolve_project_root(explicit_project_root: Optional[str] = None, *, cwd: Op
 
         # 兼容：显式传入"工作区根目录"（含 `.opencode/.webnovel-current-project` 指针，或 legacy `.claude/`）
         # 例如：D:\wk\xiaoshuo 不是项目根，但其指针指向 D:\wk\xiaoshuo\<书名>
-        pointer_root = _resolve_project_root_from_pointer(root, stop_at=_find_git_root(root))
-        if pointer_root is not None:
-            return pointer_root
+        #
+        # ⚠️ 这两条"跳出去"的兼容（指针 / 用户级注册表）只在**传入目录自己就是
+        #    工作区根**时启用——判据是它有 `.opencode/` 或 `.claude/`。
+        #    无条件启用会带来静默改错书：显式给一个普通空目录时，指针解析会
+        #    顺着**祖先**目录找到无关工作区的指针。实测在仓库 `.tmp/emptytest`
+        #    里执行 `status --project-root .tmp/emptytest`，读到了仓库
+        #    `.opencode/.webnovel-current-project` 指向的 E:\workspace\webnovel2\凡尘之舞，
+        #    并输出了它的健康报告、退出码 0——用户以为在看当前项目。
+        is_workspace_root = (root / ".opencode").is_dir() or (root / ".claude").is_dir()
+        if is_workspace_root:
+            pointer_root = _resolve_project_root_from_pointer(root, stop_at=_find_git_root(root))
+            if pointer_root is not None:
+                return pointer_root
 
+        # "向下看一层找唯一一本书"不会跳出传入目录，故不受上面的限制。
         child_root = _resolve_unique_child_project_root(root)
         if child_root is not None:
             return child_root
 
-        # 兼容：显式传入"工作区根目录"但其 `.opencode/` 或 `.claude/` 在用户目录（全局安装）时，
-        # workspace 内部可能没有指针文件。此时从用户级 registry 查找。
-        reg_root = _resolve_project_root_from_global_registry(
-            root,
-            workspace_hint=root,
-            allow_last_used_fallback=False,
-        )
-        if reg_root is not None:
-            return reg_root
+        if is_workspace_root:
+            # 兼容：显式传入"工作区根目录"但其 `.opencode/` 或 `.claude/` 在用户目录（全局安装）时，
+            # workspace 内部可能没有指针文件。此时从用户级 registry 查找。
+            reg_root = _resolve_project_root_from_global_registry(
+                root,
+                workspace_hint=root,
+                allow_last_used_fallback=False,
+            )
+            if reg_root is not None:
+                return reg_root
 
-        raise FileNotFoundError(f"Not a webnovel project root (missing .webnovel/state.json): {root}")
+        raise FileNotFoundError(
+            f"Not a webnovel project root (missing .webnovel/state.json): {root}\n"
+            "Hint: point --project-root at the book root, "
+            "or run `webnovel init` to create one."
+        )
 
     env_root = os.environ.get("WEBNOVEL_PROJECT_ROOT")
     if env_root:

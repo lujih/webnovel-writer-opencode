@@ -1189,6 +1189,15 @@ class StatusReporter:
 
         return lines
 
+def _is_within(child: Path, parent: Path) -> bool:
+    """child 是否在 parent 子树内（含相等）。"""
+    try:
+        child.relative_to(parent)
+        return True
+    except ValueError:
+        return False
+
+
 def main():
     import argparse
 
@@ -1224,11 +1233,24 @@ def main():
     args = parser.parse_args()
 
     # 解析项目根目录（允许传入“工作区根目录”，统一解析到真正的 book project_root）
+    requested = Path(args.project_root).expanduser().resolve()
     try:
         project_root = str(resolve_project_root(args.project_root))
     except FileNotFoundError as exc:
         print(f"❌ 无法定位项目根目录（需要包含 .webnovel/state.json）: {exc}", file=sys.stderr)
         sys.exit(1)
+
+    # 兜底提示：解析结果既不在请求目录之下、也不是它的祖先 → 用的是
+    # 「工作区里的另一本书」（入口层会兜底到脚本 checkout 所在工作区）。
+    # 不提示的话，用户会以为看到的是当前目录那本书的报告。
+    resolved = Path(project_root).resolve()
+    if resolved != requested and not _is_within(resolved, requested) \
+            and not _is_within(requested, resolved):
+        print(
+            f"⚠️ 当前目录未找到书项目，已改用: {resolved}\n"
+            f"   如需指定其它项目，请加 --project-root <PATH>",
+            file=sys.stderr,
+        )
 
     # 创建报告生成器
     reporter = StatusReporter(project_root)

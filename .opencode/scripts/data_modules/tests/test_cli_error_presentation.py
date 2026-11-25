@@ -42,14 +42,33 @@ pytestmark = pytest.mark.skipif(
 def _run(args: list[str], cwd: Path, env_extra: dict | None = None) -> subprocess.CompletedProcess:
     env = dict(os.environ)
     # 隔离：不继承可能存在的项目绑定
-    for key in ("WEBNOVEL_PROJECT_ROOT", "WEBNOVEL_OPENCODE_HOME",
+    for key in ("WEBNOVEL_PROJECT_ROOT",
                 "OPENCODE_PROJECT_DIR", "CLAUDE_PROJECT_DIR"):
         env.pop(key, None)
+    # ⚠️ `WEBNOVEL_OPENCODE_HOME` 不能只是 pop 掉——pop 之后用的是**用户级默认位置**，
+    # 而 project_locator 的最后一级兜底正是「用户级注册表」。在开发机上注册过书时，
+    # 空目录也能解析到那本书，`status` 于是正常退出 0，本类的「找不到项目必须非零
+    # 退出」全部被环境污染成失败（CI 上是干净的容器，所以一直绿）。
+    # 这里把它指向 cwd 下一个不存在的隔离目录，注册表查询必然落空。
+    env["WEBNOVEL_OPENCODE_HOME"] = str(Path(cwd) / ".isolated-webnovel-home")
     if env_extra:
         env.update(env_extra)
+    # `status` 默认 `--project-root '.'`，会走入口层的「工作区兜底」；
+    # 而 conftest 把 tmp_path 钉在仓库 `.tmp/pytest` 下——也就是说这个
+    # "empty_dir" 其实**在工具工作区内**，兜底会解析到工作区里真实的那本书
+    # （本机实测指向 webnovel2/凡尘之舞），于是「项目不存在」这个前提失效。
+    # CI 容器里没有书，所以一直是绿的。这里显式钉死 --project-root，
+    # 让用例真正测「显式指定的目录里没有书项目」。
+    if args and args[0] == "status" and "--project-root" not in args:
+        args = [*args, "--project-root", str(cwd)]
     return subprocess.run(
         [sys.executable, str(ENTRY), *args],
-        capture_output=True, text=True, timeout=180, cwd=str(cwd), env=env,
+        # encoding 必须显式指定：Windows 下 text=True 会按 GBK 解码子进程 stdout，
+        # 而本项目的中文/emoji 输出（如「🚫」）根本不是 GBK 可解码的——
+        # reader 线程抛 UnicodeDecodeError，于是 stdout/stderr 变成空串，
+        # 失败原因被伪装成「消息不对」而不是「解码炸了」。
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=180, cwd=str(cwd), env=env,
     )
 
 
