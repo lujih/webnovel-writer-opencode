@@ -2,7 +2,6 @@
 name: webnovel-fanqie-write
 description: 番茄写作技巧、番茄风章节、番茄留存约束；Use ONLY when writing or revising Fanqie chapters. Supplements webnovel-write with opener, pacing, dialogue, hook, and retention rules.
 compatibility: opencode
-allowed-tools: Agent AskUserQuestion
 ---
 
 # 番茄写作

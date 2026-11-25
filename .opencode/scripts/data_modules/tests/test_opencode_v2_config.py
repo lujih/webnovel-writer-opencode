@@ -51,48 +51,84 @@ class TestConfigParses:
     def test_is_valid_jsonc(self, config):
         assert isinstance(config, dict)
 
-    def test_only_cross_generation_safe_keys(self, config):
-        """只允许 V1 与 V2 都能加载的键。
+    def test_native_v2_keys(self, config):
+        """配置只出现 V2 原生键（本项目已放弃 V1 兼容）。
 
-        实测（opencode 1.18.34）：`formatter` / `compaction`（V2 形状的 keep）
-        / `watcher` / `tool_output` 四个 V1 均接受；`permissions` 会让 V1 以 rc=1
-        拒绝**整份**配置。新增键前请先按下方 TestConfigDoesNotBreakV1 验证。
+        历史：2026-10 时这里断言的是「只允许 V1 与 V2 都能加载的 4 个键」，
+        因为 opencode 1.18.34 遇到 V2 `permissions` 会 rc=1 拒绝**整份**配置。
+        现在改为 V2-only：`$schema` + `permissions` 是 V2 的核心，V1 用户请用
+        v3.1.x 及更早版本。
         """
-        allowed = {"formatter", "compaction", "watcher", "tool_output"}
+        allowed = {"$schema", "permissions", "formatter", "compaction", "watcher", "tool_output"}
         assert set(config) == allowed, (
-            f"出现未验证的键: {set(config) - allowed}。"
-            "新增前须确认 OpenCode V1 不会因此拒绝加载整份配置。"
+            f"出现未列入 V2 白名单的键: {set(config) - allowed}。"
+            "新增前请对照 https://opencode.ai/config.json 确认形状。"
         )
 
+    def test_schema_points_at_official_v2_schema(self, config):
+        """`$schema` 必须是官方地址——编辑器校验与自动补全靠它。
 
-class TestConfigDoesNotBreakV1:
-    """opencode.json 里不得出现让 OpenCode V1 致命的键。
+        历史：此前刻意不写 `$schema`，理由是 2026-10-01 抓到的
+        https://opencode.ai/config.json 仍是 V1 形状（顶层
+        additionalProperties:false）。该判断已过期：官方 config 页现在把
+        `$schema` 作为推荐写法，且示例里包含 permissions/agents/skills 等 V2 键。
+        """
+        assert config.get("$schema") == "https://opencode.ai/config.json"
 
-    背景：本项目是对外公开的仓库，安装器会把 `.opencode/` 部署到用户工作区。
-    2026-10-04 实测 opencode 1.18.34：
 
-        $ opencode debug config
-        Error: Configuration is invalid at .../.opencode/opencode.json
-        ↳ V2 permissions are not supported by OpenCode V1.
-          Use V1 "permission" rules or run opencode2.  permissions
+class TestNativeV2Shape:
+    """顶层的 `permissions` 必须存在且形状正确。
 
-    关键在于它是**致命**的且拒绝**整份文件**——不是忽略单个键、不是降级。
-    一旦有 V2 `permissions`，全部 V1 用户直接起不来。
+    这是 SSOT 写保护的**第一层**（第二层是 write-guard.js 的运行时拦截，
+    第三层是 6 个 agent 各自的 permissions）。
 
-    同一次实测确认了一件相关的事：**agent frontmatter** 里的 V2 `permissions`
-    是被静默忽略的（agent 照常加载，回落到 V1 默认规则），不会触发这种失败。
-    所以子 agent 可以保留 V2 规则，配置文件不行。
+    历史：2026-10-04 实测 opencode 1.18.34 遇到 V2 `permissions` 会 rc=1
+    **拒绝整份配置**，所以当时把它移除了，只留 write-guard 兜底。现在配置
+    改为 V2-only，这一层得以恢复——main agent 也能在权限判定阶段看到 deny，
+    而不是只靠运行时抛错。
     """
 
-    # 已实测会让 V1 拒绝整份配置的 V2 键
-    V2_FATAL_KEYS = {"permissions"}
+    SSOT_PATHS = (
+        "*.webnovel/state.json",
+        "*.webnovel/index.db",
+        "*.webnovel/vectors.db",
+        "*.webnovel/memory_scratchpad.json",
+        "*.story-system/events/",
+        "*.story-system/commits/",
+        "*.story-system/master_setting.json",
+    )
 
-    def test_no_v2_fatal_key(self, config):
-        present = self.V2_FATAL_KEYS & set(config)
-        assert not present, (
-            f"opencode.json 含 {present}——OpenCode V1 会拒绝加载**整份**配置"
-            "（实测 rc=1），所有 V1 用户将无法启动。"
+    def test_permissions_present(self, config):
+        assert "permissions" in config, "顶层 permissions 缺失"
+        rules = config["permissions"]
+        assert isinstance(rules, list) and rules, "permissions 必须是非空数组"
+
+    def test_every_rule_has_three_string_fields(self, config):
+        for i, rule in enumerate(config["permissions"]):
+            assert set(rule) == {"action", "resource", "effect"}, f"第 {i} 条规则字段不对: {rule}"
+            for key, value in rule.items():
+                assert isinstance(value, str) and value, f"第 {i} 条规则的 {key} 必须是非空字符串"
+            assert rule["effect"] in {"allow", "deny", "ask"}, f"第 {i} 条 effect 非法: {rule}"
+
+    def test_uses_v2_action_names(self, config):
+        """V1 的 action 名（bash/task/write/patch）在 V2 里已改名。"""
+        legacy = {"bash", "task", "write", "patch"}
+        used = {r["action"] for r in config["permissions"]}
+        assert not (used & legacy), f"出现 V1 action 名: {sorted(used & legacy)}（应为 shell/subagent/edit）"
+
+    def test_every_ssot_path_is_denied_globally(self, config):
+        denied = {(r["action"], r["resource"]) for r in config["permissions"] if r["effect"] == "deny"}
+        missing = [p for p in self.SSOT_PATHS if ("edit", p) not in denied]
+        assert not missing, (
+            f"这些 SSOT 路径没有全局 edit deny: {missing}。"
+            "缺少它们时，写保护只剩 write-guard 的运行时兜底。"
         )
+
+    def test_external_directory_restores_ask(self, config):
+        """V2 默认**允许**访问项目外；本项目依赖仓库外的书项目，故恢复 ask。"""
+        ask_rules = [r for r in config["permissions"]
+                     if r["action"] == "external_directory" and r["effect"] == "ask"]
+        assert ask_rules, "external_directory 未设为 ask——V2 默认放行，会静默读取仓库外任意路径"
 
     def test_ssot_guard_still_exists(self):
         """移除全局 permissions 后，SSOT 写保护不能同时消失。
@@ -211,46 +247,33 @@ class TestSyncAgentsMdCommand:
         assert self._run(tmp_path, monkeypatch) == 1
 
 
-class TestNoStaleSchema:
-    """配置里不主动写 $schema——但 OpenCode 会自己加回来。
+class TestSchemaDeclaration:
+    """配置**必须**声明官方 `$schema`（V2 已把它作为推荐写法）。
 
-    两件相关的事，都实测过：
+    历史：2026-10-01 实测 https://opencode.ai/config.json 返回的仍是 V1 形状
+    （顶层 additionalProperties:false），挂上去会让编辑器把正确的 V2 字段标红，
+    所以当时刻意不写，并断言"仓库副本不含 $schema"。
 
-    1. 我们**主动不写**：2026-10-01 实测 https://opencode.ai/config.json 返回的
-       仍是 V1 形状 schema，挂上去只会让编辑器把正确的 V2 字段全标红。
-    2. 但**跑一次 OpenCode 就会被写回**：2026-10-04 实测，执行
-       `opencode debug config` 之后，本文件第 2 行被自动插入
-       `"$schema": "https://opencode.ai/config.json",`——这是 OpenCode 的配置
-       迁移行为，不经我们同意，且它写的恰是上面那个陈旧 schema。
-
-    所以这里断言的是"仓库里的版本不含 $schema"（保证提交物干净），而不是
-    "任何人跑过 opencode 之后本地文件不含它"。后者在真实使用中无法维持，
-    且不该为一个编辑器侧的 JSON 标记去跟运行时反复较劲。
+    该判断现已过期：官方 config 页把 `$schema` 写进所有示例，且示例本身包含
+    permissions/agents/skills 等 V2 键。保留旧断言会让配置与规范脱节，故反转。
     """
 
-    def test_repository_copy_has_no_schema_key(self, config):
-        """只看真实键，不看注释——配置里刻意写了为什么不加它的散文。"""
-        assert "$schema" not in config, (
-            "提交的 opencode.json 不应含 $schema：发布地址仍是 V1 形状，"
-            "挂上会让编辑器把正确的 V2 字段标红。若确认它已更新为 V2，"
-            "请连同文件顶部的禁令注释一起更新。"
-        )
-
-    def test_documented_that_opencode_reinjects_it(self, config):
-        """把这个行为写进配置注释，免得下一个人以为配置被改坏了。"""
-        text = CONFIG.read_text(encoding="utf-8")
-        assert "opencode" in text and "$schema" in text
-        # 注释里必须说明是 OpenCode 会写回来，而不是我们打算加上
-        assert re.search(r"(自动|写回|插入|会加)", text), (
-            "配置注释需说明 $schema 是 OpenCode 自动写回的，避免被误当作有意改动"
+    def test_repository_copy_declares_official_schema(self, config):
+        assert config.get("$schema") == "https://opencode.ai/config.json", (
+            "opencode.json 必须声明官方 $schema，否则编辑器无法校验 V2 键"
         )
 
 
 class TestNoSilentNoOpInstructions:
     def test_instructions_key_absent(self, config):
+        """本项目不使用 `instructions`。
+
+        ⚠️ 理由已更新：V2 **确实会加载** instructions（/docs/config#instructions），
+        此前"V2 不加载、是静默空操作"的说法是错的。这里保留断言只是因为这个
+        项目把规则集中在单一 AGENTS.md，不需要额外文件清单——不是因为该键无效。
+        """
         assert "instructions" not in config, (
-            "V2 不加载 instructions 条目，是静默空操作；"
-            "项目说明的唯一真实通道是 AGENTS.md"
+            "本项目未使用 instructions；若确实要引入，请同时更新 CLAUDE.md 的说明"
         )
 
 

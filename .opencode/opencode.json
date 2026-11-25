@@ -1,60 +1,57 @@
 {
-  // webnovel-writer 的 OpenCode 项目配置。
+  // ── OpenCode V2 原生配置 ─────────────────────────────────────────────
   //
-  // ⚠️ 本文件必须能被 **OpenCode V1 也能加载**，否则 V1 用户直接起不来。
-  //     实测（opencode 1.18.34 + `opencode debug config`）：V1 遇到 V2 的
-  //     `permissions` 键会以 rc=1 **致命失败**，且不是忽略单个键而是拒绝整份文件：
-  //       "V2 permissions are not supported by OpenCode V1.
-  //        Use V1 \"permission\" rules or run opencode2."
+  // 本项目自本次改动起**只支持 OpenCode 2**（破坏性变更，见下方「V1 兼容」）。
+  // 键名全部采用 V2 原生形状，可对照 https://opencode.ai/config.json 校验。
   //
-  //     因此这里**不写 permissions**。SSOT 写保护由下面两层承担，二者都不依赖
-  //     OpenCode 的权限配置格式：
-  //
-  //       ① .opencode/plugins/write-guard.js —— 运行时拦截 edit/write/patch。
-  //          挂的是全局 tool hook，V1/V2 都生效，且对**所有** agent 生效（含主
-  //          agent）。这是实际执行层。
-  //       ② 6 个 .opencode/agents/*.md frontmatter 的 `permissions:` —— V2 会把
-  //          SSOT 路径的 edit 从模型可见集里整体移除，比运行时拒绝更靠前一层。
-  //          实测 V1 对 frontmatter 里的 V2 `permissions` 是**静默忽略**，不报错。
-  //
-  //     代价（明确记录，别当已解决）：V2 的**主 agent**（用户直接对话的那个）
-  //     不再"看不见" SSOT 路径的 edit 工具，改为由 write-guard 在运行时拒绝。
-  //     6 个子 agent 不受影响，它们的前端拦截仍在。
-  //
-  //     要恢复主 agent 这一层，需在 V2 用户侧自行把 permissions 块并入本文件——
-  //     但那会让同一份配置在 V1 下无法加载，取舍由用户决定。
+  // ⚠️ V1 兼容：V1（1.18.x）的配置 schema 是 additionalProperties:false，
+  //    遇到顶层 `permissions` 会以 rc=1 **拒绝加载整份配置**（实测 opencode
+  //    1.18.34 + `opencode debug config`）。因此从本版本开始：
+  //      · OpenCode 2：完整支持（本文件即 V2 原生）
+  //      · OpenCode 1：不再支持，请使用 v3.1.x 及更早版本
+  //    需要同时兼容两代时，把 users 的 expectations 写进 README 而不是配置——
+  //    配置只能有一份形状，混写会让其中一代直接起不来。
+  "$schema": "https://opencode.ai/config.json",
 
-  // ⚠️ 故意**不**写 "$schema": "https://opencode.ai/config.json"。
-  //     实测（2026-10-01）：该地址返回的仍是 **V1 形状**的 schema——顶层
-  //     additionalProperties: false，且只认 permission / agent / command / plugin /
-  //     snapshot / attachment / provider 这些 V1 字段，文档里的 V2 原生字段
-  //     permissions / agents / commands / plugins / snapshots / media / warming /
-  //     update / providers 一个都没有。挂上去只会让编辑器把**正确的** V2 字段全标红。
-  //     但要知道：**OpenCode 会自动把它写回来**。实测 2026-10-04，执行任意一次
-  //     `opencode debug config`，本文件第 2 行就被插入这一行——那是它的配置迁移
-  //     行为，写回的恰是上面那个陈旧 schema。仓库里提交的版本刻意不含它；
-  //     本地被写回不必修，也不影响加载（V1 接受 $schema）。
+  // SSOT 写保护的第一层。三层一起看：
+  //   ① 本文件的顶层 permissions（V2 在权限判定最前端生效）
+  //   ② .opencode/plugins/write-guard.js 的 tool.execute.before 运行时拦截
+  //   ③ 6 个 .opencode/agents/*.md 各自的 permissions（子 agent 用**自己的**
+  //      规则集，不是父集的子集）
   //
+  // V2 语义：规则按顺序匹配，**最后命中者生效**；全局规则先于 agent 规则，
+  // agent 规则追加在后面而不是替换。默认基线是 {*:*:allow} + .env 读 ask，
+  // 所以这里的 deny 必须排在基线的 allow 之后——它们天然位于全局配置段，满足。
+  "permissions": [
+    { "action": "edit", "resource": "*.webnovel/state.json", "effect": "deny" },
+    { "action": "edit", "resource": "*.webnovel/index.db", "effect": "deny" },
+    { "action": "edit", "resource": "*.webnovel/vectors.db", "effect": "deny" },
+    { "action": "edit", "resource": "*.webnovel/memory_scratchpad.json", "effect": "deny" },
+    { "action": "edit", "resource": "*.story-system/events/", "effect": "deny" },
+    { "action": "edit", "resource": "*.story-system/commits/", "effect": "deny" },
+    { "action": "edit", "resource": "*.story-system/master_setting.json", "effect": "deny" },
 
-  // ⚠️ 显式关闭 formatter。依据是 V2 文档记载内置 formatter 的 prettier / biome
-  //     均覆盖 .md。本书的章节正文全是 .md，开启会重排折行、规范化空白——那是在改
-  //     用户作品，且 formatter 在写盘**之后**才跑，拦不住。
-  //     （文档转述，未在本项目 65 章正文上实测。）
+    // V2 默认**允许**访问项目之外（V1 是 ask）。书项目通常在工具仓库之外
+    // （E:\workspace\webnovel2 等），这里恢复 ask：能访问，但要经一次确认。
+    // 见 https://opencode.ai/docs/permissions#directories
+    { "action": "external_directory", "resource": "*", "effect": "ask" }
+  ],
+
+  // 显式关闭 formatter：V2 内置的 prettier/biome 都覆盖 .md，而本项目产物
+  // 绝大多数是 .md（章节正文、设定集、skill 文档）。formatter 在写盘**之后**
+  // 才跑，等于重排用户作品且拦不住。见 /docs/formatters。
   "formatter": false,
 
-  // 长会话（连写多章 / 批量写作）的压缩策略。
-  // V2 用摘要 + keep.tokens 取代 V1 的 tail_turns / prune。keep 调高是为了让刚
-  // 写完那章的原文尽量逐字留在尾部——跨章依赖虽落在 state.json 与事件日志上，
-  // 但对话尾部仍决定下一章开头的连续性。
-  // 实测：V1 接受该 V2 形状，不报错（按 V1 语义解释，忽略 keep）。
+  // 长会话（连写多章）的压缩策略。V2 的 keep.tokens 取代 V1 的 tail_turns/prune；
+  // buffer 是「模型窗口的预留比例」，可写 token 数或百分比（如 "15%"）。
+  // 这里用 token 数：保留 24000 让刚写完那章的原文尽量逐字留在尾部。
   "compaction": {
     "auto": true,
     "keep": { "tokens": 24000 },
     "buffer": 20000
   },
 
-  // 大文件按需加载，别让 watcher 盯着。
-  // .webnovel/ 下是 SQLite 与运行时产物，事件多时改动频繁且无意义。
+  // 文件监听忽略项。`.webnovel/` 下是 SQLite 与运行时产物，事件多且无意义。
   "watcher": {
     "ignore": [
       ".opencode/node_modules/**",
@@ -67,17 +64,17 @@
     ]
   },
 
-  // 工具输出上限。以下两个数是 V2 文档给出的默认值，写出来是为了在输出很长时
-  // 尽早暴露截断，而非改动默认行为——doctor / ssot verify 的差异报告需要完整。
+  // 工具输出上限：V2 文档的默认值，写出来只为在长输出时尽早暴露截断。
   "tool_output": {
     "max_lines": 2000,
     "max_bytes": 51200
   }
 
-  // ⚠️ 故意**不**写 "instructions": [...]。
-  //     V2 文档原文："OpenCode accepts this field but does not load its entries;
-  //     use AGENTS.md for instructions." —— 能过校验、什么都不做的静默空操作。
-  //     项目说明的唯一真实通道是 AGENTS.md（由 `sync-agents-md` 从 CLAUDE.md 镜像）。
-  //
-  // 同样不写 "skills"：V2 已自动发现 .opencode/skills/，配空数组没有意义。
+  // 说明：不使用以下键
+  // · `instructions`：V2 **确实会加载**（/docs/config#instructions），本项目把
+  //   规则放在 AGENTS.md 单一入口，暂不需要额外文件清单。
+  // · `skills`：V2 自动发现 .opencode/skills/，无需声明。
+  // · `agents` / `commands` / `plugins`：本项目用文件式定义
+  //   （.opencode/agents/*.md、.opencode/commands/*.md、.opencode/plugins/*.js），
+  //   文件式与 JSON 式共用同一注册表，二者取其一即可。
 }

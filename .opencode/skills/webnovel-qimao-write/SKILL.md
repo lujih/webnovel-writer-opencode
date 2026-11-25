@@ -2,7 +2,6 @@
 name: webnovel-qimao-write
 description: 七猫写作技巧、七猫风章节、七猫留存与签约约束；Use ONLY when writing or revising Qimao chapters. Supplements webnovel-write with opener, pacing, hook, expectation, character, and content-audit rules.
 compatibility: opencode
-allowed-tools: Agent AskUserQuestion
 ---
 
 # 七猫写作

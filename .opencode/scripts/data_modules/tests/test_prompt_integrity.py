@@ -298,11 +298,23 @@ def test_active_skills_use_agent_tool_name_not_legacy_task():
 
 
 def test_webnovel_write_skill_uses_explicit_agent_invocation_templates():
-    """webnovel-write 的关键 subagent 必须用显式 Agent(subagent_type=...) 调用模板。"""
+    """webnovel-write 的关键 subagent 必须用显式调用模板，而不是口头带过。
+
+    ⚠️ 旧断言是 `"Agent" in allowed-tools`——那是 Claude Code / V1 的机制。
+    V2 的 skill frontmatter **只解释** name / description /
+    metadata.opencode/autoinvoke / disable-model-invocation，`allowed-tools`
+    留着也不生效（本项目已删除）。谁能启动子 agent 由**权限**决定：
+    主 agent 走全局 `permissions`（默认允许 `subagent`），子 agent 各自的
+    `permissions` 里则显式 deny——见 test_agent_v2_permissions.py。
+    因此这里只钉住「模板文本存在」，不再钉 frontmatter 键。
+    """
     text = _read_text(SKILLS_DIR / "webnovel-write" / "SKILL.md")
     fm = _extract_frontmatter(text)
 
-    assert "Agent" in fm.get("allowed-tools", "")
+    # V2 不解释该键，出现即漂移
+    assert "allowed-tools" not in fm, (
+        "webnovel-write/SKILL.md 仍有 allowed-tools——V2 会静默忽略它"
+    )
     for subagent in ("context-agent", "reviewer", "data-agent"):
         assert f'subagent_type: "{subagent}"' in text
     assert "不得用主流程口头代替 subagent 输出" in text
