@@ -37,6 +37,21 @@ from .entity_index_utils import ENTITY_TYPES
 logger = logging.getLogger(__name__)
 
 
+class StateCorruptionError(RuntimeError):
+    """既有 state.json 存在但读不出来 —— rebuild 必须中止。
+
+    修复前：`rebuild_projections` 把解析失败降级成一条 warning，然后照常
+    ``atomic_write_json(state_path, state, backup=True)``：
+      - `_NON_EVENT_FIELDS` 里 10 个非事件字段（project_info / chapter_meta /
+        review_checkpoints / world_settings / strand_tracker /
+        disambiguation_*）全部丢失；
+      - 备份逻辑把这份**损坏的** state.json 拷成 .bak，回滚通道一并销毁。
+
+    事件日志可推进的字段能以重建结果为准，但「解析不出来」时我们无法判断
+    要保留什么，只能 fail-closed：让操作者先修好文件（或显式删掉它）。
+    """
+
+
 # ── Event log ────────────────────────────────────────────────────────
 
 _EVENT_LOG_DIR = ".story-system/events"
@@ -823,14 +838,23 @@ def rebuild_projections(project_root: Path) -> dict:
     state_path.parent.mkdir(parents=True, exist_ok=True)
 
     # P0：保留既有 state.json 的非事件顶层字段（仅补缺，事件字段以重建为准）
-    try:
-        if state_path.is_file():
+    #
+    # 读不出来时必须中止，不能降级成 warning 后照常覆盖：
+    # ① 非事件字段会全部丢失；② 备份步骤会把这份损坏文件写成 .bak，
+    # 回滚通道同时失效。要重建请先修复/移走 state.json。
+    if state_path.is_file():
+        try:
             # utf-8-sig：BOM 会让 json.loads 失败，从而跳过「保留非事件字段」
             # 的合并——用户手工编辑过的 project_info 等会被 rebuild 擦掉。
             existing = json.loads(state_path.read_text(encoding="utf-8-sig"))
-            state = _merge_non_event_fields(existing, state)
-    except (OSError, ValueError) as exc:
-        logger.warning("ssot rebuild: 无法读取既有 state.json 合并非事件字段: %s", exc)
+        except (OSError, ValueError) as exc:
+            raise StateCorruptionError(
+                f"无法读取既有 state.json（{exc}），rebuild 已中止：{state_path}\n"
+                "继续执行会用事件重放结果覆盖它，并把这份损坏文件写成 .bak。\n"
+                "修复方式：① 从 .bak / 版本库恢复 state.json 后重试；"
+                "② 确认要从事件重建时，先手工备份再删除 state.json。"
+            ) from exc
+        state = _merge_non_event_fields(existing, state)
 
     atomic_write_json(state_path, state, use_lock=True, backup=True)
 
@@ -1048,7 +1072,11 @@ def cmd_ssot(args) -> int:
         return 0 if all(d["severity"] == "info" for d in drifts) else 1
 
     if args.action == "rebuild":
-        summary = rebuild_projections(project_root)
+        try:
+            summary = rebuild_projections(project_root)
+        except StateCorruptionError as exc:
+            print(f"❌ {exc}", file=sys.stderr)
+            return 1
         print(f"Rebuilt {summary['projection']}: "
               f"{summary['event_count']} events → "
               f"{summary['chapters_in_state']} chapters, "
