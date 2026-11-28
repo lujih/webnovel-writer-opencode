@@ -73,9 +73,16 @@ def git_tracked_files(opencode_dir: Path) -> list:
         return []
 
     try:
+        # **必须显式 encoding**：Windows 上 `text=True` 走系统编码（GBK），
+        # 而 git 输出的是 UTF-8——仓库里有中文路径（`外部参考/`）时，
+        # 解码会在 reader 线程里炸，`r.stdout` 变成 None，
+        # 后续 `.split('\0')` 抛 AttributeError。
+        # 实测：Windows + 中文路径下 `python .opencode/scripts/gen_manifest.py`
+        # 必然崩；Linux CI 因为 UTF-8 是默认编码所以从未暴露。
         r = subprocess.run(
             ['git', '-C', str(opencode_dir), 'ls-files', '-z', '--', '.'],
-            capture_output=True, text=True, timeout=60,
+            capture_output=True, text=True, encoding='utf-8', errors='replace',
+            timeout=60,
         )
     except (OSError, subprocess.SubprocessError):
         return []
