@@ -1,7 +1,7 @@
 {
-  "version": "v4.0.0",
+  "version": "v4.0.0-20261128.1614",
   "tag": "v4.0.0",
-  "updated": "2026-11-29T00:00:00Z",
+  "updated": "2026-11-28T16:14:01Z",
   "changelog": [],
   "files": {
     ".opencode/.gitignore": {
@@ -112,10 +112,6 @@
       "sha256": "60f3e5dccf592ddbfacfe48a1662b011875f55058b33f1277f1b68a62f46f004",
       "size": 6261
     },
-    ".opencode/dashboard/frontend/dist/assets/echarts-vendor-CCZFUTXT.js": {
-      "sha256": "afbdbda1d918861640343bb397f2eb457b2a2db6b415cdc3cb3208a155bb8f2a",
-      "size": 632750
-    },
     ".opencode/dashboard/frontend/dist/assets/EditorPanel-BDRvSjul.js": {
       "sha256": "e3d33918aece1a2ab5a8957cee00b63abe49514824eca937ce89c6e14e8dfa6a",
       "size": 618392
@@ -124,25 +120,9 @@
       "sha256": "11638b42b1b0774ffff8226d605ea7379bd4793db861018637764f43b2459979",
       "size": 4553
     },
-    ".opencode/dashboard/frontend/dist/assets/foreshadowing-BP4NrzVI.js": {
-      "sha256": "4cecc1503ab776bd7099161ec358af5c6e455c0775b3dcf71ea010912c885378",
-      "size": 2238
-    },
     ".opencode/dashboard/frontend/dist/assets/ForeshadowingPage-Dmad5mZd.js": {
       "sha256": "fd9055987445ead01a26469a82aa83359ee43e6e962a7b38bedcb315d8d4209b",
       "size": 5574
-    },
-    ".opencode/dashboard/frontend/dist/assets/format-BN_PqXuB.js": {
-      "sha256": "d16d4c434e6f01c492d7c1618a22df88076539e08c073c0ff74a5e324b50a0a7",
-      "size": 1487
-    },
-    ".opencode/dashboard/frontend/dist/assets/index-B3sPIbAP.css": {
-      "sha256": "dd6135d3e1a9aefab3e2e4ad8aaab357d4a25fd1840e313f039859fd75df2a65",
-      "size": 16893
-    },
-    ".opencode/dashboard/frontend/dist/assets/index-CqPQWrrD.js": {
-      "sha256": "6ffcdd09df1cc8fbc6c1124dff36510b669c681ded7b82cb40b348d94fb1e67f",
-      "size": 197979
     },
     ".opencode/dashboard/frontend/dist/assets/OverviewPage-BM6CPoch.js": {
       "sha256": "3c39e551a58680594e994c3d6f41af1c02809988f9418d87bff11459eac70be6",
@@ -156,17 +136,9 @@
       "sha256": "5ac769a873058c4864ebcb0812470e413c7ebcd16ec87bacdfd21d32ec799513",
       "size": 700
     },
-    ".opencode/dashboard/frontend/dist/assets/react-vendor-CjpoAPrF.js": {
-      "sha256": "a73ee4c48bf1694465cb392489e61ba3dc5b229f360cb22298dc0fb9181b843e",
-      "size": 49774
-    },
     ".opencode/dashboard/frontend/dist/assets/ReviewAnalyticsPage-BdcQ0vOT.js": {
       "sha256": "3632830244da094b844e55ffc41a30eeda15c4266286e48e2ceb78e0e4372881",
       "size": 13150
-    },
-    ".opencode/dashboard/frontend/dist/assets/story-lVhSS0ka.js": {
-      "sha256": "715038222b7c0feaab451599a5c971d44b20fe7a33b0ebefadda4fdd90d30fbd",
-      "size": 1099
     },
     ".opencode/dashboard/frontend/dist/assets/StyleEditorPage-DF7kWy8d.js": {
       "sha256": "e8fc054dad90d59b50157b9d509dcc49ca6fdd87ec53e6b3379f212a9b70d7d7",
@@ -175,6 +147,34 @@
     ".opencode/dashboard/frontend/dist/assets/SystemPage-DW46T_ij.js": {
       "sha256": "bd7e04fd31948b7bef81888a8b8cc5e922bbd562993c565eb150ac279421e601",
       "size": 10985
+    },
+    ".opencode/dashboard/frontend/dist/assets/echarts-vendor-CCZFUTXT.js": {
+      "sha256": "afbdbda1d918861640343bb397f2eb457b2a2db6b415cdc3cb3208a155bb8f2a",
+      "size": 632750
+    },
+    ".opencode/dashboard/frontend/dist/assets/foreshadowing-BP4NrzVI.js": {
+      "sha256": "4cecc1503ab776bd7099161ec358af5c6e455c0775b3dcf71ea010912c885378",
+      "size": 2238
+    },
+    ".opencode/dashboard/frontend/dist/assets/format-BN_PqXuB.js": {
+      "sha256": "d16d4c434e6f01c492d7c1618a22df88076539e08c073c0ff74a5e324b50a0a7",
+      "size": 1487
+    },
+    ".opencode/dashboard/frontend/dist/assets/index-B3sPIbAP.css": {
+      "sha256": "dd6135d3e1a9aefab3e2e4ad8aaab357d4a25fd1840e313f039859fd75df2a65",
+      "size": 16893
+    },
+    ".opencode/dashboard/frontend/dist/assets/index-CqPQWrrD.js": {
+      "sha256": "6ffcdd09df1cc8fbc6c1124dff36510b669c681ded7b82cb40b348d94fb1e67f",
+      "size": 197979
+    },
+    ".opencode/dashboard/frontend/dist/assets/react-vendor-CjpoAPrF.js": {
+      "sha256": "a73ee4c48bf1694465cb392489e61ba3dc5b229f360cb22298dc0fb9181b843e",
+      "size": 49774
+    },
+    ".opencode/dashboard/frontend/dist/assets/story-lVhSS0ka.js": {
+      "sha256": "715038222b7c0feaab451599a5c971d44b20fe7a33b0ebefadda4fdd90d30fbd",
+      "size": 1099
     },
     ".opencode/dashboard/frontend/dist/index.html": {
       "sha256": "b83ecf37899b58c176f5cedb061022b329c10b335133c35231b3800076db3a2f",
@@ -196,6 +196,10 @@
       "sha256": "1a9c9f3f5a60ee57a41dfe310fc685b83fe713e674524dd2e49afe89bcb02dc1",
       "size": 1128
     },
+    ".opencode/dashboard/frontend/src/App.jsx": {
+      "sha256": "4b1f08fe1d23efc04be0e1f87946c5935b12e71c4e5a6e49a5fcb37832dec33d",
+      "size": 6171
+    },
     ".opencode/dashboard/frontend/src/api.js": {
       "sha256": "7c5de02fbf2e3440c4e4b951c3be0f5244679bca55a2580f76010c3024cebf04",
       "size": 8222
@@ -203,10 +207,6 @@
     ".opencode/dashboard/frontend/src/api.test.js": {
       "sha256": "a4670c21eb9233bf0d2edef9536972fb630d9cd07fcfcc8070d454c615704bd7",
       "size": 5992
-    },
-    ".opencode/dashboard/frontend/src/App.jsx": {
-      "sha256": "4b1f08fe1d23efc04be0e1f87946c5935b12e71c4e5a6e49a5fcb37832dec33d",
-      "size": 6171
     },
     ".opencode/dashboard/frontend/src/components/Badge.jsx": {
       "sha256": "dfdf540e2d7799c0c787335aa09650f1029e282cdd6ea29fc68d15f95c9fec24",
@@ -552,17 +552,21 @@
       "sha256": "ed386b82efe52ea74ae9609ba8cdd0ad8f902d542345710eb57c84943566a96a",
       "size": 12148
     },
+    ".opencode/references/README.md": {
+      "sha256": "9c9773b80079ac57f68080fe66614ad3473f0ec9ecf3304a58e9dec95ab04ed4",
+      "size": 1534
+    },
     ".opencode/references/context-agent-example.md": {
       "sha256": "413e6b54d6c2f8e1e5eb19f05d6f9318dc32959e672d12b9c9db24557b83fb3d",
       "size": 2654
     },
-    ".opencode/references/csv/genre-canonical.md": {
-      "sha256": "06c30a6c213d72628c1d32ea17b67a6dde4cda29c96bcfb9c6a3526b913783bd",
-      "size": 14254
-    },
     ".opencode/references/csv/README.md": {
       "sha256": "accb5c98be2e6f2a526532a8336dd301ebdb1ea15830f8e4a456f702435cef8a",
       "size": 7656
+    },
+    ".opencode/references/csv/genre-canonical.md": {
+      "sha256": "06c30a6c213d72628c1d32ea17b67a6dde4cda29c96bcfb9c6a3526b913783bd",
+      "size": 14254
     },
     ".opencode/references/csv/\u4eba\u8bbe\u4e0e\u5173\u7cfb.csv": {
       "sha256": "e5b1b6eb954cb8799a20da7df8abc7738214d072e957c1834045eeeb38631f7d",
@@ -619,10 +623,6 @@
     ".opencode/references/reading-power-taxonomy.md": {
       "sha256": "41a6df4a371c68151a1dc273000cc02a800f1e83fc6b532c0a8379a5286cfd5b",
       "size": 12717
-    },
-    ".opencode/references/README.md": {
-      "sha256": "9c9773b80079ac57f68080fe66614ad3473f0ec9ecf3304a58e9dec95ab04ed4",
-      "size": 1534
     },
     ".opencode/references/review/blocking-override-guidelines.md": {
       "sha256": "50df68df6553353fec4734106377b1bb223dfb9b7dd661a3e5269fe8c0888e10",
@@ -1988,13 +1988,13 @@
       "sha256": "d69abb2563c62f9da97ac9c368cf9cef66806f13685cff0a20049b5add5dc835",
       "size": 3168
     },
-    ".opencode/skills/webnovel-dashboard/references/dashboard-api.md": {
-      "sha256": "adf030e9d95314775c19aebf320c55f1cd4e2a7a0618bb1343df3be358af0a0f",
-      "size": 8313
-    },
     ".opencode/skills/webnovel-dashboard/SKILL.md": {
       "sha256": "f412362bcf2416d1f30b719adbe02cf02aff9b4a818c8bf3fa33228766c474ca",
       "size": 5307
+    },
+    ".opencode/skills/webnovel-dashboard/references/dashboard-api.md": {
+      "sha256": "adf030e9d95314775c19aebf320c55f1cd4e2a7a0618bb1343df3be358af0a0f",
+      "size": 8313
     },
     ".opencode/skills/webnovel-delete/SKILL.md": {
       "sha256": "15c296cee74f60ba23f6017197c633b33384e88ab93685bf7907dc23090870c0",
@@ -2007,6 +2007,10 @@
     ".opencode/skills/webnovel-export/SKILL.md": {
       "sha256": "2091454fde2cda6328c4d9fefddbf1e1d8001726fd14fdabaeaf32ad557aa204",
       "size": 5863
+    },
+    ".opencode/skills/webnovel-fanqie-write/SKILL.md": {
+      "sha256": "37ac42f606400784d41e2e54ce4a2a73fa221fd84e45f07aa2f53539a97dbc61",
+      "size": 1742
     },
     ".opencode/skills/webnovel-fanqie-write/references/checklist.md": {
       "sha256": "598dffd882785caebe3d78c71e9e003aa74f8e0be61d56be25b7303ea18ba8b4",
@@ -2024,13 +2028,13 @@
       "sha256": "315ec5244ca71c431025080b85e1948b5738069a9e7878a28d38c58899dcaebc",
       "size": 1598
     },
-    ".opencode/skills/webnovel-fanqie-write/SKILL.md": {
-      "sha256": "37ac42f606400784d41e2e54ce4a2a73fa221fd84e45f07aa2f53539a97dbc61",
-      "size": 1742
-    },
     ".opencode/skills/webnovel-heal/SKILL.md": {
       "sha256": "96a3a92881168c108110436e9054ee3d41e11c3586158bff6feb37533e2498f2",
       "size": 2860
+    },
+    ".opencode/skills/webnovel-init/SKILL.md": {
+      "sha256": "0359db1b673e56a6403a03a59464227f00de13540565d6b9bdba299757fafe53",
+      "size": 17648
     },
     ".opencode/skills/webnovel-init/references/creativity/anti-trope-game.md": {
       "sha256": "c23971e2a7abf8a9ab2ed110fdb6f5532c0fa26eadf8fff9876d3613e97ae2f7",
@@ -2108,13 +2112,13 @@
       "sha256": "f2670fbf57584ff3bd6310cc2eb0bf924dc9ae1355e04ccf07afce9b0df4d91c",
       "size": 3431
     },
-    ".opencode/skills/webnovel-init/SKILL.md": {
-      "sha256": "0359db1b673e56a6403a03a59464227f00de13540565d6b9bdba299757fafe53",
-      "size": 17648
-    },
     ".opencode/skills/webnovel-learn/SKILL.md": {
       "sha256": "d688c11f4018285946304af033fcb2912e8fc7c99fa56557ddc322ff1c7b1c38",
       "size": 2267
+    },
+    ".opencode/skills/webnovel-plan/SKILL.md": {
+      "sha256": "069dc213a6728f0f05b6c57f8bf7dfcaeee285293b213d524329ed092c52eb65",
+      "size": 13136
     },
     ".opencode/skills/webnovel-plan/references/outlining/chapter-planning.md": {
       "sha256": "44846da8f5d7b135fa090ab1f7b9aaaa24ea0d74eed1e7ca9d9ddf19be54660d",
@@ -2140,10 +2144,6 @@
       "sha256": "72ba5c24aaa6203dd32f5bafd821c59c3d0a2e7e4b9d9f80d3ac874fd341b54e",
       "size": 1240
     },
-    ".opencode/skills/webnovel-plan/SKILL.md": {
-      "sha256": "069dc213a6728f0f05b6c57f8bf7dfcaeee285293b213d524329ed092c52eb65",
-      "size": 13136
-    },
     ".opencode/skills/webnovel-publish/SKILL.md": {
       "sha256": "72d7543554cb2ac60db1aee77fe2b3d724d0bc0c4bd9b592ad877802c662496e",
       "size": 8715
@@ -2151,6 +2151,10 @@
     ".opencode/skills/webnovel-publish/\u4f7f\u7528\u8bf4\u660e.md": {
       "sha256": "a308f10f92e8df8f0a84199b0dcf5c4c7305e254ff2e1efec5f764ce2dee2045",
       "size": 6998
+    },
+    ".opencode/skills/webnovel-qimao-write/SKILL.md": {
+      "sha256": "de2582c577ce1f0a03fcf13bd7b26de01eb8e10b069ae96ca12a997ac1c147a9",
+      "size": 3134
     },
     ".opencode/skills/webnovel-qimao-write/references/audit.md": {
       "sha256": "f405dbeebeb8f27bfdf6cd118640940443dd6d5040d1853ff5f2bfb048bc4856",
@@ -2180,9 +2184,9 @@
       "sha256": "fbee258b3f3bef38b60fc0e8f5a7862edf68f4956d6d58a360557f9e4dd17808",
       "size": 7058
     },
-    ".opencode/skills/webnovel-qimao-write/SKILL.md": {
-      "sha256": "de2582c577ce1f0a03fcf13bd7b26de01eb8e10b069ae96ca12a997ac1c147a9",
-      "size": 3134
+    ".opencode/skills/webnovel-query/SKILL.md": {
+      "sha256": "73087e9d71d6f70dad4119e6ace2e8094b8ab5d0063486bd0d823b0534be9579",
+      "size": 5076
     },
     ".opencode/skills/webnovel-query/references/advanced/foreshadowing.md": {
       "sha256": "4b037c847e1c88f8077222e466512bbd54e5514e37900f1201ba0407bd8afe21",
@@ -2196,9 +2200,9 @@
       "sha256": "4c1f3687b1b96277d7fad1309dec7a6c43da95e0d44bae9cbf73ddd0d6815050",
       "size": 5391
     },
-    ".opencode/skills/webnovel-query/SKILL.md": {
-      "sha256": "73087e9d71d6f70dad4119e6ace2e8094b8ab5d0063486bd0d823b0534be9579",
-      "size": 5076
+    ".opencode/skills/webnovel-review/SKILL.md": {
+      "sha256": "eed26550736ae665bc9dccfd8c5758234dc300892685a30ca0469c6bcebb89d7",
+      "size": 6112
     },
     ".opencode/skills/webnovel-review/evals/evals.json": {
       "sha256": "0cf156faf1489281632c4ae67d2fd68ca8509f919525d10665a98a4c24db3298",
@@ -2212,13 +2216,13 @@
       "sha256": "70291d4a47120730e073a97880bb229e04a629921fd7a91840af1d5b025ed7e4",
       "size": 4186
     },
-    ".opencode/skills/webnovel-review/SKILL.md": {
-      "sha256": "eed26550736ae665bc9dccfd8c5758234dc300892685a30ca0469c6bcebb89d7",
-      "size": 6112
-    },
     ".opencode/skills/webnovel-rewrite/SKILL.md": {
       "sha256": "777da01bb64d055e0c20c1fbb3f82b159230fb1c32d18ac3880e25b5ac519b40",
       "size": 2439
+    },
+    ".opencode/skills/webnovel-write/SKILL.md": {
+      "sha256": "1c670ca24ad571bdbb79288a1d542828be66fe2bf4ca0b10277911b21111e0c8",
+      "size": 14939
     },
     ".opencode/skills/webnovel-write/evals/evals.json": {
       "sha256": "056adc03be1e0139933040f12c60fd3e63585a4d0d7be327060ebd7738fdf250",
@@ -2272,17 +2276,13 @@
       "sha256": "b0ffc774a474b93c7c35c1ce3f55b464e2acc5e29bb17d2e323c4d65ab447222",
       "size": 2766
     },
-    ".opencode/skills/webnovel-write/SKILL.md": {
-      "sha256": "1c670ca24ad571bdbb79288a1d542828be66fe2bf4ca0b10277911b21111e0c8",
-      "size": 14939
+    ".opencode/skills/webnovel-write-batch/SKILL.md": {
+      "sha256": "e9fbe03624c969be8bfa439f23207091aea9445c3fc8be5598ac9f5f40944b3d",
+      "size": 20081
     },
     ".opencode/skills/webnovel-write-batch/references/batch-protocol.md": {
       "sha256": "71a4a57263a69267bb80857d734eea64f3d79322bfe8c6a3331a96540c3167d2",
       "size": 10711
-    },
-    ".opencode/skills/webnovel-write-batch/SKILL.md": {
-      "sha256": "e9fbe03624c969be8bfa439f23207091aea9445c3fc8be5598ac9f5f40944b3d",
-      "size": 20081
     },
     ".opencode/templates/genres/\u4fee\u4ed9.md": {
       "sha256": "b87326f3924d96f66e989bd766b4740ef1b356dca63cc1b6078460fccac1bd81",
