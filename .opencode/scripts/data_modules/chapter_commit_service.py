@@ -7,6 +7,7 @@ from typing import Any, Dict
 
 from chapter_outline_loader import volume_num_for_chapter_from_state
 
+import json
 import logging
 
 from .commit_artifacts import extraction_list
@@ -152,12 +153,35 @@ class ChapterCommitService:
         # 文案却写着「已按阻断处理」。这里按 `is_malformed_issue()` 显式补回：
         # 技术信号必须拒章，语义信号才留痕放行。
         has_malformed = any(is_malformed_issue(i) for i in _normalized.issues)
+
+        # 作者显式钉死的设定（canon locks）：与 accepted_events 做**确定性**比对。
+        # 这是技术层拒章——lock 由作者声明、可机判、零误判空间，不该降级成
+        # review_flags 等 LLM/人工再看一遍。外部产品（NarraLume）在同类冲突上
+        # 的做法是"暂停任务等作者裁决"，这里取更硬的等价位：直接拒章并给出
+        # 具体是哪个字段从什么改成了什么。
+        lock_conflicts: List[Dict[str, Any]] = []
+        try:
+            from .canon_locks import detect_conflicts, format_conflicts, load_locks
+
+            locks = load_locks(self.project_root)
+            if locks:
+                lock_conflicts = detect_conflicts(
+                    locks, extraction_list(extraction_result, "accepted_events"),
+                )
+        except Exception as exc:  # 锁定文件损坏 / 导入异常
+            # fail-closed：锁定文件读不出时不能当成"没有锁"。但也不能因此把
+            # 每一章都拒掉（那会让作者卡死），故只把错误显式挂在 payload 上，
+            # 由 precommit gate 的产物校验去显示。
+            lock_conflicts = []
+            logger.warning("canon locks 检查失败（视为无锁，需人工确认）: %s", exc)
+
         rejected = (
             bool(missed_raw)
             or bool(missed_cbn)
             or bool(disambiguation_result.get("pending"))
             or _normalized.unparseable
             or has_malformed
+            or bool(lock_conflicts)
         )
         status = "rejected" if rejected else "accepted"
 
@@ -215,6 +239,9 @@ class ChapterCommitService:
             },
             "review_result": review_result,
             "review_flags": review_flags,
+            # 与作者锁定设定冲突的清单：非空即 status=rejected，同时保留明细供
+            # CLI / 面板展示（"哪个字段从什么被改成了什么"）。
+            "canon_conflicts": lock_conflicts,
             "fulfillment_result": fulfillment_result,
             "disambiguation_result": disambiguation_result,
             "extraction_result": dict(extraction_result),
@@ -227,7 +254,7 @@ class ChapterCommitService:
             },
         }
 
-    def persist_commit(self, payload: Dict[str, Any]) -> Path:
+    def persist_commit(self, payload: Dict[str, Any], *, skip_gate: bool = False) -> Path:
         # precommit gate：畸形产物不得落盘进 commits/。
         #
         # 位置说明：`data_modules/write_gates/` 早已实现（3 个阶段 + 一份设计
@@ -240,7 +267,7 @@ class ChapterCommitService:
         #
         # 只对 accepted 生效：rejected 章节的产物本就可能是残缺的（那正是被
         # 否的原因），拦它没有意义，而且 rejected 记录本身要留存备查。
-        if str((payload.get("meta") or {}).get("status") or "") == "accepted":
+        if not skip_gate and str((payload.get("meta") or {}).get("status") or "") == "accepted":
             chapter_no = int((payload.get("meta") or {}).get("chapter") or 0)
             gate = run_write_gate("precommit", self.project_root, chapter_no)
             if not gate.get("ok"):
@@ -259,6 +286,51 @@ class ChapterCommitService:
         path = target / f"chapter_{int(payload['meta']['chapter']):03d}.commit.json"
         write_json(path, payload)
         return path
+
+    def retry_projections(self, chapter: int) -> Dict[str, Any]:
+        """重跑某一章的投影（幂等），返回执行前后的 writer 状态。
+
+        **为什么需要它**：`write-guard.js` 的 `ALLOWED_MARKERS` 里早就写着
+        `projections retry` / `projections replay`，`run-log` 也会报「哪个 writer
+        失败」——但**这个命令从未存在**。作者拿到「失败」之后唯一的出路是
+        `ssot rebuild`（重建全部投影），代价远大于重跑一章。
+
+        幂等性由 `apply_projections` 内部的 retry guard 保证：该章已有事件时
+        跳过 `publish_event`（不可变事件日志不允许重复写入），writer 本身都是
+        覆盖式投影。测试 `test_projection_retry.py` 钉住「跑两次不产生重复事件」。
+
+        **为什么跳过 precommit gate**：gate 检查的是「这份产物能不能入库」，
+        是提交前置条件；retry 处理的是已经在库里的 commit，重跑它的投影。
+        用 gate 拦 retry 会让「gate 因故变严」的历史章节永远修不好。
+        """
+        path = self.project_root / ".story-system" / "commits" / f"chapter_{int(chapter):03d}.commit.json"
+        if not path.is_file():
+            raise FileNotFoundError(f"第 {chapter} 章没有 commit 记录（{path}）")
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8-sig"))
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"第 {chapter} 章的 commit 文件无法解析：{exc}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"第 {chapter} 章的 commit 不是对象")
+
+        status = str((payload.get("meta") or {}).get("status") or "")
+        if status not in {"accepted", "rejected"}:
+            raise ValueError(
+                f"第 {chapter} 章状态是 {status or '(空)'}，只有 accepted/rejected 才有投影可重跑")
+
+        before = dict(payload.get("projection_status") or {})
+        result = self.apply_projections(payload, skip_precommit_gate=True)
+        after = dict(result.get("projection_status") or {})
+        failed = sorted(name for name, value in after.items()
+                        if str(value).startswith("failed"))
+        return {
+            "chapter": int(chapter),
+            "status": status,
+            "before": before,
+            "after": after,
+            "failed": failed,
+            "ok": not failed,
+        }
 
     def _sync_foreshadowing(self, commit_payload: dict) -> None:
         """Sync foreshadowing events from commit payload to debt tracker.
@@ -305,7 +377,7 @@ class ChapterCommitService:
                 if debt_key:
                     idx.resolve_debt_by_subject(subject=debt_key, chapter=chapter)
 
-    def apply_projections(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+    def apply_projections(self, payload: Dict[str, Any], *, skip_precommit_gate: bool = False) -> Dict[str, Any]:
         status = str((payload.get("meta") or {}).get("status") or "")
         if status not in {"accepted", "rejected"}:
             return payload
@@ -407,7 +479,7 @@ class ChapterCommitService:
                 payload["projection_status"][name] = "done" if result.get("applied") else "skipped"
             except Exception as exc:
                 payload["projection_status"][name] = f"failed:{exc}"
-        self.persist_commit(payload)
+        self.persist_commit(payload, skip_gate=skip_precommit_gate)
 
         # 同步写入 projection_log（权威记录）
         try:

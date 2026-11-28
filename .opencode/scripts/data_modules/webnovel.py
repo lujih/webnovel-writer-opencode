@@ -414,6 +414,129 @@ def cmd_use(args: argparse.Namespace) -> int:
     return 0
 
 
+def _run_projections(args, project_root: str) -> int:
+    """projections 子命令：重跑某一章的投影（幂等）。
+
+    `write-guard.js` 的 ALLOWED_MARKERS 里早有 `projections retry`，但命令
+    从未实现——作者看到「投影失败」之后只能 `ssot rebuild`（重建全部）。
+    这里补上那个缺失的入口。
+    """
+    from data_modules.chapter_commit_service import ChapterCommitService
+
+    if getattr(args, "projections_action", None) != "retry":
+        print("用法：webnovel.py projections retry --chapter N", file=sys.stderr)
+        return 2
+    chapter = int(getattr(args, "chapter", 0) or 0)
+    try:
+        result = ChapterCommitService(Path(project_root)).retry_projections(chapter)
+    except FileNotFoundError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
+
+    if getattr(args, "json", False):
+        print(json.dumps(result, ensure_ascii=False, indent=2))
+    else:
+        print(f"第 {result['chapter']} 章（{result['status']}）投影已重跑：")
+        for name, value in result["after"].items():
+            mark = "❌" if str(value).startswith("failed") else "✅"
+            print(f"  {mark} {name}: {value}")
+        if result["failed"]:
+            print(f"仍有失败：{','.join(result['failed'])}——查看 `webnovel.py run-log list`", file=sys.stderr)
+    return 0 if result["ok"] else 1
+
+
+def _run_changes(args, project_root: str) -> int:
+    """changes 子命令：章节状态变更审计（只读）。"""
+    from data_modules.state_change_log import main as _main
+
+    argv = ["--project-root", str(project_root), getattr(args, "changes_action", None) or "list"]
+    if getattr(args, "chapter", None) is not None:
+        argv += ["--chapter", str(args.chapter)]
+    if getattr(args, "from_chapter", None) is not None:
+        argv += ["--from", str(args.from_chapter)]
+    if getattr(args, "to_chapter", None) is not None:
+        argv += ["--to", str(args.to_chapter)]
+    if getattr(args, "json", False):
+        argv.append("--json")
+    if getattr(args, "high_risk", False):
+        argv.append("--high-risk")
+    if getattr(args, "limit", None) is not None:
+        argv += ["--limit", str(args.limit)]
+    if getattr(args, "entity", None):
+        argv += ["--entity", str(args.entity)]
+    if getattr(args, "field", None):
+        argv += ["--field", str(args.field)]
+    if getattr(args, "since_chapter", None):
+        argv += ["--since-chapter", str(args.since_chapter)]
+    if getattr(args, "min_changes", None) is not None:
+        argv += ["--min-changes", str(args.min_changes)]
+    if getattr(args, "file", None):
+        argv += ["--file", str(args.file)]
+    return _main(argv)
+
+
+def _run_run_log(args, project_root: str) -> int:
+    """run-log 子命令：投影运行记录（只读）。
+
+    投影日志早已被写入与读取，但作者没有入口——失败时只能看到一个阶段报错。
+    这里把它摊开：哪一章、哪个 writer 失败、下一步该跑什么。
+    """
+    from data_modules.projection_log import main as _main
+
+    argv = ["--project-root", str(project_root), "list"]
+    if getattr(args, "chapter", None) is not None:
+        argv += ["--chapter", str(args.chapter)]
+    argv += ["--limit", str(int(getattr(args, "limit", 10) or 10))]
+    if getattr(args, "json", False):
+        argv.append("--json")
+    return _main(argv)
+
+
+def _run_canon(args, project_root: str) -> int:
+    """canon 子命令：作者钉死的设定（canon locks）的增删查。
+
+    为什么需要 CLI：锁定是**作者的**决定，不能只靠手工编辑 JSON——
+    那样一旦格式写错，`.story-system/canon_locks.json` 会进入"读不出→视为无锁"
+    的降级路径，锁静默失效。
+    """
+    from data_modules.canon_locks import add_lock, load_locks, remove_lock
+
+    action = getattr(args, "canon_action", None)
+    root = Path(project_root)
+
+    if action == "lock":
+        lock = add_lock(
+            root, args.subject, args.field, args.value,
+            rationale=getattr(args, "rationale", "") or "",
+            chapter=int(getattr(args, "chapter", 0) or 0),
+        )
+        verb = "已锁定" if lock["created"] else "已更新"
+        print(f"{verb} {lock['subject']}.{lock['field']} = {lock['value']}  (id={lock['id']})")
+        return 0
+
+    if action == "unlock":
+        removed = remove_lock(root, args.id)
+        print(f"{'已解除' if removed else '未找到'}: {args.id}")
+        return 0 if removed else 1
+
+    if action == "list":
+        locks = load_locks(root)
+        if not locks:
+            print("（没有锁定任何设定）")
+            return 0
+        for item in locks:
+            rationale = f"  ← {item.get('rationale')}" if item.get("rationale") else ""
+            print(f"{item.get('id')}  {item['subject']}.{item['field']} = {item['value']}"
+                  f"  (第 {item.get('created_chapter') or 0} 章){rationale}")
+        return 0
+
+    print("canon 子命令：lock | unlock | list", file=sys.stderr)
+    return 2
+
+
 def _run_flag_triage(args, project_root: str) -> int:
     """flag-triage 子命令：把 --project-root 传进 flag_triage 模块的 main。"""
     import sys as _sys
@@ -682,6 +805,61 @@ def main() -> None:
     fc_list = p_fc_sub.add_parser("list", help="列出最近 forecast 与选中记录")
     fc_list.add_argument("--limit", type=int, default=10)
 
+    # 作者钉死的设定：与 accepted_events 冲突时**拒章**（技术层，不是语义留痕）。
+    p_canon = sub.add_parser("canon", help="钉死设定（与章节事件冲突时拒章）")
+    p_canon_sub = p_canon.add_subparsers(dest="canon_action")
+    c_lock = p_canon_sub.add_parser("lock", help="锁定某实体的某字段值")
+    c_lock.add_argument("--subject", required=True, help="实体 id")
+    c_lock.add_argument("--field", required=True, help="字段名，如 realm / state / location")
+    c_lock.add_argument("--value", required=True, help="锁定的值（与事件新值做精确比较）")
+    c_lock.add_argument("--rationale", default="", help="为什么锁（写进冲突提示）")
+    c_lock.add_argument("--chapter", type=int, default=0, help="在哪一章确立")
+    c_unlock = p_canon_sub.add_parser("unlock", help="解除锁定（id 或 subject.field）")
+    c_unlock.add_argument("--id", required=True)
+    p_canon_sub.add_parser("list", help="列出全部锁定")
+
+    # 投影运行记录：失败时给出**真实存在**的恢复动作（ssot rebuild）。
+    p_runlog = sub.add_parser("run-log", help="查看投影运行记录（只读；失败时给出下一步）")
+    rl_sub = p_runlog.add_subparsers(dest="run_log_action")
+    rl_list = rl_sub.add_parser("list", help="列出最近投影运行（新 → 旧）")
+    rl_list.add_argument("--chapter", type=int)
+    rl_list.add_argument("--limit", type=int, default=10)
+    rl_list.add_argument("--json", action="store_true", help="输出 JSON 而不是文本表")
+
+    # 章节状态变更审计：把"这章改了什么"变成一条命令。
+    p_changes = sub.add_parser("changes", help="章节状态变更审计（只读：list / diff）")
+    pc_sub = p_changes.add_subparsers(dest="changes_action")
+    pc_list = pc_sub.add_parser("list", help="列出某章改了哪些字段")
+    pc_list.add_argument("--chapter", type=int, required=True)
+    pc_list.add_argument("--high-risk", action="store_true", help="只显示 high/medium 风险项")
+    pc_list.add_argument("--json", action="store_true")
+    pc_diff = pc_sub.add_parser("diff", help="两章之间的字段差异（changed/added/removed）")
+    pc_diff.add_argument("--from", dest="from_chapter", type=int, required=True)
+    pc_diff.add_argument("--to", dest="to_chapter", type=int, required=True)
+    pc_diff.add_argument("--json", action="store_true")
+    pc_audit = pc_sub.add_parser("audit", help="回溯最近 N 章：高危变更 + 违背 canon lock")
+    pc_audit.add_argument("--limit", type=int, default=20)
+    pc_audit.add_argument("--json", action="store_true")
+    pc_trace = pc_sub.add_parser("trace", help="某 (实体, 字段) 的跨章时间线 + 值回退检测")
+    pc_trace.add_argument("--entity", required=True)
+    pc_trace.add_argument("--field", required=True)
+    pc_trace.add_argument("--since-chapter", dest="since_chapter", type=int, default=0)
+    pc_trace.add_argument("--json", action="store_true")
+    pc_cand = pc_sub.add_parser("candidates", help="全书扫描：值得考虑交给 canon lock 的字段")
+    pc_cand.add_argument("--since-chapter", dest="since_chapter", type=int, default=0)
+    pc_cand.add_argument("--min-changes", dest="min_changes", type=int, default=3)
+    pc_cand.add_argument("--json", action="store_true")
+    pc_prev = pc_sub.add_parser("preview", help="预演一份尚未提交的 payload 会产生什么变更")
+    pc_prev.add_argument("--file", required=True)
+    pc_prev.add_argument("--json", action="store_true")
+
+    # 投影重跑：write-guard 白名单里的 `projections retry` 此前从未实现。
+    p_projections = sub.add_parser("projections", help="投影运维（retry：重跑某章投影，幂等）")
+    pj_sub = p_projections.add_subparsers(dest="projections_action")
+    pj_retry = pj_sub.add_parser("retry", help="重跑某一章的投影（不动 SSOT 事件日志）")
+    pj_retry.add_argument("--chapter", type=int, required=True)
+    pj_retry.add_argument("--json", action="store_true")
+
     p_sync_agents = sub.add_parser(
         "sync-agents-md",
         help="把 CLAUDE.md 镜像为 AGENTS.md（OpenCode V2 只发现 AGENTS.md）",
@@ -891,6 +1069,18 @@ def main() -> None:
         if hasattr(args, "chapter") and args.chapter:
             return_args.extend(["--chapter", str(args.chapter)])
         raise SystemExit(_run_data_module("override_contract_engine", return_args))
+
+    if tool == "canon":
+        raise SystemExit(_run_canon(args, project_root))
+
+    if tool == "run-log":
+        raise SystemExit(_run_run_log(args, project_root))
+
+    if tool == "changes":
+        raise SystemExit(_run_changes(args, project_root))
+
+    if tool == "projections":
+        raise SystemExit(_run_projections(args, project_root))
 
     if tool == "flag-triage":
         raise SystemExit(_run_flag_triage(args, project_root))

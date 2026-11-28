@@ -114,18 +114,31 @@ def append_projection_run(
     path = projection_log_path(project_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     lock_path = path.with_suffix(".jsonl.lock")
+
+    def _append(handle) -> None:
+        handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
+        handle.write("\n")
+
+    # 只在 filelock 不可用/超时时降级为无锁追加；**写入异常必须冒出去**。
+    # 修复前这里是 `except (ImportError, Exception)`——等于 `except Exception`，
+    # 把磁盘满、权限不足这类真实错误也当成"锁不可用"，再用一次写入掩盖掉真正的
+    # 原因（第二次失败时抛出的是第二个异常，第一个永远看不到）。
+    lock = None
     try:
         import filelock
+
         lock = filelock.FileLock(str(lock_path), timeout=5)
-        with lock:
-            with path.open("a", encoding="utf-8") as handle:
-                handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
-                handle.write("\n")
-    except (ImportError, Exception):
-        # filelock 不可用或超时时降级为无锁写入
+    except ImportError:  # pragma: no cover - filelock 是必装依赖
+        lock = None
+
+    if lock is None:
         with path.open("a", encoding="utf-8") as handle:
-            handle.write(json.dumps(record, ensure_ascii=False, sort_keys=True))
-            handle.write("\n")
+            _append(handle)
+        return record
+
+    with lock:
+        with path.open("a", encoding="utf-8") as handle:
+            _append(handle)
     return record
 
 
@@ -184,3 +197,97 @@ def latest_projection_run(project_root: str | Path, *, chapter: int | None = Non
                 continue
         return payload
     return None
+
+
+#: 投影失败时给作者的下一步。必须是**真实存在**的命令——建议一个不存在的
+#: 命令比不给建议更糟（作者会照着敲、然后得到 "unrecognized arguments"）。
+#:
+#: 曾经这里写的是 `ssot rebuild`（重建全部投影）。它有两大问题：代价过大
+#: （一章失败要重建整本书），且 `write-guard.js` 的白名单里早写着
+#: `projections retry`——那个命令却从未实现。第 13 轮补上了 `projections retry`，
+#: 建议随之换成精准的一条。
+RECOVER_ACTION_TEMPLATE = (
+    "python .opencode/scripts/webnovel.py projections retry --chapter {chapter}"
+    "（只重跑该章投影；仍是失败再考虑 `ssot rebuild`）"
+)
+
+
+def recover_action(chapter: int) -> str:
+    return RECOVER_ACTION_TEMPLATE.format(chapter=int(chapter))
+
+
+def summarize_runs(
+    project_root: str | Path,
+    *,
+    chapter: int | None = None,
+    limit: int = 10,
+) -> list[dict[str, Any]]:
+    """把投影运行记录整理成「人能判断该做什么」的摘要（新 → 旧）。
+
+    为什么需要它：`projection_log` 早已被 `chapter_commit_service` 写入、被
+    `postcommit` gate 与 `project_phase` 读取，但**没有任何作者可见的入口**——
+    投影失败时作者只看到"某个阶段报错"，不知道该看哪一条、下一步做什么。
+    外部产品（NarraLume 的 run center）把这件事当一等功能：任务步骤、错误、
+    可恢复动作摆在同一视图里。
+    """
+    runs = read_projection_runs(project_root, chapter=chapter)
+    size = max(1, int(limit or 10))
+    rows: list[dict[str, Any]] = []
+    for run in reversed(runs[-size:]):
+        statuses = projection_status_from_run(run)
+        failed = sorted(name for name, status in statuses.items() if status.startswith("failed"))
+        pending = sorted(name for name, status in statuses.items() if status == "pending")
+        ok = not failed and not pending
+        rows.append({
+            "chapter": int(run.get("chapter") or 0),
+            "status": str(run.get("status") or ""),
+            "commit_status": str(run.get("commit_status") or ""),
+            "created_at": str(run.get("created_at") or ""),
+            "run_id": str(run.get("run_id") or ""),
+            "failed_writers": failed,
+            "pending_writers": pending,
+            "ok": ok,
+            "action": "" if ok else recover_action(int(run.get("chapter") or 0)),
+        })
+    return rows
+
+
+def format_runs(rows: list[dict[str, Any]]) -> str:
+    """把摘要渲染成终端文本。空列表也要有一行说明，而不是空白。"""
+    if not rows:
+        return "（没有投影运行记录。投影日志在 .webnovel/projection_log.jsonl）"
+    lines: list[str] = []
+    for row in rows:
+        if row["failed_writers"]:
+            mark, detail = "❌", " 失败=" + ",".join(row["failed_writers"])
+        elif row["pending_writers"]:
+            mark, detail = "⚠️", " 未完成=" + ",".join(row["pending_writers"])
+        else:
+            mark, detail = "✅", ""
+        status = row["status"] or "-"
+        lines.append(
+            f"{mark} 第{row['chapter']:03d}章 {status}{detail}  ({row['created_at']})"
+        )
+        if row["action"]:
+            lines.append(f"   ↳ 下一步：{row['action']}")
+    return "\n".join(lines)
+
+
+def main(argv: list[str] | None = None) -> int:
+    """`run-log list` 的 CLI 实现（只读）。"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Projection run log（只读）")
+    parser.add_argument("--project-root", required=True)
+    parser.add_argument("action", nargs="?", default="list", choices=["list"])
+    parser.add_argument("--chapter", type=int, default=None)
+    parser.add_argument("--limit", type=int, default=10)
+    parser.add_argument("--json", action="store_true", help="输出 JSON 而不是文本表")
+    args = parser.parse_args(argv)
+
+    rows = summarize_runs(args.project_root, chapter=args.chapter, limit=args.limit)
+    if args.json:
+        print(json.dumps(rows, ensure_ascii=False, indent=2))
+    else:
+        print(format_runs(rows))
+    return 0
