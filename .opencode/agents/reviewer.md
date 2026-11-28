@@ -158,10 +158,13 @@ permissions:
   "issues": [
     {
       "category": "setting",
+      "error_type": "core_rule_violation",
       "severity": "critical|high|medium|low",
       "blocking": true,
       "description": "",
-      "evidence": "",
+      "evidence": "原文逐字引用（不得改写、不得概括）",
+      "evidence_start": 0,
+      "evidence_end": 0,
       "location": "",
       "fix_hint": ""
     }
@@ -169,6 +172,27 @@ permissions:
   "has_blocking": false
 }
 ```
+
+### 7.1 `error_type` 必须从上表选（19 选 1）
+
+分类法对齐 ConStory-Bench（arXiv 2603.05890）的 5 类 19 子类型。**不得自造、不要留空**——
+留空只能表示「未分类」，会让分类趋势图失真（下游按 `error_type` 归并大类算密度）。
+
+| 大类 | 子类型（原样写进 `error_type`） |
+|---|---|
+| 时间线与情节逻辑 | `absolute_time_contradiction` `duration_contradiction` `simultaneity_contradiction` `causeless_effect` `causal_logic_violation` `abandoned_plot_element` |
+| 人物刻画 | `memory_contradiction` `knowledge_contradiction` `skill_fluctuation` `forgotten_ability` |
+| 世界设定 | `core_rule_violation` `social_norm_violation` `geographical_contradiction` |
+| 事实与细节 | `appearance_mismatch` `nomenclature_confusion` `quantitative_mismatch` |
+| 叙事与文风（仅规则类，如视角越界） | `perspective_confusion` `tone_inconsistency` `style_shift` |
+
+> 注意：`ai_flavor` / `pacing` / 毒点**不在**本表范围内，也不由 reviewer 检查（归 polish）。
+
+### 7.2 证据必须可定位
+
+- `evidence` 逐字复制正文中的冲突片段，不改写、不概括；否则下游无法核验，等于没有证据。
+- 能确定位置时给 `evidence_start` / `evidence_end`（字符偏移，左闭右开）；**两者必须同时给且 start ≤ end**，只给一半会被整对清空。
+- 外部基准的位置统计（ConStory-Bench RQ5）显示：事实首次出现多在全文 15–30%，而矛盾集中在 40–60%。**不要把注意力只放在开头**——中后段和跨段回指是重灾区。
 
 ## 8. 强制输出约束
 

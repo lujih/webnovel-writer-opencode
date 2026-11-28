@@ -70,6 +70,56 @@ SCORE_CATEGORIES = (
 CONTENT_DIMENSIONS = {"continuity", "setting", "character", "timeline", "ai_flavor", "logic", "pacing"}
 SYSTEM_DIMENSIONS = {"other"}
 
+#: 一致性错误的**类型分类法**，对齐 ConStory-Bench（arXiv 2603.05890）的
+#: 5 类 19 子类型。
+#:
+#: 为什么需要它：现有 CED 只有三个"总量"口径（raw / weighted / blocking），
+#: 能回答「错得多不多」，回答不了「错在时间线还是设定」。外部基准的经验是
+#: **错误类型分布本身是流程的指纹**——只看总量会把"世界规则崩塌"和"文风漂移"
+#: 混成一个数，而两者的修复动作完全不同（前者的修复是改设定/补合同，后者是润色）。
+#:
+#: 命名用 snake_case 英文：落库后要跨版本比较，中文标签会随措辞变。
+CONSISTENCY_TAXONOMY: Dict[str, tuple[str, ...]] = {
+    "timeline_plot": (
+        "absolute_time_contradiction",
+        "duration_contradiction",
+        "simultaneity_contradiction",
+        "causeless_effect",
+        "causal_logic_violation",
+        "abandoned_plot_element",
+    ),
+    "characterization": (
+        "memory_contradiction",
+        "knowledge_contradiction",
+        "skill_fluctuation",
+        "forgotten_ability",
+    ),
+    "worldbuilding": (
+        "core_rule_violation",
+        "social_norm_violation",
+        "geographical_contradiction",
+    ),
+    "factual_detail": (
+        "appearance_mismatch",
+        "nomenclature_confusion",
+        "quantitative_mismatch",
+    ),
+    "narrative_style": (
+        "perspective_confusion",
+        "tone_inconsistency",
+        "style_shift",
+    ),
+}
+
+CONSISTENCY_SUBTYPES = frozenset(
+    subtype for subtypes in CONSISTENCY_TAXONOMY.values() for subtype in subtypes
+)
+SUBTYPE_TO_CATEGORY: Dict[str, str] = {
+    subtype: category
+    for category, subtypes in CONSISTENCY_TAXONOMY.items()
+    for subtype in subtypes
+}
+
 SEVERITY_PENALTIES = {
     "critical": 35.0,
     "high": 15.0,
@@ -95,6 +145,13 @@ class ReviewIssue:
     evidence: str = ""
     fix_hint: str = ""
     blocking: Optional[bool] = None
+    #: 一致性错误子类型（`CONSISTENCY_SUBTYPES` 之一）。空串 = 未分类，
+    #: 不算错误——模型没给就是没给，不能拿 `other` 冒充分类。
+    error_type: str = ""
+    #: evidence 在正文中的字符偏移（ConStory-Checker 的"证据链"要求可定位）。
+    #: 两者必须同时有效且 start <= end，否则一起清空——半截偏移比没有更危险。
+    evidence_start: Optional[int] = None
+    evidence_end: Optional[int] = None
 
     def __post_init__(self):
         if self.severity not in VALID_SEVERITIES:
@@ -106,6 +163,19 @@ class ReviewIssue:
             self.blocking = True
         elif self.blocking is None:
             self.blocking = False
+
+        error_type = str(self.error_type or "").strip()
+        self.error_type = error_type if error_type in CONSISTENCY_SUBTYPES else ""
+
+        start, end = self.evidence_start, self.evidence_end
+        valid_span = (
+            isinstance(start, int) and not isinstance(start, bool)
+            and isinstance(end, int) and not isinstance(end, bool)
+            and start >= 0 and end >= start
+        )
+        if not valid_span:
+            self.evidence_start = None
+            self.evidence_end = None
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -163,6 +233,31 @@ class ReviewResult:
     @property
     def categories(self) -> List[str]:
         return sorted(set(i.category for i in self.issues))
+
+    @property
+    def error_type_counts(self) -> Dict[str, int]:
+        """按 19 个子类型计数（未分类的不计入，不拿 other 冒充）。"""
+        counts: Dict[str, int] = {}
+        for issue in self.issues:
+            error_type = str(issue.error_type or "")
+            if error_type:
+                counts[error_type] = counts.get(error_type, 0) + 1
+        return dict(sorted(counts.items()))
+
+    @property
+    def error_category_counts(self) -> Dict[str, int]:
+        """按 5 大类聚合（timeline_plot / characterization / worldbuilding /
+        factual_detail / narrative_style）。
+
+        存在的意义：趋势图上的总量会被"轻微文风问题多"稀释，而大类分布
+        能直接指出流程该往哪修——世界规则类高就补合同，时间线类高就补时间线提取。
+        """
+        counts: Dict[str, int] = {}
+        for error_type, n in self.error_type_counts.items():
+            category = SUBTYPE_TO_CATEGORY.get(error_type)
+            if category:
+                counts[category] = counts.get(category, 0) + n
+        return dict(sorted(counts.items()))
 
     @property
     def critical_issues(self) -> List[str]:
@@ -243,6 +338,8 @@ class ReviewResult:
             "issues_count": self.issues_count,
             "blocking_count": self.blocking_count,
             "categories": categories,
+            "error_type_counts": self.error_type_counts,
+            "error_category_counts": self.error_category_counts,
             "review_parseable": 0 if self.unparseable else 1,
             "timestamp": datetime.now().isoformat(timespec="seconds"),
         }
@@ -305,17 +402,32 @@ def compute_ced(
             "ced_raw": None,
             "ced_weighted": None,
             "ced_blocking": None,
+            "ced_by_category": {},
         }
 
     total_issues = len(issues)
     weighted = sum(SEVERITY_WEIGHTS.get(str(i.severity), 1.0) for i in issues)
     blocking = sum(1 for i in issues if i.blocking)
 
+    # 按 5 大类拆分密度。未分类的 issue 只进总量、不进分类——
+    # 把"没标类型"算进某一类，会让分类趋势图凭空多出错误。
+    category_counts: Dict[str, int] = {}
+    for issue in issues:
+        error_type = str(getattr(issue, "error_type", "") or "")
+        category = SUBTYPE_TO_CATEGORY.get(error_type)
+        if category:
+            category_counts[category] = category_counts.get(category, 0) + 1
+    ced_by_category = {
+        category: round(count / words * CED_SCALE, 4)
+        for category, count in sorted(category_counts.items())
+    }
+
     return {
         "chapter_words": words,
         "ced_raw": round(total_issues / words * CED_SCALE, 4),
         "ced_weighted": round(weighted / words * CED_SCALE, 4),
         "ced_blocking": round(blocking / words * CED_SCALE, 4),
+        "ced_by_category": ced_by_category,
     }
 
 
@@ -377,6 +489,11 @@ def parse_review_output(chapter: int, raw: Dict[str, Any]) -> ReviewResult:
             evidence=str(item.get("evidence", "")),
             fix_hint=str(item.get("fix_hint", "")),
             blocking=item.get("blocking"),
+            # 分类与证据偏移都由 `ReviewIssue.__post_init__` 做白名单/合法性校验：
+            # 非法值一律清空，不降级成 other，也不保留半截偏移。
+            error_type=str(item.get("error_type", "") or ""),
+            evidence_start=item.get("evidence_start"),
+            evidence_end=item.get("evidence_end"),
         ))
     if malformed:
         # 保留已解析出的有效问题（不丢信息），并补一条 critical 阻断项：

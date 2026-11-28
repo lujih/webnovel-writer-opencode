@@ -135,7 +135,7 @@ class IndexReadingMixin:
     # ==================== v5.4 审查指标 ====================
 
     def save_review_metrics(self, metrics: ReviewMetrics) -> None:
-        """保存审查指标记录"""
+        """保存审查指标记录（含 5 大类一致性错误计数）。"""
         with self._get_conn() as conn:
             cursor = conn.cursor()
             # CED 三个口径可能是 None（无法计算）。SQLite 存 NULL，
@@ -146,8 +146,8 @@ class IndexReadingMixin:
                 (start_chapter, end_chapter, overall_score, dimension_scores,
                  severity_counts, critical_issues, report_file, notes,
                  chapter_words, ced_raw, ced_weighted, ced_blocking,
-                 review_parseable, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                 review_parseable, error_category_counts, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
                         CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
                 ON CONFLICT(start_chapter, end_chapter)
                 DO UPDATE SET
@@ -162,6 +162,7 @@ class IndexReadingMixin:
                     ced_weighted = excluded.ced_weighted,
                     ced_blocking = excluded.ced_blocking,
                     review_parseable = excluded.review_parseable,
+                    error_category_counts = excluded.error_category_counts,
                     updated_at = CURRENT_TIMESTAMP
             """,
                 (
@@ -178,6 +179,7 @@ class IndexReadingMixin:
                     metrics.ced_weighted,
                     metrics.ced_blocking,
                     metrics.review_parseable,
+                    json.dumps(metrics.error_category_counts or {}, ensure_ascii=False),
                 ),
             )
             conn.commit()
@@ -197,10 +199,52 @@ class IndexReadingMixin:
             return [
                 self._row_to_dict(
                     row,
-                    parse_json=["dimension_scores", "severity_counts", "critical_issues"],
+                    parse_json=[
+                        "dimension_scores", "severity_counts",
+                        "critical_issues", "error_category_counts",
+                    ],
                 )
                 for row in cursor.fetchall()
             ]
+
+    def get_error_category_totals(self, limit: int = 200, since_chapter: int = 0) -> Dict[str, int]:
+        """按 5 大类聚合最近 `limit` 章的一致性错误计数。
+
+        为什么在 Python 侧聚合而不是 SQL：`error_category_counts` 是 JSON 文本，
+        SQLite 的 JSON1 扩展在部分发行版里没编进去（`json_each` 会报 no such
+        function）。这里只取一列文本再累加，数据量是章数级别（默认 200），
+        代价可以忽略。
+
+        `since_chapter > 0` 时只统计 `end_chapter >= since_chapter` 的记录——
+        做大版本对比时需要这个窗口。
+        """
+        totals: Dict[str, int] = {}
+        with self._get_conn() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT error_category_counts FROM review_metrics
+                WHERE end_chapter >= ?
+                ORDER BY end_chapter DESC
+                LIMIT ?
+                """,
+                (int(since_chapter or 0), int(limit or 0) or 200),
+            )
+            for (raw,) in cursor.fetchall():
+                if not raw:
+                    continue
+                try:
+                    counts = json.loads(raw)
+                except (TypeError, ValueError):
+                    continue
+                if not isinstance(counts, dict):
+                    continue
+                for category, count in counts.items():
+                    try:
+                        totals[str(category)] = totals.get(str(category), 0) + int(count)
+                    except (TypeError, ValueError):
+                        continue
+        return dict(sorted(totals.items()))
 
     def get_review_trend_stats(self, last_n: int = 5) -> Dict[str, Any]:
         """获取审查趋势统计"""

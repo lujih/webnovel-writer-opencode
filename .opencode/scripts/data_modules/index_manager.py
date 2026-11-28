@@ -219,6 +219,14 @@ class ReviewMetrics:
     # 审查输出是否可解析。不可解析时（_shape_issue 路径）不应产出 CED，
     # 否则一次性解析失败会在趋势图上制造一个虚假尖峰。
     review_parseable: int = 1
+    #: 按 5 大类聚合的一致性错误计数（timeline_plot / characterization /
+    #: worldbuilding / factual_detail / narrative_style）。
+    #:
+    #: 为什么要落库：CED 的三个总量口径只能回答「错得多不多」，回答不了
+    #: 「错在哪一类」。外部基准（ConStory-Bench）的经验是**错误类型分布本身
+    #: 是流程的指纹**——世界规则类偏高该补合同，时间线类偏高该补时间线提取，
+    #: 只看总量会把这两件事混成一个数。
+    error_category_counts: Dict[str, int] = field(default_factory=dict)
 
 
 
@@ -257,6 +265,9 @@ class IndexManager(IndexChapterMixin, IndexEntityMixin, IndexDebtMixin, IndexRea
         ("ced_weighted", "REAL DEFAULT 0"),
         ("ced_blocking", "REAL DEFAULT 0"),
         ("review_parseable", "INTEGER DEFAULT 1"),
+        # 分类计数以 JSON 文本落库：形状是 {大类: 次数}，SQL 侧只做搬运与聚合，
+        # 不解析 JSON（SQLite 的 JSON1 在部分发行版里没编进去）。
+        ("error_category_counts", "TEXT DEFAULT '{}'"),
     )
 
     @classmethod
@@ -602,6 +613,9 @@ class IndexManager(IndexChapterMixin, IndexEntityMixin, IndexDebtMixin, IndexRea
                     ced_weighted REAL DEFAULT 0,
                     ced_blocking REAL DEFAULT 0,
                     review_parseable INTEGER DEFAULT 1,
+                    -- 5 大类一致性错误的计数（JSON 文本）：
+                    -- {"timeline_plot": 2, "worldbuilding": 1, ...}
+                    error_category_counts TEXT DEFAULT '{}',
                     PRIMARY KEY (start_chapter, end_chapter)
                 )
             """)

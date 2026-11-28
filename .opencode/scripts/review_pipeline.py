@@ -311,6 +311,9 @@ def _build_review_metrics_record(metrics: Dict[str, Any]):
         ced_weighted=ced_weighted,
         ced_blocking=ced_blocking,
         review_parseable=parseable,
+        # 分类计数由 `review_schema.to_metrics_dict()` 产出（error_category_counts），
+        # 这里只搬运；空 dict 是合法值（该章没有任何已分类问题）。
+        error_category_counts=dict(metrics.get("error_category_counts") or {}),
     )
 
 
