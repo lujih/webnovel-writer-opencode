@@ -41,6 +41,7 @@ const SystemPage = lazy(() => import('./pages/SystemPage.jsx'))
 const StyleEditorPage = lazy(() => import('./pages/StyleEditorPage.jsx'))
 const ContextHealthPage = lazy(() => import('./pages/ContextHealthPage.jsx'))
 const ReviewAnalyticsPage = lazy(() => import('./pages/ReviewAnalyticsPage.jsx'))
+const ChangesPage = lazy(() => import('./pages/ChangesPage.jsx'))
 
 function LoadingScreen() {
     return (
@@ -71,6 +72,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
                         <Route path="style" element={<StyleEditorPage />} />
                         <Route path="context" element={<ContextHealthPage />} />
                         <Route path="review" element={<ReviewAnalyticsPage />} />
+                        <Route path="changes" element={<ChangesPage />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                     </Route>
                 </Routes>

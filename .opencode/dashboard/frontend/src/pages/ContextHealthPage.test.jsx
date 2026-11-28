@@ -98,6 +98,39 @@ describe('ContextHealthPage — 404 与真错误必须区分', () => {
   })
 })
 
+describe('ContextHealthPage — 记忆分层', () => {
+  // 这块的数据来自 context.json 的 meta.memory_stats（第 18 轮接通）。
+  // 关键点：没有统计时**整块不渲染**——显示一堆 0 会让人以为"记忆系统跑了但一条都没注入"，
+  // 而事实往往是"压根没开 orchestrator"。
+  it('有 memory_stats 时渲染三层注入数与冲突数', async () => {
+    fetchContextHealth.mockResolvedValue(healthPayload({
+      memory_stats: {
+        working_injected: 2,
+        episodic_injected: 3,
+        semantic_injected: 1,
+        layered_total_injected: 6,
+        filtered: 4,
+        conflicts: 2,
+        limits: { working: 13, episodic: 9, semantic: 7 },
+      },
+    }))
+    renderPage(ContextHealthPage, { projectInfo: PROJECT, refreshToken: 0 })
+    await waitFor(() => expect(screen.getByText('记忆分层')).toBeInTheDocument())
+    expect(screen.getByText('工作记忆')).toBeInTheDocument()
+    expect(screen.getByText('情节记忆')).toBeInTheDocument()
+    expect(screen.getByText('语义记忆')).toBeInTheDocument()
+    expect(screen.getByText(/注入 6 条/)).toBeInTheDocument()
+    expect(screen.getByText('已过滤')).toBeInTheDocument()
+  })
+
+  it('没有 memory_stats 时不渲染该块', async () => {
+    fetchContextHealth.mockResolvedValue(healthPayload())
+    renderPage(ContextHealthPage, { projectInfo: PROJECT, refreshToken: 0 })
+    await waitFor(() => expect(screen.getByText(/已包含 Section/)).toBeInTheDocument())
+    expect(screen.queryByText('记忆分层')).not.toBeInTheDocument()
+  })
+})
+
 describe('ContextHealthPage — 历史为空时的提示', () => {
   it('history.items 为空时说明"尚未生成任何上下文快照"', async () => {
     fetchContextHealth.mockRejectedValue(new HttpError(404, 'Not Found', ''))

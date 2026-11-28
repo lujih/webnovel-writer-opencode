@@ -3,11 +3,22 @@ import { useDashboardContext } from '../App.jsx'
 import Badge from '../components/Badge.jsx'
 import ChartWrapper from '../components/ChartWrapper.jsx'
 import {
+    fetchChangeAudit,
     fetchEffectivenessStats,
     fetchReviewAnalytics,
     fetchReviewFlags,
     triageReviewFlag,
 } from '../api.js'
+
+//: ConStory-Bench 的 5 大类。分类法定义在
+//: `data_modules/review_schema.CONSISTENCY_TAXONOMY`，这里是它的展示名。
+const ERROR_CATEGORY_LABELS = {
+    timeline_plot: '时间线/情节',
+    characterization: '人物',
+    worldbuilding: '世界观',
+    factual_detail: '事实细节',
+    narrative_style: '叙事风格',
+}
 
 const DIMENSION_LABELS = {
     continuity: '叙事连贯',
@@ -170,8 +181,41 @@ function buildSeverityOption(severityTotals) {
     }
 }
 
-const flagBtnStyle = {
-    border: '1px solid var(--border, #d0d7de)',
+//: 5 大类一致性错误分布。总量会被「轻微文风问题多」稀释，分类分布才能指出
+//: 流程该往哪修——世界规则类偏高该补合同，时间线类偏高该补时间线提取。
+function buildCategoryOption(categoryTotals) {
+    const entries = Object.entries(categoryTotals || {})
+        .filter(([, v]) => v > 0)
+        .sort((a, b) => b[1] - a[1])
+    if (!entries.length) return null
+    const colorMap = {
+        timeline_plot: '#26a8ff',
+        characterization: '#7f5af0',
+        worldbuilding: '#f5a524',
+        factual_detail: '#2cb67d',
+        narrative_style: '#8f7f5c',
+    }
+    return {
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+        grid: { left: 96, right: 32, top: 16, bottom: 24 },
+        xAxis: { type: 'value', minInterval: 1 },
+        yAxis: {
+            type: 'category',
+            data: entries.map(([k]) => ERROR_CATEGORY_LABELS[k] || k),
+        },
+        series: [{
+            type: 'bar',
+            barMaxWidth: 22,
+            data: entries.map(([k, v]) => ({
+                value: v,
+                itemStyle: { color: colorMap[k] || '#8f7f5c' },
+            })),
+            label: { show: true, position: 'right' },
+        }],
+    }
+}
+
+const flagBtnStyle = {    border: '1px solid var(--border, #d0d7de)',
     background: 'var(--bg, #fff)',
     borderRadius: 6,
     padding: '2px 10px',
@@ -192,6 +236,7 @@ export default function ReviewAnalyticsPage() {
     const [error, setError] = useState(null)
     const [flags, setFlags] = useState(null)
     const [effect, setEffect] = useState(null)
+    const [audit, setAudit] = useState(null)
 
     useEffect(() => {
         setLoading(true)
@@ -212,6 +257,14 @@ export default function ReviewAnalyticsPage() {
         fetchEffectivenessStats()
             .then(setEffect)
             .catch(() => setEffect(null))
+    }, [refreshToken])
+
+    // 高危变更：审查记录说「审查提到了什么」，这份数据说「提交确实改了什么」。
+    // 审查会漏报，提交记录不会——两处对照着看才知道审查有没有失灵。
+    useEffect(() => {
+        fetchChangeAudit(20)
+            .then(setAudit)
+            .catch(() => setAudit(null))
     }, [refreshToken])
 
     const pendingChapters = useMemo(() => {
@@ -235,6 +288,8 @@ export default function ReviewAnalyticsPage() {
     const radarOption = useMemo(() => buildRadarOption(data?.dimension_averages), [data])
     const trendOption = useMemo(() => buildTrendOption(data?.dimension_trends), [data])
     const severityOption = useMemo(() => buildSeverityOption(data?.severity_totals), [data])
+    const categoryOption = useMemo(
+        () => buildCategoryOption(data?.error_category_totals), [data])
     const cedOption = useMemo(() => buildCedOption(data?.ced_trends), [data])
 
     // 维度数是**数据驱动**的，不是固定 8 个：旧书可能只跑过 plot/pacing/character
@@ -267,7 +322,7 @@ export default function ReviewAnalyticsPage() {
                         </div>
                     )}
 
-                    {/* 雷达图 + 严重程度分布 */}
+                    {/* 雷达图 + 严重程度分布 + 错误分类分布 */}
                     <div className="content-grid two-columns">
                         {radarOption && (
                             <article className="card">
@@ -286,17 +341,39 @@ export default function ReviewAnalyticsPage() {
                                     <Badge tone="amber">累计</Badge>
                                 </div>
                                 <ChartWrapper option={severityOption} height={320} />
-                    {cedOption && (
-                        <>
-                            <h3>一致性错误密度（CED）</h3>
-                            <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13, marginTop: -8 }}>
-                                每万字的一致性错误数，数值越低越好。曲线断开表示该章未计入
-                                （审查输出不可解析，或取不到正文字数）。
-                                {data?.ced_summary?.chapters_skipped > 0 && (
-                                    <>已排除 {data.ced_summary.chapters_skipped} 章。</>
-                                )}
-                            </p>
-                            <ChartWrapper option={cedOption} height={320} />
+                            </article>
+                        )}
+
+                        {categoryOption && (
+                            <article className="card">
+                                <div className="card-header">
+                                    <span className="card-title">一致性错误分类分布</span>
+                                    <Badge tone="blue">5 类</Badge>
+                                </div>
+                                <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13, margin: '0 0 8px' }}>
+                                    总量会被轻微问题稀释，分类才指出下一步该修哪里：
+                                    世界观类偏高补合同，时间线类偏高补时间线提取。
+                                </p>
+                                <ChartWrapper option={categoryOption} height={260} />
+                            </article>
+                        )}
+
+                        {cedOption && (
+                            <article className="card">
+                                <div className="card-header">
+                                    <span className="card-title">一致性错误密度（CED）</span>
+                                    <Badge tone="red">每万字</Badge>
+                                </div>
+                                <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13, margin: '0 0 8px' }}>
+                                    越低越好。曲线断开表示该章未计入（审查输出不可解析，或取不到正文字数）。
+                                    {data?.ced_summary?.chapters_skipped > 0 && (
+                                        <> 已排除 {data.ced_summary.chapters_skipped} 章。</>
+                                    )}
+                                </p>
+                                <ChartWrapper option={cedOption} height={320} />
+                            </article>
+                        )}
+                    </div>
 
                     {/* 效果指标：审查标记误判率 + 叙事预报 vs CED */}
                     {effect && (
@@ -307,7 +384,6 @@ export default function ReviewAnalyticsPage() {
                             </p>
 
                             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-                                {/* 审查标记误判率 */}
                                 <div style={{ flex: '1 1 240px', padding: 12, borderRadius: 8,
                                     border: '1px solid var(--border, #d0d7de)' }}>
                                     <div style={{ fontWeight: 700, marginBottom: 6 }}>审查标记误判率</div>
@@ -330,7 +406,6 @@ export default function ReviewAnalyticsPage() {
                                     )}
                                 </div>
 
-                                {/* 叙事预报 vs CED */}
                                 <div style={{ flex: '1 1 300px', padding: 12, borderRadius: 8,
                                     border: '1px solid var(--border, #d0d7de)' }}>
                                     <div style={{ fontWeight: 700, marginBottom: 6 }}>叙事预报 vs 一致性错误密度</div>
@@ -359,6 +434,32 @@ export default function ReviewAnalyticsPage() {
                                 </div>
                             </div>
                         </>
+                    )}
+
+                    {/* 高危变更：提交记录侧。审查会漏报，提交记录不会 */}
+                    {audit?.findings?.length > 0 && (
+                        <article className="card" style={{ marginTop: 24 }}>
+                            <div className="card-header">
+                                <span className="card-title">需要人看一眼的变更</span>
+                                <Badge tone="amber">{audit.count} 项</Badge>
+                            </div>
+                            <p style={{ color: 'var(--text-muted, #8b949e)', fontSize: 13, margin: '0 0 8px' }}>
+                                最近 20 章里「改错代价大」的字段变更（境界/生死）与违背 canon lock 的记录。
+                            </p>
+                            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 14 }}>
+                                {audit.findings.map((f, i) => (
+                                    <li key={`${f.chapter}-${f.entity_id}-${f.field}-${i}`} style={{ marginBottom: 4 }}>
+                                        <span style={{ fontWeight: 600 }}>第 {f.chapter} 章</span>
+                                        {' '}{f.entity_id}.{f.field}：
+                                        {String(f.old ?? '—')} → <span style={{ fontWeight: 600 }}>{String(f.new ?? '—')}</span>
+                                        {f.risk === 'high' && <Badge tone="amber">高危</Badge>}
+                                        {f.locked_value !== undefined && (
+                                            <Badge tone="red">违背锁定 {String(f.locked_value)}</Badge>
+                                        )}
+                                    </li>
+                                ))}
+                            </ul>
+                        </article>
                     )}
 
                     {/* 待仲裁审查标记（门禁分层后 LLM 语义问题的留痕出口） */}
@@ -401,11 +502,6 @@ export default function ReviewAnalyticsPage() {
                             暂无待仲裁审查标记。
                         </p>
                     )}
-                        </>
-                    )}
-                            </article>
-                        )}
-                    </div>
 
                     {/* 维度趋势 */}
                     {trendOption && (

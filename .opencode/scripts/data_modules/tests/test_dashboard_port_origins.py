@@ -265,7 +265,7 @@ class TestCustomHostAllowsWrites:
 
 
 class TestMalformedIpLiterals:
-    """每段必须 0-255：畸形 IP 不能被当成"本机 IP"放行。
+    r"""每段必须 0-255：畸形 IP 不能被当成"本机 IP"放行。
 
     早先 `\d{1,3}` 每段，`999.999.999.999` 也能过——真实浏览器不会产生这种
     Origin，但守卫不该建立在"攻击者守规矩"之上。

@@ -224,3 +224,16 @@ export function ClipboardIcon(props) {
         </IconBase>
     )
 }
+
+export function DiffIcon(props) {
+    return (
+        <IconBase {...props}>
+            <path d="M6 3v12" />
+            <circle cx="6" cy="18" r="3" />
+            <path d="M18 21V9" />
+            <circle cx="18" cy="6" r="3" />
+            <path d="M9 6h6" />
+            <path d="M9 18h6" />
+        </IconBase>
+    )
+}

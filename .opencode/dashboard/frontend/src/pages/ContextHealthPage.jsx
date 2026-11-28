@@ -297,6 +297,59 @@ export default function ContextHealthPage() {
                         </article>
                     </div>
 
+                    {/* 记忆分层：三层各注入几条 / 上限 / 过滤 / 冲突。
+                        数据来自 context.json 的 meta.memory_stats（由
+                        MemoryOrchestrator.build_memory_pack 算出）——
+                        这是判断记忆预算配比是否合理的唯一依据。 */}
+                    {health.memory_stats && Object.keys(health.memory_stats).length > 0 && (
+                        <article className="card" style={{ marginBottom: 16 }}>
+                            <div className="card-header">
+                                <span className="card-title">记忆分层</span>
+                                <Badge tone={(health.memory_stats.conflicts || 0) > 0 ? 'red' : 'blue'}>
+                                    注入 {health.memory_stats.layered_total_injected ?? 0} 条
+                                </Badge>
+                            </div>
+                            <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', fontSize: 14 }}>
+                                {[
+                                    ['working', '工作记忆'],
+                                    ['episodic', '情节记忆'],
+                                    ['semantic', '语义记忆'],
+                                ].map(([key, label]) => {
+                                    const injected = health.memory_stats[`${key}_injected`] ?? 0
+                                    const limit = (health.memory_stats.limits || {})[key]
+                                    return (
+                                        <div key={key} style={{ minWidth: 110 }}>
+                                            <div style={{ fontWeight: 700 }}>{label}</div>
+                                            <div style={{ fontSize: 22 }}>
+                                                {injected}
+                                                {limit !== undefined && (
+                                                    <span style={{ fontSize: 12, color: 'var(--text-muted, #8b949e)' }}>
+                                                        {' '}/ {limit}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                                <div style={{ minWidth: 90 }}>
+                                    <div style={{ fontWeight: 700 }}>已过滤</div>
+                                    <div style={{ fontSize: 22 }}>{health.memory_stats.filtered ?? 0}</div>
+                                </div>
+                                <div style={{ minWidth: 90 }}>
+                                    <div style={{ fontWeight: 700 }}>冲突</div>
+                                    <div style={{
+                                        fontSize: 22,
+                                        color: (health.memory_stats.conflicts || 0) > 0
+                                            ? 'var(--accent-red)' : undefined,
+                                    }}>
+                                        {health.memory_stats.conflicts ?? 0}
+                                    </div>
+                                </div>
+                            </div>
+                        </article>
+                    )}
+
+
                     {/* 关键排除告警 */}
                     {health.critical_excluded.length > 0 && (
                         <div style={{ padding: '12px 16px', background: 'var(--bg-card)', border: '2px solid var(--accent-red)', marginBottom: 16 }}>

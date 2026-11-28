@@ -923,11 +923,17 @@ def create_app(
                 "summary": {},
                 "ced_trends": {"ced_raw": [], "ced_weighted": [], "ced_blocking": []},
                 "ced_summary": _build_ced_summary({}, 0),
+                # 空库也要给这个键：前端 builder 靠 Object.entries 取数，
+                # undefined 与 {} 对它等价，但「键缺失」会让契约测试无从断言。
+                "error_category_totals": {},
             }
 
         dimension_trends = {}
         severity_totals = {}
         all_critical_issues = []
+        # 5 大类一致性错误的累计计数。与 CED 无关：分类计数来自 issues，
+        # 不依赖字数分母，所以不受下面 CED 的跳过逻辑影响。
+        error_category_totals = {}
         # CED（一致性错误密度）趋势。三个口径各一条曲线。
         # 仅纳入 review_parseable=1 且分子/分母齐备的章节——见下。
         ced_trends = {"ced_raw": [], "ced_weighted": [], "ced_blocking": []}
@@ -947,6 +953,17 @@ def create_app(
 
             issues = _parse_json_value(row.get("critical_issues"), [])
             all_critical_issues.extend(issues)
+
+            # 分类计数与 CED 分开累计：即使该章 CED 算不出（分母为 0），
+            # "错了哪一类"仍然是可信信息。
+            category_counts = _parse_json_value(row.get("error_category_counts"), {})
+            for category, count in (category_counts or {}).items():
+                try:
+                    error_category_totals[str(category)] = (
+                        error_category_totals.get(str(category), 0) + int(count)
+                    )
+                except (TypeError, ValueError):
+                    continue
 
             # CED 收集。跳过两类章：
             #   1) review_parseable=0 —— 审查输出不可解析，
@@ -979,6 +996,87 @@ def create_app(
             "total_reviews": len(rows),
             "ced_trends": ced_trends,
             "ced_summary": _build_ced_summary(ced_trends, ced_chapters_skipped),
+            # 5 大类一致性错误分布。总量会被"轻微文风问题多"稀释，
+            # 大类分布才能指出流程该往哪修（世界规则类高 → 补合同；
+            # 时间线类高 → 补时间线提取）。外部依据：ConStory-Bench。
+            "error_category_totals": dict(sorted(error_category_totals.items())),
+        }
+
+    @app.get("/api/changes/list")
+    def changes_list(chapter: int = Query(..., ge=1)):
+        """某一章的全部状态变更（含风险等级与 lock 比对）。
+
+        与 `/api/changes/audit` 的分工：audit 回溯最近 N 章、只留关键项；
+        list 看单章的完整清单——「这章到底改了什么」要的是全量，不是摘要。
+        """
+        from data_modules.canon_locks import load_locks
+        from data_modules.state_change_log import annotate_changes, collect_changes, load_commit
+
+        root = Path(_project_root)
+        payload = load_commit(root, chapter)
+        if payload is None:
+            raise HTTPException(404, f"第 {chapter} 章没有 commit 记录（未提交？）")
+        locks = []
+        try:
+            locks = load_locks(root)
+        except Exception as exc:
+            print(f"[dashboard] canon_locks unreadable: {exc}", file=sys.stderr)
+        rows = annotate_changes(collect_changes(payload), locks)
+        return {"chapter": chapter, "changes": rows, "count": len(rows)}
+
+    @app.get("/api/changes/diff")
+    def changes_diff(
+        from_chapter: int = Query(..., ge=1, alias="from"),
+        to_chapter: int = Query(..., ge=1, alias="to"),
+    ):
+        """两章之间的状态差异（changed / added / removed）。
+
+        `removed` 尤其有用：某字段在前一章存在、后一章消失，通常意味着投影漏了
+        一条而不是作者真的删了它——这类"静默丢失"在纯表格视图里看不出来。
+        """
+        from data_modules.state_change_log import collect_changes, diff_changes, load_commit
+
+        root = Path(_project_root)
+        missing = [ch for ch in (from_chapter, to_chapter) if load_commit(root, ch) is None]
+        if missing:
+            raise HTTPException(404, f"第 {missing[0]} 章没有 commit 记录（未提交？）")
+        diff = diff_changes(
+            collect_changes(load_commit(root, from_chapter)),
+            collect_changes(load_commit(root, to_chapter)),
+        )
+        return {
+            "from": from_chapter,
+            "to": to_chapter,
+            **diff,
+            "counts": {key: len(value) for key, value in diff.items()},
+        }
+
+    @app.get("/api/changes/audit")
+    def changes_audit(limit: int = Query(20, ge=1, le=200)):
+        """最近 N 章里需要人看一眼的状态变更：高危字段 + 违背 canon lock。
+
+        与 `/api/review/analytics` 的分工：那边看「审查说了什么」，这边看
+        「提交到底改了什么」。审查会漏报，提交记录不会——同一份数据下，
+        后者能抓到审查没提但确实发生了的境界跳变。
+        """
+        from data_modules.canon_locks import load_locks
+        from data_modules.state_change_log import audit_changes
+
+        root = Path(_project_root)
+        locks = []
+        try:
+            locks = load_locks(root)
+        except Exception as exc:  # 锁文件损坏不该让整页 500
+            print(f"[dashboard] canon_locks unreadable: {exc}", file=sys.stderr)
+        try:
+            findings = audit_changes(root, limit=limit, locks=locks)
+        except Exception as exc:
+            print(f"[dashboard] changes audit failed: {exc}", file=sys.stderr)
+            findings = []
+        return {
+            "findings": findings,
+            "count": len(findings),
+            "locks_loaded": len(locks),
         }
 
     @app.get("/api/stats/chapter-trend")
@@ -1837,9 +1935,13 @@ def create_app(
         # 从 context.json 估算 token 数（粗略：len/2，中文偏低约 30%）
         total_tokens = 0
         section_tokens = {}
+        memory_stats = {}
         if context_file.is_file():
             try:
                 ctx = json.loads(context_file.read_text(encoding="utf-8"))
+                # meta 里带分层记忆的结构化统计（见 context_manager._build_pack）：
+                # 三层各注入几条、过滤掉多少、冲突几处——判断记忆预算配比的唯一依据。
+                memory_stats = dict((ctx.get("meta") or {}).get("memory_stats") or {})
                 for name, content in ctx.items():
                     text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
                     tokens = len(text) // 2
@@ -1863,6 +1965,7 @@ def create_app(
             "health_score": max(0, health_score),
             "weights_used": trace.get("weights_used", {}),
             "ranker_enabled": trace.get("ranker", {}).get("enabled", False),
+            "memory_stats": memory_stats,
         }
 
     @app.get("/api/context/history")

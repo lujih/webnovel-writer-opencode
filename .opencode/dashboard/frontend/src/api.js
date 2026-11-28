@@ -224,6 +224,18 @@ export function fetchReviewFlags(limit = 10) {
     return fetchJSON('/api/review/flags', { limit })
 }
 
+export function fetchChangeAudit(limit = 20) {
+    return fetchJSON('/api/changes/audit', { limit })
+}
+
+export function fetchChapterChanges(chapter) {
+    return fetchJSON('/api/changes/list', { chapter })
+}
+
+export function fetchChangesDiff(fromChapter, toChapter) {
+    return fetchJSON('/api/changes/diff', { from: fromChapter, to: toChapter })
+}
+
 // 仲裁一条 review flag（confirm / dismiss）——写回 commit JSON 的 triage 字段
 //
 // ⚠️ 必须走 `apiPut`：服务端只有 `@app.put("/api/review/flags/triage")`
