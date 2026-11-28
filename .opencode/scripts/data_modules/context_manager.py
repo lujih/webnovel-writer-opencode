@@ -261,16 +261,22 @@ class ContextManager:
             if summary_items:
                 core["recent_summaries"] = summary_items
 
+        appearances = self._load_recent_appearances(
+            limit=self.config.context_max_appearing_characters,
+            max_chapter=chapter,
+        )
+        appearances = self.filter_invalid_items(
+            appearances, source_type="entity", id_key="entity_id"
+        )
         scene = {
             "location_context": state.get("protagonist_state", {}).get("location", {}),
-            "appearing_characters": self._load_recent_appearances(
-                limit=self.config.context_max_appearing_characters,
-                max_chapter=chapter,
+            "appearing_characters": appearances,
+            # 关系驱动上下文（外部实践：NovelCrafter 的 Codex relations）。
+            # 只查**出场实体**的一跳关系，不做多跳扩展——两跳会让注入量指数级膨胀。
+            "relationship_context": self._load_relationship_context(
+                [str(item.get("entity_id") or "") for item in appearances if item.get("entity_id")],
             ),
         }
-        scene["appearing_characters"] = self.filter_invalid_items(
-            scene["appearing_characters"], source_type="entity", id_key="entity_id"
-        )
         story_contract = self._build_story_contract_from_runtime(runtime_sources)
         runtime_status = runtime_sources.to_dict()
         latest_commit = runtime_sources.latest_commit or {}
@@ -294,9 +300,23 @@ class ContextManager:
             # 其余键（如有）仍保留在 memory，避免丢失数据
             memory = {k: v for k, v in memory.items() if k != "patterns"}
         long_term_memory: Dict[str, Any] = orchestrator_pack if orchestrator_pack else {}
+        # 分层记忆的**结构化统计**出口。数据本来都在 `long_term_memory` 段里，
+        # 但 `stats` 只有解析 JSON 才读得到——面板/运维看不出「三层各注入几条、
+        # 过滤掉多少」，而这正是判断记忆预算配比是否合理的唯一依据。
+        memory_stats = dict(orchestrator_pack.get("stats") or {}) if orchestrator_pack else {}
+        # 记忆冲突单独拎出来：它要进 `reader_signal`（写前警戒段），见下方赋值处。
+        memory_conflicts = [
+            warning for warning in (orchestrator_pack.get("warnings") or [])
+            if isinstance(warning, dict) and warning.get("type") == "memory_conflict"
+        ]
         story_skeleton = self._load_story_skeleton(chapter)
         alert_slice = max(0, int(self.config.context_alerts_slice))
         reader_signal = self._load_reader_signal(chapter)
+        if memory_conflicts:
+            # 记忆冲突属于「写之前必须知道」：同一事实存在两条矛盾记录时，
+            # 模型若照其中一条写，另一条就变成读者眼里的硬伤。放进警戒段
+            # 比埋在长记忆段深处更容易被注意到。
+            reader_signal["memory_conflicts"] = memory_conflicts
         genre_profile = self._build_runtime_genre_profile(state, story_contract)
         writing_guidance = self._build_writing_guidance(chapter, reader_signal, genre_profile)
         plot_structure = self._load_plot_structure(chapter)
@@ -307,8 +327,14 @@ class ContextManager:
             story_contract=story_contract,
         )
 
+        meta: Dict[str, Any] = {"chapter": chapter}
+        if memory_stats:
+            # 只在真的有统计时写键：orchestrator 关闭时凭空补一个空 dict，
+            # 会让下游误判「记忆系统跑过但没数据」。
+            meta["memory_stats"] = memory_stats
+
         return {
-            "meta": {"chapter": chapter},
+            "meta": meta,
             "core": core,
             "story_contract": story_contract,
             "runtime_status": runtime_status,
@@ -958,6 +984,56 @@ class ContextManager:
             limit=limit, max_chapter=max_chapter,
         )
         return appearances or []
+
+    #: 关系上下文的注入上限：最多看几个出场实体、每个实体取几条关系。
+    #: 两个上限都存在的原因：一跳关系不做多跳扩展，注入量才会随实体数**线性**
+    #: 增长；没有上限时，一个出场 30 人的大场面会把 scene 段吃光。
+    _RELATION_MAX_ENTITIES = 5
+    _RELATION_PER_ENTITY = 5
+
+    def _load_relationship_context(
+        self,
+        entity_ids: List[str],
+        max_entities: Optional[int] = None,
+        per_entity: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """把出场实体的**一跳关系**带进上下文。
+
+        外部实践：NovelCrafter 的 Codex relations——某条目被提及时，与它链接的
+        条目自动进入上下文。本项目索引层早有 `relationships` 表
+        （from/to/type/chapter）与 `get_entity_relationships()`，但 `_build_pack`
+        此前**完全没有消费**它：写章时只知道"谁最近出场过"，不知道"这些人之间
+        是什么关系"，同一段关系于是在章节间被反复重新发明。
+
+        约束（都是为了可控的注入量）：
+        - 只查出场实体的一跳关系，不做多跳；
+        - 实体数与每实体条数都有上限；
+        - 按 (from, to, type) 去重——A→B 与 B→A 是两条独立记录，各自保留。
+        """
+        entity_limit = max_entities or self._RELATION_MAX_ENTITIES
+        per_entity_limit = per_entity or self._RELATION_PER_ENTITY
+        seen: set[tuple[Any, Any, Any]] = set()
+        collected: List[Dict[str, Any]] = []
+
+        for entity_id in [e for e in (entity_ids or []) if e][:entity_limit]:
+            try:
+                rows = self.index_manager.get_entity_relationships(entity_id)
+            except Exception as exc:  # 索引层异常不该让整次上下文组装失败
+                logger.warning("relationship context: 查询 %s 的关系失败: %s", entity_id, exc)
+                continue
+            for row in rows[:per_entity_limit]:
+                key = (row.get("from_entity"), row.get("to_entity"), row.get("type"))
+                if key in seen:
+                    continue
+                seen.add(key)
+                collected.append({
+                    "from": row.get("from_entity"),
+                    "to": row.get("to_entity"),
+                    "type": row.get("type"),
+                    "description": row.get("description") or "",
+                    "chapter": row.get("chapter"),
+                })
+        return collected
 
     def _load_setting(self, keyword: str) -> str:
         settings_dir = self.config.settings_dir

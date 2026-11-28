@@ -86,6 +86,13 @@ class MemoryOrchestrator:
                 "episodic_total": len(episodic),
                 "semantic_total": len(filtered),
                 "injected": len(semantic_payload),
+                # 分层的**实际注入数**。此前只有 `layered_total_injected` 总数，
+                # 面板无法回答「预算配比到底落在哪一层」——而这正是调
+                # `budget.allocate_limits()` 时唯一需要看的数字。
+                "working_injected": len(working_items),
+                "episodic_injected": len(episodic_items),
+                "semantic_injected": len(semantic_payload),
+                "limits": dict(limits),
                 "layered_total_injected": len(working_items) + len(episodic_items) + len(semantic_payload),
                 "filtered": max(0, len(active_items) - len(filtered)),
                 "conflicts": len(conflicts),
