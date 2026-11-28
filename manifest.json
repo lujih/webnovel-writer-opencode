@@ -1,8 +1,49 @@
 {
-  "version": "v4.0.0-20261128.1614",
-  "tag": "v4.0.0",
-  "updated": "2026-11-28T16:14:01Z",
-  "changelog": [],
+  "version": "v4.1.0",
+  "tag": "v4.1.0",
+  "updated": "2026-11-28T16:14:16Z",
+  "changelog": [
+    {
+      "hash": "7634fd1",
+      "type": "fix(manifest)",
+      "message": "fix(manifest): Windows \u4e2d\u6587\u8def\u5f84\u4e0b gen_manifest \u5d29\u6e83 + \u6e05\u5355\u968f dist \u91cd\u5efa\u5237\u65b0"
+    },
+    {
+      "hash": "70c62aa",
+      "type": "chore",
+      "message": "chore: \u6027\u80fd\u57fa\u7ebf + py3.11 \u5b88\u536b + \u4ed3\u5e93\u536b\u751f + \u6587\u6863"
+    },
+    {
+      "hash": "c32790d",
+      "type": "feat(dashboard)",
+      "message": "feat(dashboard): \u53d8\u66f4\u5ba1\u8ba1\u9875 + \u8bb0\u5fc6\u5206\u5c42\u5361 + \u9519\u8bef\u5206\u7c7b\u5206\u5e03"
+    },
+    {
+      "hash": "6808b4e",
+      "type": "feat(context)",
+      "message": "feat(context): \u5173\u7cfb\u9a71\u52a8\u4e0a\u4e0b\u6587 + \u5206\u5c42\u8bb0\u5fc6\u7684\u7ed3\u6784\u5316\u51fa\u53e3"
+    },
+    {
+      "hash": "d9cccc0",
+      "type": "feat(consistency)",
+      "message": "feat(consistency): canon locks + \u53d8\u66f4\u5ba1\u8ba1 + \u5355\u7ae0\u6295\u5f71\u91cd\u8dd1"
+    },
+    {
+      "hash": "e5591fc",
+      "type": "feat(review)",
+      "message": "feat(review): \u9519\u8bef\u5206\u7c7b\u6cd5 + \u5206\u7c7b\u8ba1\u6570\u843d\u5e93"
+    },
+    {
+      "hash": "a7196e3",
+      "type": "chore",
+      "message": "chore: release v4.0.0 [skip ci]"
+    },
+    {
+      "hash": "4d6772e",
+      "type": "chore",
+      "message": "chore: update manifest to v3.1.2-20261125.1654 [skip ci]"
+    }
+  ],
   "files": {
     ".opencode/.gitignore": {
       "sha256": "e1ea563c7f69c5502b623b7563a99fffe542694331b6bae3806c9c8e603afa7f",
