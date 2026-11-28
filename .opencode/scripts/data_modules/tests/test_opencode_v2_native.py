@@ -150,8 +150,19 @@ class TestSkillsFollowV2Frontmatter:
 
 
 class TestCommandsFollowV2Frontmatter:
-    def test_five_commands(self):
-        assert len(_command_files()) == 5, [p.name for p in _command_files()]
+    def test_commands_present_and_named(self):
+        """命令数量不写死——每加一个只读命令都要改断言，是纯粹的维护税。
+
+        改为钉住**已知集合必须都在**：这样新增命令不会误红，删除或改名会。
+        数量本身由 README 目录树的 `# N 个只读` 与 `test_readme_accuracy` 联合约束。
+        """
+        names = {p.stem for p in _command_files()}
+        expected = {
+            "wn-status", "wn-doctor", "wn-ssot-verify", "wn-where",
+            "wn-chapter-status", "wn-changes", "wn-run-log",
+        }
+        missing = expected - names
+        assert not missing, f"缺少命令：{sorted(missing)}（现有：{sorted(names)}）"
 
     @pytest.mark.parametrize("path", _command_files(), ids=lambda p: p.stem)
     def test_only_allowed_fields(self, path):

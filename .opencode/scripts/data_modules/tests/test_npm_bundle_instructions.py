@@ -74,6 +74,28 @@ class TestBundleContainsInstructionFiles:
         text = (NPM_DIR / "scripts" / "verify-bundle.js").read_text(encoding="utf-8")
         assert "'AGENTS.md'" in text and "'CLAUDE.md'" in text
 
+    def test_verify_bundle_checks_consistency_modules(self):
+        """一致性/审计链的关键模块缺一个，安装后对应能力就整个失效——但构建仍成功。
+
+        这类文件没有 requirements 撑着（它们是仓内模块，不是第三方依赖），
+        唯一能发现「没进包」的地方就是 verify 的固定清单。
+        """
+        text = (NPM_DIR / "scripts" / "verify-bundle.js").read_text(encoding="utf-8")
+        for module in ("canon_locks.py", "state_change_log.py", "projection_log.py"):
+            assert module in text, f"verify-bundle 未校验 {module}"
+
+    def test_verify_bundle_globs_lazy_chunk(self):
+        """懒加载页面是 content-hash chunk，路径不可硬编码，必须按前缀 glob。"""
+        text = (NPM_DIR / "scripts" / "verify-bundle.js").read_text(encoding="utf-8")
+        assert "ChangesPage-" in text
+        assert "readdirSync" in text
+
+    def test_build_warns_about_untracked_files(self):
+        """未 `git add` 的新文件不会进包，而构建会静默成功——必须有警告。"""
+        text = (NPM_DIR / "scripts" / "build-bundle.js").read_text(encoding="utf-8")
+        assert "未被 git 跟踪" in text
+        assert "不会进包" in text
+
 
 @needs_node
 class TestBuildFailsLoudlyWhenDocsMissing:

@@ -4,7 +4,7 @@
  * 用法: node scripts/verify-bundle.js
  */
 
-import { mkdtempSync, existsSync, rmSync } from 'node:fs';
+import { mkdtempSync, existsSync, readdirSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { extractTarGz } from '../src/core/extract.js';
@@ -29,6 +29,13 @@ try {
     // 项目说明必须在 tar 根（与 .opencode/ 平级），OpenCode V2 才发现得到
     'AGENTS.md',
     'CLAUDE.md',
+    // ── 一致性 / 审计链的关键模块 ──────────────────────────────
+    // 这些是"能力存在但进不了包"的高危项：模块本身没有运行时依赖清单撑着，
+    // 少一个文件，安装后的 canon/audit/重跑全部失效，而构建仍然成功。
+    '.opencode/scripts/data_modules/canon_locks.py',
+    '.opencode/scripts/data_modules/state_change_log.py',
+    '.opencode/scripts/data_modules/projection_log.py',
+    // 变更审计页是动态 import 的 chunk（文件名带 hash），单独做 glob 检查
   ];
 
   let failed = 0;
@@ -37,6 +44,23 @@ try {
     console.log(ok ? `  ✓ ${f}` : `  ✗ ${f}`);
     if (!ok) failed++;
   }
+
+  // 懒加载页面是 content-hash 命名的 chunk（`ChangesPage-<hash>.js`），
+  // 路径无法硬编码——只能按前缀 glob。缺了它，路由 `/changes` 会 404，
+  // 而 index.html 仍在，前面那些逐路径检查一条都不会响。
+  let changesChunk = false;
+  try {
+    const assets = join(testDir, '.opencode/dashboard/frontend/dist/assets');
+    changesChunk = readdirSync(assets).some(
+      name => name.startsWith('ChangesPage-') && name.endsWith('.js')
+    );
+  } catch {
+    changesChunk = false;
+  }
+  console.log(changesChunk
+    ? '  ✓ dist/assets/ChangesPage-*.js（懒加载 chunk）'
+    : '  ✗ dist/assets/ChangesPage-*.js（懒加载 chunk）');
+  if (!changesChunk) failed++;
 
   if (failed > 0) {
     console.error(`\n${failed} 个文件缺失`);

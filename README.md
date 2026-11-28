@@ -197,7 +197,7 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   │
 │   ├── skills/                   # 16 个 Skills（webnovel-*）
 │   │
-│   ├── commands/                 # 5 个只读诊断斜杠命令（wn-*）
+│   ├── commands/                 # 7 个只读诊断斜杠命令（wn-*）
 │   │
 │   ├── plugins/                  # write-guard.js：禁止直接写 SSOT 文件
 │   │
@@ -213,9 +213,9 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 │   │   └── review/               # 审查规则
 │   │
 │   └── scripts/                  # Python 核心脚本
-│       ├── webnovel.py           # CLI 统一入口（40 个子命令）
-│       ├── data_modules/         # 核心数据模块（77 个）
-│       └── tests/                # 测试（174 个测试文件，2593 用例）
+│       ├── webnovel.py           # CLI 统一入口（44 个子命令）
+│       ├── data_modules/         # 核心数据模块（79 个）
+│       └── tests/                # 测试（188 个测试文件，2880 用例）
 │
 └── docs/                         # 文档
     ├── architecture/             # 系统架构
@@ -258,6 +258,11 @@ webnovel-writer/                  # 仓库根目录（OpenCode 工作区）
 | **一致性错误密度（CED）** | `review_schema.py` | 审查质量指标（区别于过程指标）：`ced_raw`/`ced_weighted`/`ced_blocking` 三口径，落库 `review_metrics`（5 新列 + 幂等 ALTER 迁移），dashboard 经 `/api/review/analytics` 的 `ced_trends`/`ced_summary` 展示 |
 | **叙事预报（Narrative Forecast）** | `narrative_forecast.py` | 写章前生成候选未来分支（确定性模板，不依赖 LLM），对齐度（字符 2-gram Jaccard），选支幂等追加章纲；`webnovel.py forecast generate\|select\|list` |
 | **门禁分层（review_flags）** | `chapter_commit_service.py` | LLM 语义问题不拒章、降级为 commit 里的观察标记；`flag_triage.py` CLI + dashboard `/api/review/flags` 仲裁入口（confirm/dismiss，不改 status） |
+| **错误分类法（ConStory-Bench）** | `review_schema.py` | 审查 issue 带 5 大类 / 19 子类型 `error_type` 与 `evidence_start/end` 证据偏移；分类计数落库 `review_metrics.error_category_counts`，`IndexManager.get_error_category_totals()` 聚合，面板「一致性错误分类分布」展示 |
+| **Canon Locks** | `canon_locks.py` | 作者钉死的设定（`.story-system/canon_locks.json`）。`build_commit` 做**确定性**比对，冲突即拒章（技术层）；`webnovel.py canon lock\|unlock\|list` |
+| **变更审计** | `state_change_log.py` | 「这章改了什么」：`webnovel.py changes list\|diff\|audit`；风险分级（`realm`/`status` 等 high）、canon lock 违背**回溯**（lock 常是事后钉的，写时拦截管不了历史）、面板 `/api/changes/list\|diff\|audit` + `/changes` 页 |
+| **投影运行记录** | `projection_log.py` | 投影运行写入 `.webnovel/projection_log.jsonl`；`webnovel.py run-log list` 展示失败 writer 与**可执行**的恢复命令 |
+| **性能基线** | `benchmarks/benchmark_core.py` | 6 项关键路径计时（中位数/p95）+ `.tmp/analysis/BASELINE.md` 判定阈值；`test_benchmarks_smoke.py` 只验证脚本可用，不写耗时断言 |
 | **发布模块** | `.opencode/scripts/publisher/` | Playwright 浏览器自动化（番茄 / 七猫适配器） |
 
 ## 5. 贡献指南

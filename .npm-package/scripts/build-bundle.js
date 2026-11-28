@@ -294,6 +294,21 @@ async function buildBundle() {
   }
   process.stdout.write(`  ✅ 前端产物已入包: ${distEntries.length} 个文件\n`);
 
+  // 未跟踪文件的哨兵：`collectFiles` 按 git 索引过滤，**未 `git add` 的新文件
+  // 会静默不进包**——构建成功、verify 也查不出来（它只查固定的几个路径）。
+  // 实测代价：新写的模块/测试/前端页面可能"本地全绿"却完全没进发布包。
+  // 这里只警告不阻断：有人的工作流是先构建后提交，硬拦会打断它。
+  if (tracked) {
+    const onDisk = collectFiles(OPC_DIR, dirname(OPC_DIR), null);
+    const skipped = onDisk.filter(e => e.type === '0' && !tracked.has(e.name));
+    if (skipped.length > 0) {
+      process.stdout.write(
+        `  ⚠️  ${skipped.length} 个文件未被 git 跟踪，**不会进包**（先 \`git add\` 再构建）：\n` +
+          skipped.slice(0, 10).map(e => `        - ${e.name}`).join('\n') + '\n'
+      );
+    }
+  }
+
   for (const e of docEntries) {
     entries.push(e);
     process.stdout.write(`  ✅ 说明文件已入包: ${e.name}\n`);
